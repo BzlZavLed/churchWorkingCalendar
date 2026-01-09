@@ -1094,6 +1094,9 @@ const parseHexColor = (value) => {
     return null
   }
   const hex = value.trim()
+  if (hex === 'transparent' || hex === 'none') {
+    return null
+  }
   if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex)) {
     return null
   }
@@ -1123,8 +1126,12 @@ const isLightColor = (value) => {
 
 const eventPillStyle = (event) => {
   const color = eventColor(event)
-  if (!color) {
-    return {}
+  if (!color || color === 'transparent' || color === 'none' || color === 'rgba(0,0,0,0)') {
+    return {
+      backgroundColor: '#e9ecef',
+      color: '#111111',
+      border: '1px solid #111111',
+    }
   }
   if (isLightColor(color)) {
     return {
