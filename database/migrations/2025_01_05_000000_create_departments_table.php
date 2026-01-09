@@ -11,13 +11,21 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('departments', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('church_id')->constrained()->cascadeOnDelete();
-            $table->string('name');
-            $table->string('color')->nullable();
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('departments')) {
+            Schema::create('departments', function (Blueprint $table) {
+                $table->id();
+                $table->unsignedBigInteger('church_id');
+                $table->string('name');
+                $table->string('color')->nullable();
+                $table->timestamps();
+            });
+        }
+
+        if (Schema::hasTable('churches') && Schema::hasColumn('departments', 'church_id')) {
+            Schema::table('departments', function (Blueprint $table) {
+                $table->foreign('church_id')->references('id')->on('churches')->cascadeOnDelete();
+            });
+        }
     }
 
     /**
@@ -25,6 +33,12 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (Schema::hasTable('departments')) {
+            Schema::table('departments', function (Blueprint $table) {
+                $table->dropForeign(['church_id']);
+            });
+        }
+
         Schema::dropIfExists('departments');
     }
 };
