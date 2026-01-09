@@ -11,6 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (!Schema::hasColumn('users', 'department_id')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->foreignId('department_id')->nullable()->after('email');
+            });
+        }
+
         Schema::table('users', function (Blueprint $table) {
             $table->foreign('department_id')
                 ->references('id')
@@ -27,5 +33,11 @@ return new class extends Migration
         Schema::table('users', function (Blueprint $table) {
             $table->dropForeign(['department_id']);
         });
+
+        if (Schema::hasColumn('users', 'department_id')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropColumn('department_id');
+            });
+        }
     }
 };
