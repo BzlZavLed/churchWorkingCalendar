@@ -153,7 +153,7 @@
                 <button
                   type="button"
                   class="event-pill event-pill-button"
-                  :style="{ backgroundColor: eventColor(event) }"
+                  :style="eventPillStyle(event)"
                   @click.stop="openEventDetails(event)"
                 >
                   {{ event.title }} - {{ event.objective?.name || '' }} ({{ event.status }})
@@ -192,7 +192,7 @@
                 <button
                   type="button"
                   class="event-pill event-pill-button"
-                  :style="{ backgroundColor: eventColor(event) }"
+                  :style="eventPillStyle(event)"
                   @click.stop="openEventDetails(event)"
                 >
                   {{ event.title }} - {{ event.objective?.name || '' }} ({{ event.status }})
@@ -233,7 +233,7 @@
               v-for="event in eventsForHour(hour)"
               :key="event.id"
               class="event-pill event-pill-button"
-              :style="{ backgroundColor: eventColor(event) }"
+              :style="eventPillStyle(event)"
             >
               {{ event.title }}
             </span>
@@ -1087,6 +1087,53 @@ const departmentMap = computed(() => {
 
 const eventColor = (event) => {
   return event.department?.color || departmentMap.value.get(event.department_id)?.color || ''
+}
+
+const parseHexColor = (value) => {
+  if (!value) {
+    return null
+  }
+  const hex = value.trim()
+  if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex)) {
+    return null
+  }
+  let normalized = hex.slice(1)
+  if (normalized.length === 3) {
+    normalized = normalized
+      .split('')
+      .map((ch) => ch + ch)
+      .join('')
+  }
+  const intValue = Number.parseInt(normalized, 16)
+  return {
+    r: (intValue >> 16) & 255,
+    g: (intValue >> 8) & 255,
+    b: intValue & 255,
+  }
+}
+
+const isLightColor = (value) => {
+  const rgb = parseHexColor(value)
+  if (!rgb) {
+    return false
+  }
+  const luminance = (0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b) / 255
+  return luminance > 0.85
+}
+
+const eventPillStyle = (event) => {
+  const color = eventColor(event)
+  if (!color) {
+    return {}
+  }
+  if (isLightColor(color)) {
+    return {
+      backgroundColor: color,
+      color: '#111111',
+      border: '1px solid #111111',
+    }
+  }
+  return { backgroundColor: color }
 }
 
 const legendDepartments = computed(() => departments.value)
