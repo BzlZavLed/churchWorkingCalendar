@@ -45,6 +45,12 @@ export const useCalendarStore = defineStore('calendar', () => {
     return response
   }
 
+  const updateEvent = async (eventId, payload) => {
+    const response = await calendarApi.updateEvent(eventId, payload)
+    upsertEvent(response)
+    return response
+  }
+
   const reviewEvent = async (eventId, payload) => {
     const response = await calendarApi.reviewEvent(eventId, payload)
     upsertEvent(response)
@@ -148,6 +154,7 @@ export const useCalendarStore = defineStore('calendar', () => {
     fetchRange,
     createHold,
     lockEvent,
+    updateEvent,
     reviewEvent,
     addNote,
     replyNote,

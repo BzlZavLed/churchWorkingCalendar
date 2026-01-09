@@ -252,6 +252,48 @@
       </ul>
     </div>
 
+    <section v-if="canViewChangeRequests" class="review-panel">
+      <div class="review-header">
+        <h2 class="review-title">{{ t.changeRequestsTitle }}</h2>
+        <p class="review-subtitle">{{ t.changeRequestsSubtitle }}</p>
+      </div>
+      <div v-if="changeRequestedEvents.length === 0" class="review-empty">
+        {{ t.changeRequestsEmpty }}
+      </div>
+      <div v-else class="review-list">
+        <article v-for="event in changeRequestedEvents" :key="event.id" class="review-item">
+          <div class="review-info">
+            <strong>{{ event.title }}</strong>
+            <span>
+              {{ formatEventTime(event) }}
+              · {{ event.department?.name || t.unknownDepartment }}
+            </span>
+            <span class="review-status">
+              {{ t.locationLabel }}: {{ event.location || '—' }}
+            </span>
+          </div>
+          <div class="review-actions">
+            <div class="review-buttons">
+              <button
+                type="button"
+                class="btn btn-outline-secondary"
+                @click="openChangeRequest(event)"
+              >
+                {{ t.editEventButton }}
+              </button>
+              <button
+                type="button"
+                class="btn btn-outline-primary"
+                @click="openEventDetails(event)"
+              >
+                {{ t.viewDetailsButton }}
+              </button>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
     <EventModal
       :open="isModalOpen && canCreateEvents"
       :selected-date="selectedDate"
@@ -263,6 +305,7 @@
       :objective-id="form.objectiveId"
       :objectives="objectiveOptions"
       :active-hold-id="activeHoldId"
+      :is-editing="Boolean(editEventId)"
       :error="formError"
       :notice="formNotice"
       :labels="t.drawer"
@@ -274,6 +317,7 @@
       @update:objectiveId="form.objectiveId = $event"
       @create-hold="createHold"
       @lock-hold="lockHold"
+      @save-edit="saveEditedEvent"
       @close="closeModal"
     />
 
@@ -283,10 +327,12 @@
       :notes="selectedEvent?.notes || []"
       :histories="selectedEvent?.histories || []"
       :can-reply-notes="canReplyEventNotes"
+      :can-edit-event="canEditSelectedEvent"
       :show-status-details="showStatusDetails"
       :labels="t.eventDetails"
       @close="closeEventDetails"
       @reply-note="handleDetailsReply"
+      @edit-event="openEditModal"
     />
 
     <div v-if="reviewModalOpen" class="modal-backdrop" @click.self="closeReviewModal">
@@ -478,7 +524,7 @@
                     :class="{ active: reviewTab(event.id) === 'notes' }"
                     @click="setReviewTab(event.id, 'notes')"
                   >
-                    {{ t.notesTitle }}
+                    {{ t.notesTitle }} ({{ notesForEvent(event).length }})
                   </button>
                 </div>
                 <div v-if="reviewTab(event.id) === 'history'" class="review-history">
@@ -527,7 +573,12 @@
                     {{ t.notesEmpty }}
                   </p>
                   <ul v-else-if="isNotesExpanded(event.id)" class="history-list review-scroll">
-                    <li v-for="note in notesForEvent(event)" :key="note.id" class="history-item">
+                    <li
+                      v-for="note in notesForEvent(event)"
+                      :key="note.id"
+                      class="history-item note-item"
+                      :class="noteClass(note)"
+                    >
                       <div class="history-meta">
                         {{ note.author?.name || '—' }} · {{ formatHistoryValue(note.created_at) }}
                       </div>
@@ -573,6 +624,22 @@ const canViewUnseenNotes = computed(
 )
 const canReplyEventNotes = computed(() => canViewUnseenNotes.value)
 const showStatusDetails = computed(() => false)
+const canViewChangeRequests = computed(
+  () => !isSecretary.value && !isSuperAdmin.value && Boolean(user.value?.department_id)
+)
+const canEditSelectedEvent = computed(() => {
+  const event = selectedEvent.value
+  if (!event) {
+    return false
+  }
+  if (isSecretary.value || isSuperAdmin.value) {
+    return false
+  }
+  if (event.review_status !== 'changes_requested') {
+    return false
+  }
+  return Boolean(user.value?.department_id) && user.value.department_id === event.department_id
+})
 const unseenCount = computed(() => unseenNotes.value.length)
 const showMonthDropdown = computed(() => isSecretary.value && !isDayView.value)
 const departmentName = computed(() => {
@@ -612,6 +679,7 @@ const activeReviewEvent = ref(null)
 const statusSelection = ref('pending')
 const statusNote = ref('')
 const publishToFeed = ref(false)
+const editEventId = ref(null)
 const noteDraft = ref('')
 const includeHistoryExport = ref(false)
 const unseenNotes = ref([])
@@ -647,6 +715,7 @@ const translations = {
       end: 'Fin',
       createHold: 'Crear reserva',
       lockEvent: 'Confirmar evento',
+      saveEvent: 'Guardar cambios',
       close: 'Cerrar',
     },
     dayView: 'Dia',
@@ -687,6 +756,7 @@ const translations = {
       finalOutcomeAccepted: 'Aceptado',
       finalOutcomeRejected: 'Rechazado',
       finalOutcomeUpdateRequested: 'Cambios solicitados',
+      editEvent: 'Editar evento',
       start: 'Inicio',
       end: 'Fin',
       description: 'Descripcion',
@@ -709,6 +779,11 @@ const translations = {
     reviewMonthly: 'Revision mensual',
     reviewWeekly: 'Revision semanal',
     reviewDaily: 'Revision diaria',
+    changeRequestsTitle: 'Cambios solicitados',
+    changeRequestsSubtitle: 'Eventos que necesitan ajustes antes de aprobarse.',
+    changeRequestsEmpty: 'No hay eventos con cambios solicitados.',
+    editEventButton: 'Editar evento',
+    viewDetailsButton: 'Ver detalles',
     reviewModalTitle: 'Revision enviada',
     reviewModalClose: 'Cerrar',
     statusModalTitle: 'Actualizar estado',
@@ -771,6 +846,7 @@ const translations = {
       end: 'End',
       createHold: 'Create Hold',
       lockEvent: 'Lock Event',
+      saveEvent: 'Save changes',
       close: 'Close',
     },
     dayView: 'Day view',
@@ -811,6 +887,7 @@ const translations = {
       finalOutcomeAccepted: 'Accepted',
       finalOutcomeRejected: 'Rejected',
       finalOutcomeUpdateRequested: 'Changes requested',
+      editEvent: 'Edit event',
       start: 'Start',
       end: 'End',
       description: 'Description',
@@ -833,6 +910,11 @@ const translations = {
     reviewMonthly: 'Monthly review',
     reviewWeekly: 'Weekly review',
     reviewDaily: 'Daily review',
+    changeRequestsTitle: 'Changes requested',
+    changeRequestsSubtitle: 'Events that need updates before approval.',
+    changeRequestsEmpty: 'No events with changes requested.',
+    editEventButton: 'Edit event',
+    viewDetailsButton: 'View details',
     reviewModalTitle: 'Review sent',
     reviewModalClose: 'Close',
     statusModalTitle: 'Update status',
@@ -1093,6 +1175,7 @@ const clearSelection = () => {
 const closeModal = () => {
   isModalOpen.value = false
   activeHoldId.value = null
+  editEventId.value = null
   formError.value = ''
   formNotice.value = ''
 }
@@ -1103,9 +1186,26 @@ const openEventDetails = async (event) => {
   await markNotesSeenForEvent(event)
 }
 
+const openChangeRequest = (event) => {
+  if (canEditEvent(event)) {
+    prefillFormFromEvent(event)
+    isModalOpen.value = true
+    return
+  }
+  openEventDetails(event)
+}
+
 const closeEventDetails = () => {
   isEventDetailsOpen.value = false
   selectedEvent.value = null
+}
+
+const openEditModal = () => {
+  if (!selectedEvent.value) {
+    return
+  }
+  prefillFormFromEvent(selectedEvent.value)
+  isModalOpen.value = true
 }
 
 const exitDayView = () => {
@@ -1185,6 +1285,38 @@ const lockHold = async () => {
   }
 }
 
+const saveEditedEvent = async () => {
+  if (!editEventId.value || !selectedDate.value) {
+    return
+  }
+  const startAt = combineDateTime(selectedDate.value, form.startTime)
+  const endAt = combineDateTime(selectedDate.value, form.endTime)
+
+  if (endAt <= startAt) {
+    formError.value = 'End time must be after start time.'
+    return
+  }
+
+  formError.value = ''
+  formNotice.value = ''
+
+  try {
+    await calendarStore.updateEvent(editEventId.value, {
+      title: form.title,
+      description: form.description,
+      location: form.location,
+      objective_id: form.objectiveId || null,
+      start_at: startAt.toISOString(),
+      end_at: endAt.toISOString(),
+    })
+    formNotice.value = locale.value === 'es' ? 'Evento actualizado.' : 'Event updated.'
+    editEventId.value = null
+    isModalOpen.value = false
+  } catch {
+    formError.value = locale.value === 'es' ? 'No se pudo actualizar.' : 'Unable to update event.'
+  }
+}
+
 const handleHourClick = (hour) => {
   const hourEvents = eventsForHour(hour)
   if (isSecretary.value) {
@@ -1195,7 +1327,13 @@ const handleHourClick = (hour) => {
   }
 
   if (hourEvents.length > 0) {
-    openEventDetails(hourEvents[0])
+    const event = hourEvents[0]
+    if (canEditEvent(event)) {
+      prefillFormFromEvent(event)
+      isModalOpen.value = true
+      return
+    }
+    openEventDetails(event)
     return
   }
 
@@ -1220,6 +1358,37 @@ const selectHour = (hour) => {
   formError.value = ''
   formNotice.value = ''
   isModalOpen.value = true
+}
+
+const canEditEvent = (event) => {
+  if (!event) {
+    return false
+  }
+  if (isSecretary.value || isSuperAdmin.value) {
+    return false
+  }
+  if (event.review_status !== 'changes_requested') {
+    return false
+  }
+  return Boolean(user.value?.department_id) && user.value.department_id === event.department_id
+}
+
+const prefillFormFromEvent = (event) => {
+  if (!event) {
+    return
+  }
+  const start = new Date(event.start_at)
+  const end = new Date(event.end_at)
+  selectedDate.value = new Date(start)
+  form.title = event.title || ''
+  form.description = event.description || ''
+  form.location = event.location || ''
+  form.objectiveId = event.objective_id ? String(event.objective_id) : ''
+  form.startTime = start.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+  form.endTime = end.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+  editEventId.value = event.id
+  formError.value = ''
+  formNotice.value = ''
 }
 
 const loadMonth = async () => {
@@ -1298,6 +1467,25 @@ const reviewGroups = computed(() => {
   })
 
   return Array.from(grouped.entries()).map(([date, events]) => ({ date, events }))
+})
+
+const changeRequestedEvents = computed(() => {
+  if (!canViewChangeRequests.value) {
+    return []
+  }
+  const list = displayEvents.value
+    .filter((event) => event.review_status === 'changes_requested')
+    .filter((event) => event.department_id === user.value?.department_id)
+    .sort((a, b) => new Date(a.start_at) - new Date(b.start_at))
+
+  const range = reviewRange.value
+  if (!range) {
+    return list
+  }
+  return list.filter((event) => {
+    const startAt = new Date(event.start_at)
+    return startAt >= range.start && startAt <= range.end
+  })
 })
 
 const reviewScopeLabel = computed(() => {
@@ -1422,6 +1610,8 @@ const isSecretaryNote = (note) => {
   const role = note?.author?.role
   return role === 'secretary' || role === 'superadmin'
 }
+
+const noteClass = (note) => (isSecretaryNote(note) ? 'note-item--incoming' : 'note-item--outgoing')
 
 const fetchUnseenNotes = async () => {
   if (!canViewUnseenNotes.value) {

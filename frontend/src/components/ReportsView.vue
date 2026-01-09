@@ -1040,6 +1040,9 @@ watch(objectiveDepartmentFilter, () => {
   if (objectiveFilter.value !== 'all' && !objectiveOptions.value.some((item) => item.id === Number(objectiveFilter.value))) {
     objectiveFilter.value = 'all'
   }
+  if (!objectivesLoaded.value) {
+    loadObjectives()
+  }
 })
 
 onMounted(async () => {

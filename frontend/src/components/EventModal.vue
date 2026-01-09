@@ -62,10 +62,15 @@
       <p v-if="notice" class="event-notice">{{ notice }}</p>
 
       <div class="action-row">
-        <button type="button" @click="$emit('create-hold')">{{ labels.createHold }}</button>
-        <button type="button" :disabled="!activeHoldId" @click="$emit('lock-hold')">
-          {{ labels.lockEvent }}
-        </button>
+        <template v-if="isEditing">
+          <button type="button" @click="$emit('save-edit')">{{ labels.saveEvent }}</button>
+        </template>
+        <template v-else>
+          <button type="button" @click="$emit('create-hold')">{{ labels.createHold }}</button>
+          <button type="button" :disabled="!activeHoldId" @click="$emit('lock-hold')">
+            {{ labels.lockEvent }}
+          </button>
+        </template>
         <button type="button" @click="$emit('close')">{{ labels.close }}</button>
       </div>
     </div>
@@ -116,6 +121,10 @@ const props = defineProps({
     type: Number,
     default: null,
   },
+  isEditing: {
+    type: Boolean,
+    default: false,
+  },
   error: {
     type: String,
     default: '',
@@ -135,6 +144,7 @@ const props = defineProps({
       end: 'End',
       createHold: 'Create Hold',
       lockEvent: 'Lock Event',
+      saveEvent: 'Save changes',
       close: 'Close',
       objective: 'Objective',
     }),
@@ -150,6 +160,7 @@ const emit = defineEmits([
   'update:objectiveId',
   'create-hold',
   'lock-hold',
+  'save-edit',
   'close',
 ])
 

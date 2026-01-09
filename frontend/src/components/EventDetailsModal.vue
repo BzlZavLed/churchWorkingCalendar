@@ -28,14 +28,16 @@
             <strong>{{ labels.reviewStatus }}:</strong> {{ reviewStatusLabel }}
           </p>
           <p class="event-details-text">
-            <strong>{{ labels.finalOutcome }}:</strong> {{ finalOutcomeLabel }}
+            <strong>{{ labels.finalOutcome }}:</strong>
+            <span class="status-pill" :class="finalOutcomeClass">{{ finalOutcomeLabel }}</span>
           </p>
           <p v-if="event.review_note" class="event-details-text">
             <strong>{{ labels.reviewNote }}:</strong> {{ event.review_note }}
           </p>
         </template>
         <p v-else class="event-details-text">
-          <strong>{{ labels.finalOutcome }}:</strong> {{ finalOutcomeLabel }}
+          <strong>{{ labels.finalOutcome }}:</strong>
+          <span class="status-pill" :class="finalOutcomeClass">{{ finalOutcomeLabel }}</span>
         </p>
         <p class="event-details-text">
           <strong>{{ labels.start }}:</strong> {{ formatDate(event.start_at) }}
@@ -92,6 +94,14 @@
       </div>
 
       <div class="action-row">
+        <button
+          v-if="canEditEvent"
+          type="button"
+          class="btn btn-outline-secondary"
+          @click="$emit('edit-event')"
+        >
+          {{ labels.editEvent }}
+        </button>
         <button type="button" @click="$emit('close')">{{ labels.close }}</button>
       </div>
     </div>
@@ -100,7 +110,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-const emit = defineEmits(['close', 'reply-note'])
+const emit = defineEmits(['close', 'reply-note', 'edit-event'])
 
 const props = defineProps({
   open: {
@@ -120,6 +130,10 @@ const props = defineProps({
     default: () => [],
   },
   canReplyNotes: {
+    type: Boolean,
+    default: false,
+  },
+  canEditEvent: {
     type: Boolean,
     default: false,
   },
@@ -148,6 +162,7 @@ const props = defineProps({
       finalOutcomeAccepted: 'Accepted',
       finalOutcomeRejected: 'Rejected',
       finalOutcomeUpdateRequested: 'Changes requested',
+      editEvent: 'Edit event',
       location: 'Location',
       start: 'Start',
       end: 'End',
@@ -208,6 +223,17 @@ const finalOutcomeLabel = computed(() => {
     update_requested: props.labels.finalOutcomeUpdateRequested || 'Changes requested',
   }
   return map[value] || value
+})
+
+const finalOutcomeClass = computed(() => {
+  const value = props.event?.final_validation
+  if (value === 'accepted') {
+    return 'status-accepted'
+  }
+  if (value === 'rejected') {
+    return 'status-rejected'
+  }
+  return 'status-pending'
 })
 
 const isSecretaryNote = (note) => {

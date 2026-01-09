@@ -528,6 +528,30 @@ tbody td {
   margin-right: 6px;
 }
 
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.status-accepted {
+  background: rgba(47, 107, 79, 0.2);
+  color: #2f6b4f;
+}
+
+.status-rejected {
+  background: rgba(181, 59, 59, 0.2);
+  color: #b53b3b;
+}
+
+.status-pending {
+  background: rgba(209, 161, 13, 0.25);
+  color: #8f6a00;
+}
+
 .status-approved {
   background: #2f6b4f;
 }
