@@ -1,0 +1,95 @@
+:root {
+  --dominant: #1f6f5c;
+  --soft: #f3f1eb;
+  --text: #1f1f1f;
+  --muted: #5a5a5a;
+  --card: #ffffff;
+  --border: #d7d3c8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--text);
+  background: linear-gradient(
+    90deg,
+    var(--dominant) 0%,
+    var(--dominant) 14.285%,
+    var(--soft) 14.285%,
+    var(--soft) 100%
+  );
+  min-height: 100vh;
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 48px 24px;
+}
+
+h1, h2 {
+  margin: 0 0 16px;
+}
+
+p {
+  color: var(--muted);
+}
+
+a {
+  color: inherit;
+}
+
+form {
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 20px;
+  margin: 16px 0;
+}
+
+label {
+  display: block;
+  margin: 12px 0;
+}
+
+input, select, button {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font: inherit;
+}
+
+button {
+  background: var(--dominant);
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+
+thead th {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+@media (max-width: 720px) {
+  main {
+    padding: 32px 16px;
+  }
+}
