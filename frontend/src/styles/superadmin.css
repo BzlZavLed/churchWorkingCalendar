@@ -219,6 +219,13 @@ tbody td {
   margin: 0 auto 16px;
 }
 
+.auth-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
 .calendar-tools .form-select {
   min-width: 0;
 }

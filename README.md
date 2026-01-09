@@ -31,9 +31,10 @@ Church Working Calendar is a scheduling and approval platform for church departm
 
 ## Public Feed
 
-- JSON feed: `GET /api/public/events`
-- ICS feed: `GET /api/public/events.ics`
-- Example subscription URL: `https://www.mychurchadmin.net/api/public/events.ics`
+- JSON feed: `GET /api/public/churches/{slug}/events`
+- ICS feed: `GET /api/public/churches/{slug}/events.ics`
+- Legacy (requires `church_id` query): `GET /api/public/events?church_id=...`
+- Example subscription URL: `https://www.mychurchadmin.net/api/public/churches/my-church/events.ics`
 
 Only events with:
 - `final_validation = accepted`

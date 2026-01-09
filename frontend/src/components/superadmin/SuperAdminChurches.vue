@@ -84,6 +84,8 @@
               <tr>
                 <th>ID</th>
                 <th>Name</th>
+                <th>Slug</th>
+                <th>Feed URL</th>
                 <th>Invite Code</th>
                 <th class="text-end">Actions</th>
               </tr>
@@ -94,6 +96,17 @@
                   <td>{{ church.id }}</td>
                   <td>
                     <input v-model="church.name" class="form-control" type="text" />
+                  </td>
+                  <td>{{ church.slug || '—' }}</td>
+                  <td>
+                    <input
+                      v-if="church.slug"
+                      class="form-control form-control-sm"
+                      type="text"
+                      :value="`https://www.mychurchadmin.net/api/public/churches/${church.slug}/events.ics`"
+                      readonly
+                    />
+                    <span v-else>—</span>
                   </td>
                   <td>{{ church.latest_invitation?.code || '—' }}</td>
                   <td class="text-end">
@@ -124,7 +137,7 @@
                   </td>
                 </tr>
                 <tr v-if="isExpanded(church.id)">
-                  <td colspan="4">
+                  <td colspan="6">
                     <div class="row g-3">
                       <div class="col-12 col-md-6">
                         <strong>Conference Name:</strong> {{ church.conference_name || '—' }}

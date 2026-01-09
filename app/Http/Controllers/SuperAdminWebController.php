@@ -82,6 +82,7 @@ class SuperAdminWebController extends Controller
         $result = DB::transaction(function () use ($data, $request) {
             $church = Church::create([
                 'name' => $data['name'],
+                'slug' => Church::generateUniqueSlug($data['name']),
             ]);
 
             $invitation = Invitation::create([
@@ -119,9 +120,11 @@ class SuperAdminWebController extends Controller
             'name' => ['required', 'string', 'max:255'],
         ]);
 
-        $church->update([
-            'name' => $data['name'],
-        ]);
+        $payload = ['name' => $data['name']];
+        if ($data['name'] !== $church->name) {
+            $payload['slug'] = Church::generateUniqueSlug($data['name'], $church->id);
+        }
+        $church->update($payload);
 
         return redirect()->route('superadmin.churches.index');
     }

@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'registerWithInvite']);
     Route::post('login', [AuthController::class, 'login']);
+    Route::post('recover', [AuthController::class, 'recoverPassword']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
@@ -24,6 +25,8 @@ Route::prefix('auth')->group(function () {
 Route::prefix('public')->group(function () {
     Route::get('churches', [PublicCatalogController::class, 'churches']);
     Route::get('churches/{church}/departments', [PublicCatalogController::class, 'departments']);
+    Route::get('churches/{church:slug}/events', [PublicEventFeedController::class, 'index']);
+    Route::get('churches/{church:slug}/events.ics', [PublicEventFeedController::class, 'ics']);
     Route::get('invitations/{code}', [PublicCatalogController::class, 'invitation']);
     Route::get('events', [PublicEventFeedController::class, 'index']);
     Route::get('events.ics', [PublicEventFeedController::class, 'ics']);

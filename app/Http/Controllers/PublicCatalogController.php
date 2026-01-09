@@ -12,7 +12,7 @@ class PublicCatalogController extends Controller
     {
         $churches = Church::query()
             ->orderBy('name')
-            ->get(['id', 'name']);
+            ->get(['id', 'name', 'slug']);
 
         return response()->json($churches);
     }
@@ -43,7 +43,7 @@ class PublicCatalogController extends Controller
 
         return response()->json([
             'status' => $isActive ? 'active' : 'inactive',
-            'church' => $invitation->church()->select('id', 'name')->first(),
+            'church' => $invitation->church()->select('id', 'name', 'slug')->first(),
             'department_id' => $invitation->department_id,
         ]);
     }

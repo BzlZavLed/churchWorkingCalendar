@@ -21,6 +21,9 @@ export const authApi = {
     const { data } = await apiClient.post('/auth/register', payload)
     return data
   },
+  async recoverPassword(payload) {
+    await apiClient.post('/auth/recover', payload)
+  },
   async logout() {
     await apiClient.post('/auth/logout')
   },

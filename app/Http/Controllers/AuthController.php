@@ -100,6 +100,59 @@ class AuthController extends Controller
         ]);
     }
 
+    public function recoverPassword(Request $request)
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'church_code' => ['required', 'string'],
+        ]);
+
+        $user = User::where('email', $data['email'])->first();
+        if ($user === null) {
+            throw ValidationException::withMessages([
+                'email' => ['User not found.'],
+            ]);
+        }
+
+        $invitation = Invitation::where('code', $data['church_code'])->first();
+        if ($invitation === null) {
+            throw ValidationException::withMessages([
+                'church_code' => ['Invalid church code.'],
+            ]);
+        }
+
+        if ($invitation->revoked_at !== null) {
+            throw ValidationException::withMessages([
+                'church_code' => ['Invitation is revoked.'],
+            ]);
+        }
+
+        if ($invitation->expires_at !== null && $invitation->expires_at->isPast()) {
+            throw ValidationException::withMessages([
+                'church_code' => ['Invitation is expired.'],
+            ]);
+        }
+
+        if ($invitation->email !== null && $invitation->email !== $data['email']) {
+            throw ValidationException::withMessages([
+                'church_code' => ['Email does not match the invitation.'],
+            ]);
+        }
+
+        if ($invitation->church_id !== null && $user->church_id !== $invitation->church_id) {
+            throw ValidationException::withMessages([
+                'church_code' => ['Invitation does not belong to your church.'],
+            ]);
+        }
+
+        $user->update([
+            'password' => $data['password'],
+        ]);
+
+        return response()->noContent();
+    }
+
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()?->delete();

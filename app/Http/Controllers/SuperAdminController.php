@@ -40,6 +40,7 @@ class SuperAdminController extends Controller
         $result = DB::transaction(function () use ($data, $request) {
             $church = Church::create([
                 'name' => $data['name'],
+                'slug' => Church::generateUniqueSlug($data['name']),
                 'conference_name' => $data['conference_name'] ?? null,
                 'pastor_name' => $data['pastor_name'] ?? null,
                 'address' => $data['address'] ?? null,
@@ -76,13 +77,19 @@ class SuperAdminController extends Controller
             'ethnicity' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $church->update([
+        $payload = [
             'name' => $data['name'],
             'conference_name' => $data['conference_name'] ?? $church->conference_name,
             'pastor_name' => $data['pastor_name'] ?? $church->pastor_name,
             'address' => $data['address'] ?? $church->address,
             'ethnicity' => $data['ethnicity'] ?? $church->ethnicity,
-        ]);
+        ];
+
+        if ($data['name'] !== $church->name) {
+            $payload['slug'] = Church::generateUniqueSlug($data['name'], $church->id);
+        }
+
+        $church->update($payload);
 
         return response()->json($church);
     }
