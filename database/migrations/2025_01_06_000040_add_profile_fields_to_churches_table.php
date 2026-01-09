@@ -11,11 +11,40 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('churches', function (Blueprint $table) {
-            $table->string('conference_name')->nullable()->after('name');
-            $table->string('pastor_name')->nullable()->after('conference_name');
-            $table->string('address')->nullable()->after('pastor_name');
-            $table->string('ethnicity')->nullable()->after('address');
+        if (!Schema::hasTable('churches')) {
+            return;
+        }
+
+        $hasName = Schema::hasColumn('churches', 'name');
+
+        Schema::table('churches', function (Blueprint $table) use ($hasName) {
+            if (!Schema::hasColumn('churches', 'conference_name')) {
+                $column = $table->string('conference_name')->nullable();
+                if ($hasName) {
+                    $column->after('name');
+                }
+            }
+
+            if (!Schema::hasColumn('churches', 'pastor_name')) {
+                $column = $table->string('pastor_name')->nullable();
+                if ($hasName) {
+                    $column->after('conference_name');
+                }
+            }
+
+            if (!Schema::hasColumn('churches', 'address')) {
+                $column = $table->string('address')->nullable();
+                if ($hasName) {
+                    $column->after('pastor_name');
+                }
+            }
+
+            if (!Schema::hasColumn('churches', 'ethnicity')) {
+                $column = $table->string('ethnicity')->nullable();
+                if ($hasName) {
+                    $column->after('address');
+                }
+            }
         });
     }
 
@@ -24,8 +53,21 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('churches', function (Blueprint $table) {
-            $table->dropColumn(['conference_name', 'pastor_name', 'address', 'ethnicity']);
-        });
+        if (!Schema::hasTable('churches')) {
+            return;
+        }
+
+        $columns = [];
+        foreach (['conference_name', 'pastor_name', 'address', 'ethnicity'] as $column) {
+            if (Schema::hasColumn('churches', $column)) {
+                $columns[] = $column;
+            }
+        }
+
+        if ($columns) {
+            Schema::table('churches', function (Blueprint $table) use ($columns) {
+                $table->dropColumn($columns);
+            });
+        }
     }
 };
