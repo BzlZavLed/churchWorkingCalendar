@@ -10,6 +10,7 @@ use App\Http\Controllers\PublicEventFeedController;
 use App\Http\Controllers\CalendarExportController;
 use App\Http\Controllers\EventNoteController;
 use App\Http\Controllers\SuperAdminController;
+use App\Http\Controllers\Integrations\ClubCalendarController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -38,6 +39,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('events/hold', [EventController::class, 'storeHold']);
     Route::post('events/{event}/lock', [EventController::class, 'lockEvent']);
     Route::post('events/{event}/review', [EventController::class, 'review']);
+    Route::post('events/publish-accepted', [EventController::class, 'publishAccepted']);
     Route::patch('events/{event}', [EventController::class, 'update']);
     Route::delete('events/{event}', [EventController::class, 'destroy']);
     Route::post('events/{event}/notes', [EventNoteController::class, 'store']);
@@ -57,6 +59,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('invitations', [InvitationController::class, 'index']);
     Route::post('invitations', [InvitationController::class, 'store']);
     Route::post('invitations/{invitation}/revoke', [InvitationController::class, 'revoke']);
+});
+
+Route::middleware('integration.token')->prefix('integrations/clubs')->group(function () {
+    Route::get('catalog', [ClubCalendarController::class, 'catalog']);
+    Route::post('calendar', [ClubCalendarController::class, 'importCalendar']);
 });
 
 Route::middleware(['auth:sanctum', 'admin'])->group(function () {

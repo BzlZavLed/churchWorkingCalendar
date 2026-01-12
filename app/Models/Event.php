@@ -31,6 +31,12 @@ class Event extends Model
         'accepted_at',
         'publish_to_feed',
         'published_at',
+        'external_source',
+        'external_id',
+        'is_club_event',
+        'club_type',
+        'plan_name',
+        'requires_club_review',
         'created_by',
         'updated_by',
     ];
@@ -43,6 +49,8 @@ class Event extends Model
         'publish_to_feed' => 'boolean',
         'published_at' => 'datetime',
         'accepted_at' => 'datetime',
+        'is_club_event' => 'boolean',
+        'requires_club_review' => 'boolean',
     ];
 
     public function department(): BelongsTo

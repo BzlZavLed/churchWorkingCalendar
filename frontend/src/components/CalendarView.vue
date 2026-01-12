@@ -282,6 +282,21 @@
       </div>
     </section>
 
+    <section v-if="canReview" class="review-panel">
+      <div class="review-header">
+        <h2 class="review-title">{{ t.clubConflictsTitle }}</h2>
+        <p class="review-subtitle">{{ t.clubConflictsSubtitle }}</p>
+      </div>
+      <div v-if="clubConflictEvents.length === 0" class="review-empty">
+        {{ t.clubConflictsEmpty }}
+      </div>
+      <div v-else class="review-actions">
+        <button type="button" class="btn btn-outline-primary" @click="openClubConflictsModal">
+          {{ t.clubConflictsButton }} ({{ clubConflictEvents.length }})
+        </button>
+      </div>
+    </section>
+
     <EventModal
       :open="isModalOpen && canCreateEvents"
       :selected-date="selectedDate"
@@ -442,10 +457,95 @@
       </div>
     </div>
 
+    <div v-if="clubConflictsOpen" class="modal-backdrop" @click.self="closeClubConflictsModal">
+      <div class="modal-panel modal-panel--lg">
+        <header class="modal-header">
+          <h2>{{ t.clubConflictsModalTitle }}</h2>
+          <button type="button" class="modal-close" @click="closeClubConflictsModal">×</button>
+        </header>
+        <div v-if="clubConflictEvents.length === 0" class="event-details-text">
+          {{ t.clubConflictsEmpty }}
+        </div>
+        <div v-else class="event-details">
+          <ul class="history-list">
+            <li v-for="event in clubConflictEvents" :key="event.id" class="history-item">
+              <div class="history-meta">
+                <strong>{{ t.clubConflictsEvent }}:</strong> {{ event.title }}
+              </div>
+              <div class="event-details-text">
+                <strong>{{ t.clubConflictsDepartment }}:</strong> {{ event.department?.name || t.unknownDepartment }}
+              </div>
+              <div class="event-details-text">
+                <strong>{{ t.clubConflictsDate }}:</strong> {{ formatEventTime(event) }}
+              </div>
+              <div class="review-actions mt-2">
+                <button type="button" class="btn btn-outline-primary" @click="openStatusModal(event)">
+                  {{ t.clubConflictsReview }}
+                </button>
+                <button type="button" class="btn btn-outline-secondary" @click="openEventDetails(event)">
+                  {{ t.viewDetailsButton }}
+                </button>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="publishAcceptedOpen" class="modal-backdrop" @click.self="closePublishAcceptedModal">
+      <div class="modal-panel modal-panel--lg">
+        <header class="modal-header">
+          <h2>{{ t.publishAcceptedModalTitle }}</h2>
+          <button type="button" class="modal-close" @click="closePublishAcceptedModal">×</button>
+        </header>
+        <div v-if="publishAcceptedEvents.length === 0" class="event-details-text">
+          {{ t.publishAcceptedEmpty }}
+        </div>
+        <div v-else class="event-details">
+          <ul class="history-list">
+            <li
+              v-for="event in publishAcceptedEvents"
+              :key="event.id"
+              class="history-item"
+              :style="eventPillStyle(event)"
+            >
+              <div class="history-meta">
+                <strong>{{ event.title }}</strong>
+              </div>
+              <div class="event-details-text">
+                {{ formatEventTime(event) }} · {{ event.department?.name || t.unknownDepartment }}
+              </div>
+              <div class="event-details-text">
+                {{ formatDateOnly(event.start_at) }}
+              </div>
+            </li>
+          </ul>
+        </div><br><br>
+        <div class="action-row">
+          <button type="button" class="btn btn-outline-secondary" @click="closePublishAcceptedModal">
+            {{ t.publishAcceptedClose }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-outline-primary"
+            :disabled="publishAcceptedEvents.length === 0"
+            @click="publishAcceptedAll"
+          >
+            {{ t.publishAcceptedPublish }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <section v-if="canReview" class="review-panel">
       <div class="review-header">
-        <h2 class="review-title">{{ reviewScopeLabel }}</h2>
-        <p class="review-subtitle">{{ t.reviewSubtitle }}</p>
+        <div>
+          <h2 class="review-title">{{ reviewScopeLabel }}</h2>
+          <p class="review-subtitle">{{ t.reviewSubtitle }}</p>
+        </div>
+        <button type="button" class="btn btn-link" @click="openPublishAcceptedModal">
+          {{ t.publishAcceptedAll }}
+        </button>
       </div>
       <div class="review-filters row g-2">
         <label class="col-12 col-sm-6 col-lg-3">
@@ -683,6 +783,8 @@ const includeHistoryExport = ref(false)
 const unseenNotes = ref([])
 const unseenNotesOpen = ref(false)
 const unseenNotesLoading = ref(false)
+const clubConflictsOpen = ref(false)
+const publishAcceptedOpen = ref(false)
 
 const form = reactive({
   title: '',
@@ -786,6 +888,31 @@ const displayEvents = computed(() => {
     list = list.filter((event) => event.review_status === statusFilter.value)
   }
   return list
+})
+
+const clubConflictEvents = computed(() => {
+  if (!canReview.value) {
+    return []
+  }
+  return (events.value || []).filter((event) => event.requires_club_review)
+})
+
+const publishAcceptedEvents = computed(() => {
+  if (!canReview.value) {
+    return []
+  }
+  const range = reviewRange.value
+  if (!range) {
+    return []
+  }
+  return (events.value || [])
+    .filter((event) => event.final_validation === 'accepted')
+    .filter((event) => !event.publish_to_feed)
+    .filter((event) => {
+      const startAt = new Date(event.start_at)
+      return startAt >= range.start && startAt <= range.end
+    })
+    .sort((a, b) => new Date(a.start_at) - new Date(b.start_at))
 })
 
 const eventsByDate = computed(() => {
@@ -1454,6 +1581,22 @@ const closeUnseenNotesModal = () => {
   unseenNotesOpen.value = false
 }
 
+const openClubConflictsModal = () => {
+  clubConflictsOpen.value = true
+}
+
+const closeClubConflictsModal = () => {
+  clubConflictsOpen.value = false
+}
+
+const openPublishAcceptedModal = () => {
+  publishAcceptedOpen.value = true
+}
+
+const closePublishAcceptedModal = () => {
+  publishAcceptedOpen.value = false
+}
+
 const markNoteSeen = async (note) => {
   try {
     await calendarStore.markNoteSeen(note.id)
@@ -1540,6 +1683,29 @@ const submitReview = async (event, status, noteOverride = '', publishToFeedFlag 
   } catch {
     reviewErrors[event.id] = t.value.errors.reviewFailed
     reviewModalMessage.value = reviewErrors[event.id]
+    reviewModalOpen.value = true
+  }
+}
+
+const publishAcceptedAll = async () => {
+  const range = reviewRange.value
+  if (!range) {
+    return
+  }
+  if (!window.confirm(t.value.publishAcceptedConfirm)) {
+    return
+  }
+
+  try {
+    const response = await calendarStore.publishAccepted({
+      start: range.start.toISOString(),
+      end: range.end.toISOString(),
+    })
+    reviewModalMessage.value = `${t.value.publishAcceptedSuccess} (${response.updated || 0})`
+    reviewModalOpen.value = true
+    publishAcceptedOpen.value = false
+  } catch {
+    reviewModalMessage.value = t.value.publishAcceptedFailed
     reviewModalOpen.value = true
   }
 }

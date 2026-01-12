@@ -21,6 +21,10 @@ export const calendarApi = {
     const { data } = await apiClient.post(`/events/${eventId}/review`, payload)
     return data
   },
+  async publishAccepted(payload) {
+    const { data } = await apiClient.post('/events/publish-accepted', payload)
+    return data
+  },
   async addNote(eventId, payload) {
     const { data } = await apiClient.post(`/events/${eventId}/notes`, payload)
     return data

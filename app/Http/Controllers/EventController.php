@@ -324,6 +324,7 @@ class EventController extends Controller
                 'accepted_at' => $acceptedAt,
                 'publish_to_feed' => $shouldPublish,
                 'published_at' => $shouldPublish ? now() : null,
+                'requires_club_review' => false,
             ]);
 
             EventHistory::create([
@@ -357,6 +358,70 @@ class EventController extends Controller
         });
 
         return response()->json($reviewed);
+    }
+
+    public function publishAccepted(Request $request)
+    {
+        $user = $request->user();
+        if (!$user->isSuperAdmin() && !$user->isSecretary()) {
+            abort(403);
+        }
+
+        $data = $request->validate([
+            'start' => ['required', 'date'],
+            'end' => ['required', 'date', 'after:start'],
+        ]);
+
+        $start = Carbon::parse($data['start'])->utc();
+        $end = Carbon::parse($data['end'])->utc();
+
+        $events = Event::query()
+            ->whereHas('department', function ($query) use ($user) {
+                $query->where('church_id', $user->church_id);
+            })
+            ->where('final_validation', 'accepted')
+            ->whereBetween('start_at', [$start, $end])
+            ->orderBy('start_at')
+            ->get();
+
+        $updated = 0;
+
+        DB::transaction(function () use ($events, $user, &$updated) {
+            foreach ($events as $event) {
+                if ($event->publish_to_feed) {
+                    continue;
+                }
+
+                $event->update([
+                    'publish_to_feed' => true,
+                    'published_at' => now(),
+                    'updated_by' => $user->id,
+                ]);
+
+                EventHistory::create([
+                    'event_id' => $event->id,
+                    'user_id' => $user->id,
+                    'action' => 'publish_batch',
+                    'note' => 'Publicacion masiva de eventos aceptados.',
+                    'changes' => [
+                        'publish_to_feed' => [
+                            'from' => false,
+                            'to' => true,
+                        ],
+                        'published_at' => [
+                            'from' => null,
+                            'to' => $event->published_at?->toAtomString(),
+                        ],
+                    ],
+                ]);
+
+                $updated++;
+            }
+        });
+
+        return response()->json([
+            'updated' => $updated,
+        ]);
     }
 
     private function resolveDepartmentId(Request $request, ?int $departmentId): int
