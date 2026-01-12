@@ -22,7 +22,7 @@ class PublicCatalogController extends Controller
         $departments = Department::query()
             ->where('church_id', $church->id)
             ->orderBy('name')
-            ->get(['id', 'name', 'color', 'user_name']);
+            ->get(['id', 'name', 'color', 'user_name', 'is_club']);
 
         return response()->json($departments);
     }

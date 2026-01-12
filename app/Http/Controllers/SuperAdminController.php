@@ -142,6 +142,7 @@ class SuperAdminController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'color' => ['nullable', 'string', 'max:255'],
             'user_name' => ['nullable', 'string', 'max:255'],
+            'is_club' => ['nullable', 'boolean'],
         ]);
 
         $department = Department::create([
@@ -149,6 +150,7 @@ class SuperAdminController extends Controller
             'name' => $data['name'],
             'color' => $data['color'] ?? null,
             'user_name' => $data['user_name'] ?? null,
+            'is_club' => $data['is_club'] ?? false,
         ]);
 
         return response()->json($department, 201);
@@ -164,12 +166,14 @@ class SuperAdminController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'color' => ['nullable', 'string', 'max:255'],
             'user_name' => ['nullable', 'string', 'max:255'],
+            'is_club' => ['nullable', 'boolean'],
         ]);
 
         $department->update([
             'name' => $data['name'],
             'color' => $data['color'] ?? null,
             'user_name' => $data['user_name'] ?? null,
+            'is_club' => $data['is_club'] ?? $department->is_club,
         ]);
 
         return response()->json($department);

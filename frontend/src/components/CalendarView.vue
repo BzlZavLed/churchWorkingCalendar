@@ -526,9 +526,9 @@
             {{ t.publishAcceptedClose }}
           </button>
           <button
+            v-if="publishAcceptedEvents.length > 0"
             type="button"
             class="btn btn-outline-primary"
-            :disabled="publishAcceptedEvents.length === 0"
             @click="publishAcceptedAll"
           >
             {{ t.publishAcceptedPublish }}
@@ -740,7 +740,7 @@ const canEditSelectedEvent = computed(() => {
   return Boolean(user.value?.department_id) && user.value.department_id === event.department_id
 })
 const unseenCount = computed(() => unseenNotes.value.length)
-const showMonthDropdown = computed(() => isSecretary.value && !isDayView.value)
+const showMonthDropdown = computed(() => !isDayView.value)
 const departmentName = computed(() => {
   if (user.value?.role === 'secretary') {
     return translations[locale.value].appLayout.roleLabels.secretary

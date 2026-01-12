@@ -16,6 +16,11 @@ class Department extends Model
         'name',
         'user_name',
         'color',
+        'is_club',
+    ];
+
+    protected $casts = [
+        'is_club' => 'boolean',
     ];
 
     public function church(): BelongsTo

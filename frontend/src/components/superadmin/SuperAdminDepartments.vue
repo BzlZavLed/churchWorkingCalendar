@@ -37,22 +37,33 @@
             <input v-model="createForm.user_name" class="form-control" type="text" />
           </label>
         </div>
+        <div class="col-12">
+          <div class="form-check">
+            <input id="dept-club" v-model="createForm.is_club" class="form-check-input" type="checkbox" />
+            <label class="form-check-label" for="dept-club">
+              {{ t.clubLabel }}
+            </label>
+          </div>
+        </div>
       </div>
       <button class="btn btn-primary mt-3" type="submit">{{ t.create }}</button>
     </form>
 
     <div v-if="loading">{{ t.loading }}</div>
     <p v-if="error" class="text-danger">{{ error }}</p>
+    <p v-if="success" class="text-success">{{ success }}</p>
 
     <div v-if="departments.length === 0 && !loading && selectedChurchId">{{ t.empty }}</div>
-    <div v-else-if="selectedChurchId" class="table-responsive bg-white border rounded">
-      <table class="table mb-0">
+    <div v-else-if="selectedChurchId" class="bg-white border rounded">
+      <div class="table-responsive d-none d-md-block">
+        <table class="table mb-0" data-dt="off">
         <thead>
           <tr>
             <th>{{ t.columns.id }}</th>
             <th>{{ t.columns.name }}</th>
             <th>{{ t.columns.color }}</th>
             <th>{{ t.columns.userName }}</th>
+            <th>{{ t.columns.club }}</th>
             <th class="text-end">{{ t.columns.actions }}</th>
           </tr>
         </thead>
@@ -62,6 +73,9 @@
             <td><input v-model="department.name" class="form-control" type="text" /></td>
             <td><input v-model="department.color" class="form-control form-control-color" type="color" /></td>
             <td><input v-model="department.user_name" class="form-control" type="text" /></td>
+            <td>
+              <input v-model="department.is_club" class="form-check-input" type="checkbox" />
+            </td>
             <td class="text-end">
               <div class="d-flex flex-column flex-md-row justify-content-end gap-2">
                 <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateDepartment(department)">{{ t.save }}</button>
@@ -70,13 +84,46 @@
             </td>
           </tr>
         </tbody>
-      </table>
+        </table>
+      </div>
+
+      <div class="d-md-none p-3">
+        <div v-for="department in departments" :key="department.id" class="card mb-3">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <h5 class="card-title mb-1">{{ department.name }}</h5>
+                <p class="card-subtitle text-muted mb-0">#{{ department.id }}</p>
+              </div>
+              <input v-model="department.color" class="form-control form-control-color" type="color" />
+            </div>
+            <div class="mb-2">
+              <label class="form-label small mb-1">{{ t.name }}</label>
+              <input v-model="department.name" class="form-control" type="text" />
+            </div>
+            <div class="mb-2">
+              <label class="form-label small mb-1">{{ t.userName }}</label>
+              <input v-model="department.user_name" class="form-control" type="text" />
+            </div>
+            <div class="form-check mb-3">
+              <input :id="`dept-club-${department.id}`" v-model="department.is_club" class="form-check-input" type="checkbox" />
+              <label class="form-check-label" :for="`dept-club-${department.id}`">
+                {{ t.clubLabel }}
+              </label>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+              <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateDepartment(department)">{{ t.save }}</button>
+              <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteDepartment(department)">{{ t.delete }}</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { superAdminApi } from '../../services/superAdminApi'
 import { useUiStore } from '../../stores/uiStore'
 import { storeToRefs } from 'pinia'
@@ -87,6 +134,8 @@ const selectedChurchId = ref('')
 const departments = ref([])
 const loading = ref(false)
 const error = ref('')
+const success = ref('')
+const successTimer = ref(null)
 const uiStore = useUiStore()
 const { locale } = storeToRefs(uiStore)
 const t = computed(() => translations[locale.value].superadmin.departments)
@@ -96,6 +145,7 @@ const createForm = reactive({
   name: '',
   color: '',
   user_name: '',
+  is_club: false,
 })
 
 const loadChurches = async () => {
@@ -110,6 +160,7 @@ const loadDepartments = async () => {
   }
   loading.value = true
   error.value = ''
+  success.value = ''
   try {
     departments.value = await superAdminApi.listDepartments(selectedChurchId.value)
   } catch {
@@ -119,21 +170,36 @@ const loadDepartments = async () => {
   }
 }
 
+const setSuccessMessage = () => {
+  success.value = locale.value === 'es' ? 'Guardado correctamente.' : 'Saved successfully.'
+  if (successTimer.value) {
+    clearTimeout(successTimer.value)
+  }
+  successTimer.value = setTimeout(() => {
+    success.value = ''
+    successTimer.value = null
+  }, 3000)
+}
+
 const createDepartment = async () => {
   if (!selectedChurchId.value) {
     return
   }
   error.value = ''
+  success.value = ''
   try {
     const payload = {
       ...createForm,
       color: createForm.color || null,
       user_name: createForm.user_name || null,
+      is_club: Boolean(createForm.is_club),
     }
     await superAdminApi.createDepartment(selectedChurchId.value, payload)
     createForm.name = ''
     createForm.color = ''
     createForm.user_name = ''
+    createForm.is_club = false
+    setSuccessMessage()
     await loadDepartments()
   } catch {
     error.value = t.value.createError
@@ -145,12 +211,15 @@ const updateDepartment = async (department) => {
     return
   }
   error.value = ''
+  success.value = ''
   try {
     await superAdminApi.updateDepartment(selectedChurchId.value, department.id, {
       name: department.name,
       color: department.color || null,
       user_name: department.user_name || null,
+      is_club: Boolean(department.is_club),
     })
+    setSuccessMessage()
   } catch {
     error.value = t.value.updateError
   }
@@ -161,9 +230,11 @@ const deleteDepartment = async (department) => {
     return
   }
   error.value = ''
+  success.value = ''
   try {
     await superAdminApi.deleteDepartment(selectedChurchId.value, department.id)
     await loadDepartments()
+    setSuccessMessage()
   } catch {
     error.value = t.value.deleteError
   }
@@ -171,5 +242,11 @@ const deleteDepartment = async (department) => {
 
 onMounted(async () => {
   await loadChurches()
+})
+
+onUnmounted(() => {
+  if (successTimer.value) {
+    clearTimeout(successTimer.value)
+  }
 })
 </script>

@@ -7,6 +7,7 @@ use App\Models\Church;
 use App\Models\Department;
 use App\Models\Event;
 use App\Models\EventHistory;
+use App\Models\Invitation;
 use App\Models\Objective;
 use App\Models\User;
 use Carbon\Carbon;
@@ -18,31 +19,49 @@ class ClubCalendarController extends Controller
     public function catalog(Request $request)
     {
         $data = $request->validate([
-            'church_slug' => ['required', 'string'],
+            'invite_code' => ['required', 'string'],
         ]);
 
-        $church = Church::query()
-            ->where('slug', $data['church_slug'])
-            ->firstOrFail();
+        $invitation = Invitation::query()
+            ->where('code', $data['invite_code'])
+            ->first();
+
+        if (!$invitation) {
+            return response()->json(['status' => 'not_found'], 404);
+        }
+
+        $isActive = $invitation->revoked_at === null
+            && ($invitation->expires_at === null || $invitation->expires_at->isFuture())
+            && $invitation->uses_count < $invitation->max_uses;
+
+        if (!$isActive) {
+            return response()->json(['status' => 'inactive'], 403);
+        }
+
+        $church = $invitation->church()->firstOrFail();
 
         $departments = Department::query()
             ->where('church_id', $church->id)
+            ->where('is_club', true)
             ->orderBy('name')
-            ->get(['id', 'name', 'color', 'user_name']);
+            ->get(['id', 'name', 'color', 'user_name', 'is_club']);
 
         $objectives = Objective::query()
             ->whereHas('department', function ($query) use ($church) {
                 $query->where('church_id', $church->id);
             })
+            ->whereIn('department_id', $departments->pluck('id'))
             ->orderBy('name')
             ->get(['id', 'department_id', 'name', 'description', 'evaluation_metrics']);
 
         return response()->json([
+            'status' => 'active',
             'church' => [
                 'id' => $church->id,
                 'name' => $church->name,
                 'slug' => $church->slug,
             ],
+            'church_slug' => $church->slug,
             'departments' => $departments,
             'objectives' => $objectives,
         ]);
