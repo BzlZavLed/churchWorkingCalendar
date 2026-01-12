@@ -32,7 +32,7 @@ class InvitationController extends Controller
         $data = $request->validate([
             'church_id' => ['nullable', 'exists:churches,id'],
             'department_id' => ['nullable', 'exists:departments,id'],
-            'role' => ['nullable', 'in:admin,manager,member,secretary'],
+            'role' => ['nullable', 'in:admin,member,secretary'],
             'email' => ['nullable', 'email'],
             'expires_at' => ['nullable', 'date'],
             'max_uses' => ['nullable', 'integer', 'min:1'],

@@ -4,9 +4,6 @@
       <div class="row">
         <div class="col-12 col-lg-4">
           <h1 class="mb-1">{{ t.title }}</h1>
-          <p v-if="user" class="mb-0 text-muted small">
-            {{ t.welcome }}, {{ user.name }}. {{ t.department }}: {{ departmentName }}
-          </p>
         </div>
       </div>
       <div class="row" id="filters">

@@ -7,6 +7,12 @@
       <div class="app-sidebar-inner">
         <img :src="logoUrl" alt="Logo" class="login-logo" />
 
+        <div v-if="authStore.isAuthenticated && authStore.user" class="sidebar-user">
+          <div class="sidebar-user-name">{{ authStore.user.name }}</div>
+          <div class="sidebar-user-role">{{ roleLabel }}</div>
+          <div v-if="departmentLabel" class="sidebar-user-dept">{{ departmentLabel }}</div>
+        </div>
+
         <h2 v-if="authStore.isAuthenticated" class="app-sidebar-title">{{ t.navigation }}</h2>
 
         <nav v-if="authStore.isAuthenticated && authStore.user?.role === 'superadmin'">
@@ -27,6 +33,9 @@
             </li>
             <li v-if="authStore.user?.role !== 'secretary'">
               <router-link to="/objectives">{{ t.objectives }}</router-link>
+            </li>
+            <li v-if="authStore.user?.role === 'admin'">
+              <router-link to="/admin/users">{{ t.users }}</router-link>
             </li>
           </ul>
         </nav>
@@ -76,6 +85,13 @@ const translations = {
     users: 'Usuarios',
     reports: 'Reportes',
     logout: 'Salir',
+    departmentLabel: 'Departamento',
+    roleLabels: {
+      superadmin: 'Superadmin',
+      admin: 'Administrador',
+      member: 'Miembro',
+      secretary: 'Secretaria',
+    },
   },
   en: {
     navigation: 'Navigation',
@@ -87,10 +103,29 @@ const translations = {
     users: 'Users',
     reports: 'Reports',
     logout: 'Logout',
+    departmentLabel: 'Department',
+    roleLabels: {
+      superadmin: 'Superadmin',
+      admin: 'Admin',
+      member: 'Member',
+      secretary: 'Secretary',
+    },
   },
 }
 
 const t = computed(() => translations[locale.value] || translations.es)
+const roleLabel = computed(() => {
+  const role = authStore.user?.role
+  if (!role) {
+    return ''
+  }
+  return t.value.roleLabels?.[role] || role
+})
+
+const departmentLabel = computed(() => {
+  const dept = authStore.user?.department?.name
+  return dept ? `${t.value.departmentLabel}: ${dept}` : ''
+})
 
 watch(locale, (next) => {
   if (next) {

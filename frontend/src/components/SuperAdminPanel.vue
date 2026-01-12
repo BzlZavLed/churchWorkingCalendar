@@ -11,7 +11,6 @@
         Initial Invite Role
         <select v-model="form.invite_role">
           <option value="admin">admin</option>
-          <option value="manager">manager</option>
           <option value="member">member</option>
         </select>
       </label>

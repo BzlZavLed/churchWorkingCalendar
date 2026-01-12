@@ -73,7 +73,7 @@ class SuperAdminWebController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'invite_role' => ['nullable', 'in:admin,manager,member,secretary'],
+            'invite_role' => ['nullable', 'in:admin,member,secretary'],
             'invite_email' => ['nullable', 'email'],
             'invite_expires_at' => ['nullable', 'date'],
             'invite_max_uses' => ['nullable', 'integer', 'min:1'],
@@ -141,7 +141,7 @@ class SuperAdminWebController extends Controller
     public function generateInvite(Request $request, Church $church)
     {
         $data = $request->validate([
-            'invite_role' => ['nullable', 'in:admin,manager,member,secretary'],
+            'invite_role' => ['nullable', 'in:admin,member,secretary'],
             'invite_email' => ['nullable', 'email'],
             'invite_expires_at' => ['nullable', 'date'],
             'invite_max_uses' => ['nullable', 'integer', 'min:1'],

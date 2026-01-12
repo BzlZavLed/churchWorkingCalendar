@@ -5,6 +5,7 @@ import LoginForm from '../components/LoginForm.vue'
 import RegisterWithInvite from '../components/RegisterWithInvite.vue'
 import ObjectivesView from '../components/ObjectivesView.vue'
 import ReportsView from '../components/ReportsView.vue'
+import AdminUsers from '../components/admin/AdminUsers.vue'
 import SuperAdminLogin from '../components/superadmin/SuperAdminLogin.vue'
 import SuperAdminChurches from '../components/superadmin/SuperAdminChurches.vue'
 import SuperAdminDepartments from '../components/superadmin/SuperAdminDepartments.vue'
@@ -17,6 +18,7 @@ const routes = [
   { path: '/calendar', component: CalendarView, meta: { requiresAuth: true } },
   { path: '/objectives', component: ObjectivesView, meta: { requiresAuth: true } },
   { path: '/reports', component: ReportsView, meta: { requiresAuth: true } },
+  { path: '/admin/users', component: AdminUsers, meta: { requiresAuth: true, adminOnly: true } },
   { path: '/superadmin', redirect: '/superadmin/churches' },
   { path: '/superadmin/login', component: SuperAdminLogin, meta: { guestOnly: true, noLayout: true } },
   { path: '/superadmin/churches', component: SuperAdminChurches, meta: { requiresAuth: true, superadminOnly: true } },
@@ -48,6 +50,10 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.superadminOnly && authStore.user?.role !== 'superadmin') {
+    return '/calendar'
+  }
+
+  if (to.meta.adminOnly && !['admin', 'superadmin'].includes(authStore.user?.role || '')) {
     return '/calendar'
   }
 

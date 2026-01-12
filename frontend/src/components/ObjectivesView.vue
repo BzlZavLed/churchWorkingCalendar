@@ -63,38 +63,136 @@
     <p v-if="error" class="text-danger">{{ error }}</p>
 
     <div v-if="filteredObjectives.length === 0 && !loading">{{ t.messages.empty }}</div>
-    <div v-else class="table-responsive bg-white border rounded">
-      <table class="table mb-0" data-dt="off">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th v-if="showDepartmentColumn">{{ t.fields.department }}</th>
-            <th>{{ t.fields.name }}</th>
-            <th>{{ t.fields.description }}</th>
-            <th>{{ t.fields.metrics }}</th>
-            <th class="text-end">{{ t.labels.actions }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="objective in filteredObjectives" :key="objective.id">
-            <td>{{ objective.id }}</td>
-            <td v-if="showDepartmentColumn">{{ objective.department?.name || '—' }}</td>
-            <td><input v-model="objective.name" class="form-control" type="text" /></td>
-            <td><textarea v-model="objective.description" class="form-control" rows="2"></textarea></td>
-            <td><textarea v-model="objective.evaluation_metrics" class="form-control" rows="2"></textarea></td>
-            <td class="text-end">
-              <div class="d-flex flex-wrap justify-content-end gap-2">
-                <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateObjective(objective)">
-                  {{ t.labels.save }}
-                </button>
-                <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteObjective(objective)">
-                  {{ t.labels.delete }}
-                </button>
+    <div v-else class="objectives-list bg-white border rounded p-3">
+      <div class="row g-2 align-items-center mb-3">
+        <div class="col-12 col-md-6">
+          <label class="form-label mb-0 w-100">
+            <span class="d-block small mb-1">{{ t.labels.filter }}</span>
+            <input v-model="filterText" class="form-control" type="search" :placeholder="t.labels.filterPlaceholder" />
+          </label>
+        </div>
+      </div>
+
+      <div class="table-responsive d-none d-md-block">
+        <table class="table table-sm align-middle mb-0 objectives-table" data-dt="off">
+          <thead>
+            <tr>
+              <th>ID</th>
+            <th v-if="showDepartmentColumn">
+              <button class="table-sort" type="button" @click="toggleSort('department')">
+                {{ t.fields.department }}
+                <span v-if="sortKey === 'department'">{{ sortDir === 'asc' ? '▲' : '▼' }}</span>
+              </button>
+            </th>
+              <th>{{ t.fields.name }}</th>
+              <th>{{ t.fields.description }}</th>
+              <th>{{ t.fields.metrics }}</th>
+              <th class="text-end">{{ t.labels.actions }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="objective in paginatedObjectives" :key="objective.id">
+              <td>{{ objective.id }}</td>
+              <td v-if="showDepartmentColumn">
+                <span
+                  class="dept-pill"
+                  :style="{
+                    backgroundColor: objective.department?.color || '#cfd4da',
+                    color: textColorForBg(objective.department?.color),
+                  }"
+                >
+                  {{ objective.department?.name || '—' }}
+                </span>
+              </td>
+              <td><input v-model="objective.name" class="form-control" type="text" /></td>
+              <td><textarea v-model="objective.description" class="form-control" rows="2"></textarea></td>
+              <td><textarea v-model="objective.evaluation_metrics" class="form-control" rows="2"></textarea></td>
+              <td class="text-end">
+                <div class="d-flex flex-wrap justify-content-end gap-2">
+                  <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateObjective(objective)">
+                    {{ t.labels.save }}
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteObjective(objective)">
+                    {{ t.labels.delete }}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="d-md-none">
+        <div v-for="objective in paginatedObjectives" :key="objective.id" class="card mb-3">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <h5 class="card-title mb-1">{{ objective.name }}</h5>
+                <p class="card-subtitle text-muted mb-0">#{{ objective.id }}</p>
               </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              <span
+                v-if="showDepartmentColumn"
+                class="dept-badge"
+                :style="{
+                  backgroundColor: objective.department?.color || '#cfd4da',
+                  color: textColorForBg(objective.department?.color),
+                }"
+              >
+                {{ objective.department?.name || '—' }}
+              </span>
+            </div>
+            <div class="mb-2">
+              <label class="form-label small mb-1">{{ t.fields.description }}</label>
+              <textarea v-model="objective.description" class="form-control" rows="2"></textarea>
+            </div>
+            <div class="mb-2">
+              <label class="form-label small mb-1">{{ t.fields.metrics }}</label>
+              <textarea v-model="objective.evaluation_metrics" class="form-control" rows="2"></textarea>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small mb-1">{{ t.fields.name }}</label>
+              <input v-model="objective.name" class="form-control" type="text" />
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+              <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateObjective(objective)">
+                {{ t.labels.save }}
+              </button>
+              <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteObjective(objective)">
+                {{ t.labels.delete }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex flex-column flex-md-row align-items-center justify-content-between gap-2 mt-3">
+        <div class="text-muted small">
+          {{ t.labels.page }} {{ currentPage }} / {{ totalPages }}
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-outline-secondary btn-sm" type="button" :disabled="currentPage === 1" @click="goPrev">
+            {{ t.labels.prev }}
+          </button>
+          <button
+            v-for="page in totalPages"
+            :key="page"
+            class="btn btn-outline-secondary btn-sm"
+            :class="{ active: currentPage === page }"
+            type="button"
+            @click="goToPage(page)"
+          >
+            {{ page }}
+          </button>
+          <button
+            class="btn btn-outline-secondary btn-sm"
+            type="button"
+            :disabled="currentPage === totalPages"
+            @click="goNext"
+          >
+            {{ t.labels.next }}
+          </button>
+        </div>
+      </div>
     </div>
   </section>
 </template>
@@ -126,6 +224,11 @@ const translations = {
       create: 'Crear',
       save: 'Guardar',
       delete: 'Eliminar',
+      filter: 'Filtrar',
+      filterPlaceholder: 'Buscar por objetivo, departamento o descripcion',
+      page: 'Pagina',
+      prev: 'Anterior',
+      next: 'Siguiente',
     },
     messages: {
       loading: 'Cargando objetivos...',
@@ -152,6 +255,11 @@ const translations = {
       create: 'Create',
       save: 'Save',
       delete: 'Delete',
+      filter: 'Filter',
+      filterPlaceholder: 'Search by objective, department, or description',
+      page: 'Page',
+      prev: 'Previous',
+      next: 'Next',
     },
     messages: {
       loading: 'Loading objectives...',
@@ -172,12 +280,17 @@ const departments = ref([])
 const loading = ref(false)
 const error = ref('')
 const isActive = ref(true)
+const filterText = ref('')
+const currentPage = ref(1)
+const pageSize = 10
+const sortKey = ref('department')
+const sortDir = ref('asc')
 
 const canChooseDepartment = computed(() =>
-  ['superadmin', 'secretary'].includes(authStore.user?.role || '')
+  ['superadmin', 'secretary', 'admin'].includes(authStore.user?.role || '')
 )
 const showDepartmentColumn = computed(() =>
-  ['superadmin', 'secretary'].includes(authStore.user?.role || '')
+  ['superadmin', 'secretary', 'admin'].includes(authStore.user?.role || '')
 )
 
 const createForm = reactive({
@@ -190,12 +303,105 @@ const createForm = reactive({
 const filteredObjectives = computed(() => {
   const list = objectives.value || []
   const role = authStore.user?.role
-  if (role === 'member' || role === 'admin') {
+  const term = filterText.value.trim().toLowerCase()
+  if (role === 'member') {
     const deptId = authStore.user?.department_id
-    return list.filter((item) => item.department_id === deptId)
+    return list
+      .filter((item) => item.department_id === deptId)
+      .filter((item) => matchesFilter(item, term))
+      .sort((a, b) => compareObjectives(a, b))
   }
   return list
+    .filter((item) => matchesFilter(item, term))
+    .sort((a, b) => compareObjectives(a, b))
 })
+
+const totalPages = computed(() => {
+  const count = filteredObjectives.value.length
+  return Math.max(1, Math.ceil(count / pageSize))
+})
+
+const paginatedObjectives = computed(() => {
+  const start = (currentPage.value - 1) * pageSize
+  return filteredObjectives.value.slice(start, start + pageSize)
+})
+
+const matchesFilter = (item, term) => {
+  if (!term) {
+    return true
+  }
+  const haystack = [
+    item.name,
+    item.description,
+    item.evaluation_metrics,
+    item.department?.name,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  return haystack.includes(term)
+}
+
+const compareObjectives = (a, b) => {
+  if (sortKey.value !== 'department') {
+    return 0
+  }
+  const nameA = (a.department?.name || '').toLowerCase()
+  const nameB = (b.department?.name || '').toLowerCase()
+  if (nameA === nameB) {
+    return 0
+  }
+  const dir = sortDir.value === 'asc' ? 1 : -1
+  return nameA > nameB ? dir : -dir
+}
+
+const toggleSort = (key) => {
+  if (sortKey.value === key) {
+    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
+    return
+  }
+  sortKey.value = key
+  sortDir.value = 'asc'
+}
+
+const textColorForBg = (color) => {
+  if (!color) {
+    return '#111111'
+  }
+  const hex = color.trim()
+  if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex)) {
+    return '#111111'
+  }
+  let normalized = hex.slice(1)
+  if (normalized.length === 3) {
+    normalized = normalized
+      .split('')
+      .map((ch) => ch + ch)
+      .join('')
+  }
+  const intValue = Number.parseInt(normalized, 16)
+  const r = (intValue >> 16) & 255
+  const g = (intValue >> 8) & 255
+  const b = intValue & 255
+  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
+  return luminance > 0.7 ? '#111111' : '#ffffff'
+}
+
+const goToPage = (page) => {
+  if (page < 1 || page > totalPages.value) {
+    return
+  }
+  currentPage.value = page
+}
+
+const goPrev = () => {
+  goToPage(currentPage.value - 1)
+}
+
+const goNext = () => {
+  goToPage(currentPage.value + 1)
+}
 
 const loadDepartments = async () => {
   if (!authStore.user?.church_id) {
@@ -214,6 +420,7 @@ const loadObjectives = async () => {
       return
     }
     objectives.value = Array.isArray(data) ? data.map((item) => ({ ...item })) : []
+    currentPage.value = 1
   } catch {
     if (!isActive.value) {
       return
@@ -318,4 +525,17 @@ watch(locale, (next) => {
     localStorage.setItem(LOCALE_KEY, next)
   }
 })
+
+watch(filterText, () => {
+  currentPage.value = 1
+})
+
+watch(
+  () => filteredObjectives.value.length,
+  () => {
+    if (currentPage.value > totalPages.value) {
+      currentPage.value = totalPages.value
+    }
+  }
+)
 </script>

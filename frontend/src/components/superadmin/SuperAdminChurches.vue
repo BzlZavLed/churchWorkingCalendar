@@ -47,7 +47,6 @@
               Initial Invite Role
               <select v-model="createForm.invite_role" class="form-select">
                 <option value="admin">admin</option>
-                <option value="manager">manager</option>
                 <option value="member">member</option>
                 <option value="secretary">secretary</option>
               </select>

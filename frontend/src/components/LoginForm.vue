@@ -1,49 +1,80 @@
 <template>
-  <section>
-    <h1>Login</h1>
-    <form v-if="!showRecovery" @submit.prevent="submit">
-      <label>
-        Email
-        <input v-model="form.email" type="email" required />
-      </label>
-      <label>
-        Password
-        <input v-model="form.password" type="password" required />
-      </label>
-      <button type="submit">Login</button>
-    </form>
-    <form v-else @submit.prevent="recover">
-      <label>
-        Email
-        <input v-model="recovery.email" type="email" required />
-      </label>
-      <label>
-        Church Code
-        <input v-model="recovery.church_code" type="text" required />
-      </label>
-      <label>
-        New Password
-        <input v-model="recovery.password" type="password" required />
-      </label>
-      <label>
-        Confirm Password
-        <input v-model="recovery.password_confirmation" type="password" required />
-      </label>
-      <button type="submit">Reset Password</button>
-    </form>
-    <div class="auth-actions">
-      <button class="btn-accent" type="button" @click="toggleRecovery">
-        {{ showRecovery ? 'Back to Login' : 'Forgot password?' }}
-      </button>
-      <button v-if="!showRecovery" class="btn-accent" type="button" @click="goToRegister">Register</button>
-    </div>
-    <p v-if="notice">{{ notice }}</p>
-    <p v-if="error">{{ error }}</p>
-  </section>
+  <main class="min-vh-100">
+   
+
+    <section class="container py-4">
+      <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-5">
+          <div class="card shadow-sm">
+            <div class="card-body p-4">
+              <h1 class="h4 mb-3 text-center">{{ showRecovery ? 'Recuperar contrasena' : 'Calendario de trabajo' }}</h1>
+
+              <form v-if="!showRecovery" @submit.prevent="submit">
+                <div class="mb-3">
+                  <label class="form-label">
+                    Email
+                    <input v-model="form.email" class="form-control" type="email" required />
+                  </label>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">
+                    Password
+                    <input v-model="form.password" class="form-control" type="password" required />
+                  </label>
+                </div>
+                <button class="btn btn-primary w-100" type="submit">Login</button>
+              </form>
+
+              <form v-else @submit.prevent="recover">
+                <div class="mb-3">
+                  <label class="form-label">
+                    Email
+                    <input v-model="recovery.email" class="form-control" type="email" required />
+                  </label>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">
+                    Church Code
+                    <input v-model="recovery.church_code" class="form-control" type="text" required />
+                  </label>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">
+                    New Password
+                    <input v-model="recovery.password" class="form-control" type="password" required />
+                  </label>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">
+                    Confirm Password
+                    <input v-model="recovery.password_confirmation" class="form-control" type="password" required />
+                  </label>
+                </div>
+                <button class="btn btn-primary w-100" type="submit">Reset Password</button>
+              </form>
+
+              <div class="auth-actions mt-3">
+                <button class="btn btn-outline-secondary" type="button" @click="toggleRecovery">
+                  {{ showRecovery ? 'Back to Login' : 'Forgot password?' }}
+                </button>
+                <button v-if="!showRecovery" class="btn btn-outline-secondary" type="button" @click="goToRegister">
+                  Register
+                </button>
+              </div>
+
+              <p v-if="notice" class="alert alert-success mt-3 mb-0">{{ notice }}</p>
+              <p v-if="error" class="alert alert-danger mt-3 mb-0">{{ error }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import logoUrl from '../assets/logo.png'
+import { onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { authApi } from '../services/authApi'
@@ -121,4 +152,12 @@ const extractErrorMessage = (err) => {
 const goToRegister = async () => {
   await router.push('/register')
 }
+
+onMounted(() => {
+  document.body.classList.add('sidebar-open')
+})
+
+onUnmounted(() => {
+  document.body.classList.remove('sidebar-open')
+})
 </script>

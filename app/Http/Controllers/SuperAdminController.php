@@ -31,7 +31,7 @@ class SuperAdminController extends Controller
             'pastor_name' => ['nullable', 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:255'],
             'ethnicity' => ['nullable', 'string', 'max:255'],
-            'invite_role' => ['nullable', 'in:admin,manager,member,secretary'],
+            'invite_role' => ['nullable', 'in:admin,member,secretary'],
             'invite_email' => ['nullable', 'email'],
             'invite_expires_at' => ['nullable', 'date'],
             'invite_max_uses' => ['nullable', 'integer', 'min:1'],
@@ -106,7 +106,7 @@ class SuperAdminController extends Controller
     public function generateInvite(Request $request, Church $church)
     {
         $data = $request->validate([
-            'invite_role' => ['nullable', 'in:admin,manager,member,secretary'],
+            'invite_role' => ['nullable', 'in:admin,member,secretary'],
             'invite_email' => ['nullable', 'email'],
             'invite_expires_at' => ['nullable', 'date'],
             'invite_max_uses' => ['nullable', 'integer', 'min:1'],
@@ -202,7 +202,7 @@ class SuperAdminController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
-            'role' => ['required', 'in:admin,manager,member,secretary'],
+            'role' => ['required', 'in:admin,member,secretary'],
             'department_id' => ['nullable', 'exists:departments,id'],
         ]);
 
@@ -237,7 +237,7 @@ class SuperAdminController extends Controller
             'name' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'password' => ['nullable', 'string', 'min:8'],
-            'role' => ['sometimes', 'in:admin,manager,member,secretary'],
+            'role' => ['sometimes', 'in:admin,member,secretary'],
             'department_id' => ['nullable', 'exists:departments,id'],
         ]);
 

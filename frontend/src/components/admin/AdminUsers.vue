@@ -4,22 +4,7 @@
       <h1 class="h3 m-0">Users</h1>
     </div>
 
-    <div class="bg-white border rounded p-3 mb-4">
-      <label class="form-label">
-        Invitation Code
-        <div class="d-flex flex-column flex-md-row gap-2">
-          <input v-model="inviteCode" class="form-control" type="text" />
-          <button class="btn btn-outline-primary" type="button" @click="lookupInvite">Check Code</button>
-        </div>
-      </label>
-      <p v-if="inviteStatus === 'active'" class="text-success mb-0">
-        Invite active for: {{ inviteChurchName }}
-      </p>
-      <p v-else-if="inviteStatus === 'inactive'" class="text-danger mb-0">Invite is inactive.</p>
-      <p v-else-if="inviteStatus === 'not_found'" class="text-danger mb-0">Invite not found.</p>
-    </div>
-
-    <form v-if="selectedChurchId" class="bg-white border rounded p-4 mb-4" @submit.prevent="createUser">
+    <form class="bg-white border rounded p-4 mb-4" @submit.prevent="createUser">
       <h2 class="h5 mb-3">Create User</h2>
       <div class="row g-3">
         <div class="col-12 col-md-6">
@@ -43,11 +28,11 @@
         <div class="col-12 col-md-6">
           <label class="form-label">
             Role
-              <select v-model="createForm.role" class="form-select">
-                <option value="admin">admin</option>
-                <option value="member">member</option>
-                <option value="secretary">secretary</option>
-              </select>
+            <select v-model="createForm.role" class="form-select">
+              <option value="admin">admin</option>
+              <option value="member">member</option>
+              <option value="secretary">secretary</option>
+            </select>
           </label>
         </div>
         <div class="col-12">
@@ -68,8 +53,8 @@
     <div v-if="loading">Loading users...</div>
     <p v-if="error" class="text-danger">{{ error }}</p>
 
-    <div v-if="users.length === 0 && !loading && selectedChurchId">No users yet.</div>
-    <div v-else-if="selectedChurchId" class="bg-white border rounded p-3">
+    <div v-if="users.length === 0 && !loading">No users yet.</div>
+    <div v-else class="bg-white border rounded p-3">
       <div class="row g-2 align-items-center mb-3">
         <div class="col-12 col-md-6">
           <label class="form-label mb-0 w-100">
@@ -234,23 +219,16 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import { superAdminApi } from '../../services/superAdminApi'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { adminApi } from '../../services/adminApi'
 import { useAuthStore } from '../../stores/authStore'
-import { publicApi } from '../../services/publicApi'
 
-const route = useRoute()
-const authStore = useAuthStore()
-const selectedChurchId = ref('')
-const inviteCode = ref('')
-const inviteStatus = ref('')
-const inviteChurchName = ref('')
 const departments = ref([])
 const users = ref([])
 const loading = ref(false)
 const error = ref('')
 const filterText = ref('')
+const authStore = useAuthStore()
 const passwordModalOpen = ref(false)
 const activeUser = ref(null)
 const passwordForm = reactive({
@@ -288,14 +266,10 @@ const filteredUsers = computed(() => {
 const currentUserId = computed(() => authStore.user?.id || null)
 
 const loadUsers = async () => {
-  if (!selectedChurchId.value) {
-    users.value = []
-    return
-  }
   loading.value = true
   error.value = ''
   try {
-    users.value = await superAdminApi.listUsers(selectedChurchId.value)
+    users.value = await adminApi.listUsers()
   } catch {
     error.value = 'Unable to load users.'
   } finally {
@@ -303,60 +277,22 @@ const loadUsers = async () => {
   }
 }
 
-const loadDepartments = async (churchId) => {
-  if (!churchId) {
-    departments.value = []
-    return
-  }
+const loadDepartments = async () => {
   try {
-    departments.value = await superAdminApi.listDepartments(churchId)
+    departments.value = await adminApi.listDepartments()
   } catch {
     departments.value = []
   }
 }
 
-const lookupInvite = async () => {
-  error.value = ''
-  inviteStatus.value = ''
-  inviteChurchName.value = ''
-  selectedChurchId.value = ''
-  users.value = []
-  departments.value = []
-
-  if (!inviteCode.value) {
-    inviteStatus.value = 'not_found'
-    return
-  }
-
-  try {
-    const response = await publicApi.lookupInvitation(inviteCode.value)
-    inviteStatus.value = response.status
-    selectedChurchId.value = response.church?.id || ''
-    inviteChurchName.value = response.church?.name || ''
-    if (inviteStatus.value === 'active' && selectedChurchId.value) {
-      await loadDepartments(selectedChurchId.value)
-      await loadUsers()
-    }
-  } catch (err) {
-    if (err?.response?.status === 404) {
-      inviteStatus.value = 'not_found'
-    } else {
-      inviteStatus.value = 'inactive'
-    }
-  }
-}
-
 const createUser = async () => {
-  if (!selectedChurchId.value) {
-    return
-  }
   error.value = ''
   try {
     const payload = {
       ...createForm,
       department_id: createForm.department_id || null,
     }
-    await superAdminApi.createUser(selectedChurchId.value, payload)
+    await adminApi.createUser(payload)
     createForm.name = ''
     createForm.email = ''
     createForm.password = ''
@@ -369,12 +305,9 @@ const createUser = async () => {
 }
 
 const updateUser = async (user) => {
-  if (!selectedChurchId.value) {
-    return
-  }
   error.value = ''
   try {
-    await superAdminApi.updateUser(selectedChurchId.value, user.id, {
+    await adminApi.updateUser(user.id, {
       name: user.name,
       email: user.email,
       role: user.role,
@@ -386,12 +319,9 @@ const updateUser = async (user) => {
 }
 
 const deleteUser = async (user) => {
-  if (!selectedChurchId.value) {
-    return
-  }
   error.value = ''
   try {
-    await superAdminApi.deleteUser(selectedChurchId.value, user.id)
+    await adminApi.deleteUser(user.id)
     await loadUsers()
   } catch {
     error.value = 'Unable to delete user.'
@@ -411,12 +341,12 @@ const closePasswordModal = () => {
 }
 
 const submitPasswordUpdate = async () => {
-  if (!selectedChurchId.value || !activeUser.value || !passwordForm.password) {
+  if (!activeUser.value || !passwordForm.password) {
     return
   }
   error.value = ''
   try {
-    await superAdminApi.updateUserPassword(selectedChurchId.value, activeUser.value.id, {
+    await adminApi.updateUser(activeUser.value.id, {
       password: passwordForm.password,
     })
     closePasswordModal()
@@ -426,30 +356,8 @@ const submitPasswordUpdate = async () => {
   }
 }
 
-const normalizeInvite = (value) => {
-  if (Array.isArray(value)) {
-    return value[0] || ''
-  }
-  return value || ''
-}
-
-const applyInviteFromRoute = async (value) => {
-  const code = normalizeInvite(value)
-  if (!code) {
-    return
-  }
-  inviteCode.value = code
-  await lookupInvite()
-}
-
 onMounted(async () => {
-  await applyInviteFromRoute(route.query.invite)
+  await loadDepartments()
+  await loadUsers()
 })
-
-watch(
-  () => route.query.invite,
-  async (next) => {
-    await applyInviteFromRoute(next)
-  }
-)
 </script>

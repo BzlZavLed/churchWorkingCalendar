@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\ObjectiveController;
@@ -56,6 +57,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('invitations', [InvitationController::class, 'index']);
     Route::post('invitations', [InvitationController::class, 'store']);
     Route::post('invitations/{invitation}/revoke', [InvitationController::class, 'revoke']);
+});
+
+Route::middleware(['auth:sanctum', 'admin'])->group(function () {
+    Route::get('admin/departments', [AdminUserController::class, 'listDepartments']);
+    Route::get('admin/users', [AdminUserController::class, 'listUsers']);
+    Route::post('admin/users', [AdminUserController::class, 'storeUser']);
+    Route::put('admin/users/{user}', [AdminUserController::class, 'updateUser']);
+    Route::delete('admin/users/{user}', [AdminUserController::class, 'destroyUser']);
 });
 
 Route::middleware(['auth:sanctum', 'superadmin'])->group(function () {
