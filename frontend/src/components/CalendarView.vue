@@ -562,7 +562,7 @@
           <span class="form-label small mb-1">{{ t.filterDepartment }}</span>
           <select v-model="reviewDepartmentFilter" class="form-select">
             <option value="all">{{ t.allDepartments }}</option>
-            <option v-for="dept in departments" :key="dept.id" :value="String(dept.id)">
+            <option v-for="dept in departmentOptions" :key="dept.id" :value="String(dept.id)">
               {{ dept.name }}
             </option>
           </select>
@@ -950,6 +950,19 @@ const departmentMap = computed(() => {
   return map
 })
 
+const departmentOptions = computed(() => {
+  if (departments.value.length) {
+    return departments.value
+  }
+  const map = new Map()
+  ;(events.value || []).forEach((event) => {
+    if (event.department_id && event.department) {
+      map.set(event.department_id, event.department)
+    }
+  })
+  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name))
+})
+
 const eventColor = (event) => {
   return event.department?.color || departmentMap.value.get(event.department_id)?.color || ''
 }
@@ -1325,7 +1338,11 @@ const loadDepartments = async (churchId) => {
     departments.value = []
     return
   }
-  departments.value = await publicApi.listDepartments(churchId)
+  try {
+    departments.value = await publicApi.listDepartments(churchId)
+  } catch {
+    departments.value = []
+  }
 }
 
 const shiftPeriod = (direction) => {
