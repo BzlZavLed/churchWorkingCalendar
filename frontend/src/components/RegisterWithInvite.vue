@@ -1,65 +1,71 @@
 <template>
   <section>
-    <h1>Register With Invite</h1>
+    <h1>{{ t.title }}</h1>
     <form @submit.prevent="submit">
       <label>
-        Invitation Code
+        {{ t.code }}
         <div>
           <input v-model="form.invite_code" type="text" required /><br><br>
-      <button class="btn-accent" type="button" @click="lookupInvite">Check Code</button>
+      <button class="btn-accent" type="button" @click="lookupInvite">{{ t.check }}</button>
         </div>
       </label>
-      <p v-if="inviteStatus === 'active'">Invite active for: {{ inviteChurchName }}</p>
-      <p v-else-if="inviteStatus === 'inactive'">Invite is inactive.</p>
-      <p v-else-if="inviteStatus === 'not_found'">Invite not found.</p>
+      <p v-if="inviteStatus === 'active'">{{ t.active }} {{ inviteChurchName }}</p>
+      <p v-else-if="inviteStatus === 'inactive'">{{ t.inactive }}</p>
+      <p v-else-if="inviteStatus === 'not_found'">{{ t.notFound }}</p>
 
       <div v-if="inviteStatus === 'active'">
         <label>
-          Church
+          {{ t.church }}
           <input type="text" :value="inviteChurchName" readonly />
         </label>
         <label>
-          Department (optional)
+          {{ t.department }}
           <select v-model="form.department_id">
-            <option value="">Select...</option>
+            <option value="">{{ t.select }}</option>
             <option v-for="department in departments" :key="department.id" :value="department.id">
               {{ department.name }}
             </option>
           </select>
         </label>
         <label>
-          Name
+          {{ t.name }}
           <input v-model="form.name" type="text" required />
         </label>
         <label>
-          Email
+          {{ t.email }}
           <input v-model="form.email" type="email" required />
         </label>
         <label>
-          Password
+          {{ t.password }}
           <input v-model="form.password" type="password" required />
         </label>
         <label>
-          Confirm Password
+          {{ t.confirm }}
           <input v-model="form.password_confirmation" type="password" required />
         </label>
-        <button class="btn-accent" type="submit">Register</button>
+        <button class="btn-accent" type="submit">{{ t.submit }}</button>
       </div>
     </form>
     <p v-if="error">{{ error }}</p>
-    <p><router-link to="/login">Return to login</router-link></p>
+    <p><router-link to="/login">{{ t.back }}</router-link></p>
   </section>
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { publicApi } from '../services/publicApi'
+import { useUiStore } from '../stores/uiStore'
+import { storeToRefs } from 'pinia'
+import { translations } from '../i18n/translations'
 
 const authStore = useAuthStore()
+const uiStore = useUiStore()
+const { locale } = storeToRefs(uiStore)
 const router = useRouter()
 const error = ref('')
+const t = computed(() => translations[locale.value].register)
 const departments = ref([])
 const inviteStatus = ref('')
 const inviteChurchId = ref('')
@@ -117,7 +123,7 @@ const submit = async () => {
   error.value = ''
   try {
     if (inviteStatus.value !== 'active') {
-      error.value = 'Invitation code is not active.'
+      error.value = t.value.errorInactive
       return
     }
     const payload = {
@@ -127,7 +133,7 @@ const submit = async () => {
     await authStore.register(payload)
     await router.push('/login')
   } catch (err) {
-    error.value = 'Registration failed.'
+    error.value = t.value.errorRegister
   }
 }
 </script>

@@ -4,15 +4,7 @@
       <div class="col-12 col-md-6">
         <h1 class="h3 m-0">{{ t.title }}</h1>
       </div>
-      <div class="col-12 col-md-6">
-        <label class="d-flex align-items-center gap-2 justify-content-md-end mb-0">
-          <span class="form-label small mb-0">{{ t.labels.language }}</span>
-          <select v-model="locale" class="form-select w-auto">
-            <option value="es">Espanol</option>
-            <option value="en">English</option>
-          </select>
-        </label>
-      </div>
+      <div class="col-12 col-md-6"></div>
     </div>
 
     <form class="bg-white border rounded p-4 mb-4" @submit.prevent="createObjective">
@@ -77,13 +69,13 @@
         <table class="table table-sm align-middle mb-0 objectives-table" data-dt="off">
           <thead>
             <tr>
-              <th>ID</th>
-            <th v-if="showDepartmentColumn">
-              <button class="table-sort" type="button" @click="toggleSort('department')">
-                {{ t.fields.department }}
-                <span v-if="sortKey === 'department'">{{ sortDir === 'asc' ? '▲' : '▼' }}</span>
-              </button>
-            </th>
+              <th>{{ t.labels.id }}</th>
+              <th v-if="showDepartmentColumn">
+                <button class="table-sort" type="button" @click="toggleSort('department')">
+                  {{ t.fields.department }}
+                  <span v-if="sortKey === 'department'">{{ sortDir === 'asc' ? '▲' : '▼' }}</span>
+                </button>
+              </th>
               <th>{{ t.fields.name }}</th>
               <th>{{ t.fields.description }}</th>
               <th>{{ t.fields.metrics }}</th>
@@ -199,81 +191,20 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useAuthStore } from '../stores/authStore'
+import { useUiStore } from '../stores/uiStore'
+import { translations } from '../i18n/translations'
 import { objectiveApi } from '../services/objectiveApi'
 import { publicApi } from '../services/publicApi'
 
 const authStore = useAuthStore()
 
-const LOCALE_KEY = 'ui_locale'
-const locale = ref('es')
+const uiStore = useUiStore()
+const { locale } = storeToRefs(uiStore)
 
-const translations = {
-  es: {
-    title: 'Objetivos',
-    fields: {
-      department: 'Departamento',
-      name: 'Nombre',
-      description: 'Descripcion',
-      metrics: 'Metricas de evaluacion anual',
-    },
-    labels: {
-      language: 'Idioma',
-      selectDepartment: 'Selecciona departamento',
-      actions: 'Acciones',
-      create: 'Crear',
-      save: 'Guardar',
-      delete: 'Eliminar',
-      filter: 'Filtrar',
-      filterPlaceholder: 'Buscar por objetivo, departamento o descripcion',
-      page: 'Pagina',
-      prev: 'Anterior',
-      next: 'Siguiente',
-    },
-    messages: {
-      loading: 'Cargando objetivos...',
-      empty: 'No hay objetivos registrados.',
-      loadError: 'No se pudieron cargar los objetivos.',
-      createError: 'No se pudo crear el objetivo.',
-      updateError: 'No se pudo actualizar el objetivo.',
-      deleteError: 'No se pudo eliminar el objetivo.',
-      departmentRequired: 'El departamento es obligatorio.',
-    },
-  },
-  en: {
-    title: 'Objectives',
-    fields: {
-      department: 'Department',
-      name: 'Name',
-      description: 'Description',
-      metrics: 'End of year evaluation metrics',
-    },
-    labels: {
-      language: 'Language',
-      selectDepartment: 'Select department',
-      actions: 'Actions',
-      create: 'Create',
-      save: 'Save',
-      delete: 'Delete',
-      filter: 'Filter',
-      filterPlaceholder: 'Search by objective, department, or description',
-      page: 'Page',
-      prev: 'Previous',
-      next: 'Next',
-    },
-    messages: {
-      loading: 'Loading objectives...',
-      empty: 'No objectives yet.',
-      loadError: 'Unable to load objectives.',
-      createError: 'Unable to create objective.',
-      updateError: 'Unable to update objective.',
-      deleteError: 'Unable to delete objective.',
-      departmentRequired: 'Department is required.',
-    },
-  },
-}
+const t = computed(() => translations[locale.value].objectives)
 
-const t = computed(() => translations[locale.value] || translations.es)
 
 const objectives = ref([])
 const departments = ref([])
@@ -515,16 +446,7 @@ onUnmounted(() => {
   isActive.value = false
 })
 
-const storedLocale = localStorage.getItem(LOCALE_KEY)
-if (storedLocale && translations[storedLocale]) {
-  locale.value = storedLocale
-}
-
-watch(locale, (next) => {
-  if (next) {
-    localStorage.setItem(LOCALE_KEY, next)
-  }
-})
+// Locale is managed by the sidebar selector.
 
 watch(filterText, () => {
   currentPage.value = 1

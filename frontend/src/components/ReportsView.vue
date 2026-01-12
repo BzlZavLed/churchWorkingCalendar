@@ -4,15 +4,7 @@
       <div class="col-12 col-md-6">
         <h1 class="h3 m-0">{{ t.title }}</h1>
       </div>
-      <div class="col-12 col-md-6">
-        <label class="d-flex align-items-center gap-2 justify-content-md-end mb-0">
-          <span class="form-label small mb-0">Language</span>
-          <select v-model="locale" class="form-select w-auto">
-            <option value="es">Espanol</option>
-            <option value="en">English</option>
-          </select>
-        </label>
-      </div>
+      <div class="col-12 col-md-6"></div>
     </div>
 
     <div class="review-tabs d-flex flex-wrap gap-2 mb-3">
@@ -107,7 +99,7 @@
         <table class="table mb-0 main-table" data-dt="off">
           <thead>
             <tr>
-              <th>ID</th>
+              <th>{{ t.columns.id }}</th>
               <th>
                 <button type="button" class="table-sort" @click="setObjectiveSort('name')">
                   {{ t.columns.name }}
@@ -396,7 +388,10 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useAuthStore } from '../stores/authStore'
+import { useUiStore } from '../stores/uiStore'
+import { translations } from '../i18n/translations'
 import { objectiveApi } from '../services/objectiveApi'
 import { calendarApi } from '../services/calendarApi'
 import { publicApi } from '../services/publicApi'
@@ -406,175 +401,10 @@ import 'jspdf-autotable'
 
 const authStore = useAuthStore()
 
-const LOCALE_KEY = 'ui_locale'
-const locale = ref('es')
-const translations = {
-  es: {
-    title: 'Reportes',
-    tabs: { objectives: 'Objetivos', events: 'Eventos', notes: 'Notas' },
-    labels: {
-      department: 'Departamento',
-      objective: 'Objetivo',
-      status: 'Estado',
-      all: 'Todos',
-      includeEvents: 'Incluir eventos',
-      events: 'Eventos',
-      noEvents: 'Sin eventos',
-      show: 'Ver',
-      hide: 'Ocultar',
-      search: 'Buscar',
-      exportCsv: 'Exportar CSV',
-      exportPdf: 'Exportar PDF',
-      viewDetails: 'Ver detalles',
-      viewNotes: 'Ver notas',
-      hideNotes: 'Ocultar notas',
-    },
-    columns: {
-      name: 'Nombre',
-      department: 'Departamento',
-      description: 'Descripcion',
-      metrics: 'Metricas',
-      date: 'Fecha',
-      time: 'Hora',
-      place: 'Lugar',
-      event: 'Evento',
-      objective: 'Objetivo',
-      status: 'Estado',
-      acceptedAt: 'Fecha de votacion',
-      actions: 'Acciones',
-      note: 'Nota',
-      author: 'Autor',
-      finalStatus: 'Resultado final',
-    },
-    status: {
-      pending: 'Pendiente',
-      approved: 'Aprobado',
-      denied: 'Rechazado',
-      changes: 'Cambios solicitados',
-    },
-    messages: {
-      loadingObjectives: 'Cargando objetivos...',
-      loadingNotes: 'Cargando notas...',
-      noObjectives: 'No se encontraron objetivos.',
-      searchToLoad: 'Usa Buscar para cargar datos.',
-      loadingEvents: 'Cargando eventos...',
-      noEvents: 'No se encontraron eventos.',
-      noNotes: 'No se encontraron notas.',
-    },
-    eventDetails: {
-      title: 'Detalles del evento',
-      close: 'Cerrar',
-      department: 'Departamento',
-      objective: 'Objetivo',
-      location: 'Ubicacion',
-      status: 'Estado',
-      reviewStatus: 'Revision',
-      reviewNote: 'Nota de revision',
-      finalOutcome: 'Resultado final',
-      reviewPending: 'En revision',
-      finalOutcomeAccepted: 'Aceptado',
-      finalOutcomeRejected: 'Rechazado',
-      finalOutcomeUpdateRequested: 'Cambios solicitados',
-      start: 'Inicio',
-      end: 'Fin',
-      description: 'Descripcion',
-      historyTitle: 'Historial',
-      notesTitle: 'Notas',
-      replyButton: 'Responder',
-      replyLabel: 'Respuesta',
-      replyPlaceholder: 'Escribe una respuesta...',
-    },
-  },
-  en: {
-    title: 'Reports',
-    tabs: { objectives: 'Objectives', events: 'Events', notes: 'Notes' },
-    labels: {
-      department: 'Department',
-      objective: 'Objective',
-      status: 'Status',
-      all: 'All',
-      includeEvents: 'Include events',
-      events: 'Events',
-      noEvents: 'No events',
-      show: 'Show',
-      hide: 'Hide',
-      search: 'Search',
-      exportCsv: 'Export CSV',
-      exportPdf: 'Export PDF',
-      viewDetails: 'View details',
-      viewNotes: 'View notes',
-      hideNotes: 'Hide notes',
-    },
-    columns: {
-      name: 'Name',
-      department: 'Department',
-      description: 'Description',
-      metrics: 'Evaluation Metrics',
-      date: 'Date',
-      time: 'Time',
-      place: 'Place',
-      event: 'Event',
-      objective: 'Objective',
-      status: 'Status',
-      acceptedAt: 'Approval date',
-      actions: 'Actions',
-      note: 'Note',
-      author: 'Author',
-      finalStatus: 'Final outcome',
-    },
-    status: {
-      pending: 'Pending',
-      approved: 'Approved',
-      denied: 'Denied',
-      changes: 'Changes requested',
-    },
-    messages: {
-      loadingObjectives: 'Loading objectives...',
-      loadingNotes: 'Loading notes...',
-      noObjectives: 'No objectives found.',
-      searchToLoad: 'Use Search to load data.',
-      loadingEvents: 'Loading events...',
-      noEvents: 'No events found.',
-      noNotes: 'No notes found.',
-    },
-    eventDetails: {
-      title: 'Event details',
-      close: 'Close',
-      department: 'Department',
-      objective: 'Objective',
-      location: 'Location',
-      status: 'Status',
-      reviewStatus: 'Review',
-      reviewNote: 'Review note',
-      finalOutcome: 'Final outcome',
-      reviewPending: 'Pending review',
-      finalOutcomeAccepted: 'Accepted',
-      finalOutcomeRejected: 'Rejected',
-      finalOutcomeUpdateRequested: 'Changes requested',
-      start: 'Start',
-      end: 'End',
-      description: 'Description',
-      historyTitle: 'History',
-      notesTitle: 'Notes',
-      replyButton: 'Reply',
-      replyLabel: 'Reply',
-      replyPlaceholder: 'Write a reply...',
-    },
-  },
-}
+const uiStore = useUiStore()
+const { locale } = storeToRefs(uiStore)
+const t = computed(() => translations[locale.value].reports)
 
-const t = computed(() => translations[locale.value])
-
-const storedLocale = localStorage.getItem(LOCALE_KEY)
-if (storedLocale && translations[storedLocale]) {
-  locale.value = storedLocale
-}
-
-watch(locale, (next) => {
-  if (next) {
-    localStorage.setItem(LOCALE_KEY, next)
-  }
-})
 
 const isMember = computed(() => authStore.user?.role === 'member')
 const isAdmin = computed(() => authStore.user?.role === 'admin')
@@ -684,12 +514,12 @@ const notesByEvent = computed(() => {
 const finalOutcomeLabel = (event) => {
   const value = event?.final_validation
   if (!value) {
-    return t.value.eventDetails?.reviewPending || 'Pending review'
+    return t.value.eventDetails.reviewPending
   }
   const map = {
-    accepted: t.value.eventDetails?.finalOutcomeAccepted || 'Accepted',
-    rejected: t.value.eventDetails?.finalOutcomeRejected || 'Rejected',
-    update_requested: t.value.eventDetails?.finalOutcomeUpdateRequested || 'Changes requested',
+    accepted: t.value.eventDetails.finalOutcomeAccepted,
+    rejected: t.value.eventDetails.finalOutcomeRejected,
+    update_requested: t.value.eventDetails.finalOutcomeUpdateRequested,
   }
   return map[value] || value
 }
@@ -788,9 +618,7 @@ const fetchNotes = async () => {
     notesEvents.value = await calendarApi.fetchEvents(params)
     notesLoaded.value = true
   } catch {
-    notesError.value = locale.value === 'es'
-      ? 'No se pudieron cargar las notas.'
-      : 'Unable to load notes.'
+    notesError.value = t.value.messages.loadFailed
   } finally {
     notesLoading.value = false
   }

@@ -1,50 +1,57 @@
 <template>
   <section>
-    <h1>Superadmin: Church Registration</h1>
+    <h1>{{ t.title }}</h1>
 
     <form @submit.prevent="submit">
       <label>
-        Church Name
+        {{ t.churchName }}
         <input v-model="form.name" type="text" required />
       </label>
       <label>
-        Initial Invite Role
+        {{ t.inviteRole }}
         <select v-model="form.invite_role">
-          <option value="admin">admin</option>
-          <option value="member">member</option>
+          <option value="admin">{{ roleLabels.admin }}</option>
+          <option value="member">{{ roleLabels.member }}</option>
         </select>
       </label>
       <label>
-        Invite Email (optional)
+        {{ t.inviteEmail }}
         <input v-model="form.invite_email" type="email" />
       </label>
       <label>
-        Invite Max Uses
+        {{ t.inviteMax }}
         <input v-model.number="form.invite_max_uses" type="number" min="1" />
       </label>
       <label>
-        Invite Expires At (optional)
+        {{ t.inviteExpires }}
         <input v-model="form.invite_expires_at" type="datetime-local" />
       </label>
-      <button type="submit">Create Church & Invite</button>
+      <button type="submit">{{ t.submit }}</button>
     </form>
 
     <p v-if="error">{{ error }}</p>
 
     <div v-if="result">
-      <h2>Created</h2>
-      <p>Church: {{ result.church.name }} (ID {{ result.church.id }})</p>
-      <p>Invite Code: <strong>{{ result.invitation.code }}</strong></p>
+      <h2>{{ t.createdTitle }}</h2>
+      <p>{{ t.createdChurch }}: {{ result.church.name }} (ID {{ result.church.id }})</p>
+      <p>{{ t.inviteCode }}: <strong>{{ result.invitation.code }}</strong></p>
     </div>
   </section>
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useUiStore } from '../stores/uiStore'
 import { superAdminApi } from '../services/superAdminApi'
+import { translations } from '../i18n/translations'
 
 const error = ref('')
 const result = ref(null)
+const uiStore = useUiStore()
+const { locale } = storeToRefs(uiStore)
+const t = computed(() => translations[locale.value].superadminPanel)
+const roleLabels = computed(() => translations[locale.value].appLayout.roleLabels)
 
 const form = reactive({
   name: '',
@@ -69,7 +76,7 @@ const submit = async () => {
 
     result.value = await superAdminApi.createChurch(payload)
   } catch (err) {
-    error.value = 'Unable to create church.'
+    error.value = t.value.error
   }
 }
 </script>

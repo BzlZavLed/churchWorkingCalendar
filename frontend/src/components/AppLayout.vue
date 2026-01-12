@@ -66,54 +66,19 @@ import logoUrl from '../assets/logo.png'
 
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
-import { computed, ref, watch } from 'vue'
+import { useUiStore } from '../stores/uiStore'
+import { translations } from '../i18n/translations'
+import { computed, ref } from 'vue'
+import { storeToRefs } from 'pinia'
 
 const authStore = useAuthStore()
+const uiStore = useUiStore()
+const { locale } = storeToRefs(uiStore)
 const router = useRouter()
 const isSidebarOpen = ref(false)
-const LOCALE_KEY = 'ui_locale'
-const locale = ref(localStorage.getItem(LOCALE_KEY) || 'es')
 
-const translations = {
-  es: {
-    navigation: 'Navegacion',
-    language: 'Idioma',
-    calendar: 'Calendario',
-    objectives: 'Objetivos',
-    churches: 'Iglesias',
-    departments: 'Departamentos',
-    users: 'Usuarios',
-    reports: 'Reportes',
-    logout: 'Salir',
-    departmentLabel: 'Departamento',
-    roleLabels: {
-      superadmin: 'Superadmin',
-      admin: 'Administrador',
-      member: 'Miembro',
-      secretary: 'Secretaria',
-    },
-  },
-  en: {
-    navigation: 'Navigation',
-    language: 'Language',
-    calendar: 'Calendar',
-    objectives: 'Objectives',
-    churches: 'Churches',
-    departments: 'Departments',
-    users: 'Users',
-    reports: 'Reports',
-    logout: 'Logout',
-    departmentLabel: 'Department',
-    roleLabels: {
-      superadmin: 'Superadmin',
-      admin: 'Admin',
-      member: 'Member',
-      secretary: 'Secretary',
-    },
-  },
-}
+const t = computed(() => translations[locale.value].appLayout)
 
-const t = computed(() => translations[locale.value] || translations.es)
 const roleLabel = computed(() => {
   const role = authStore.user?.role
   if (!role) {
@@ -125,12 +90,6 @@ const roleLabel = computed(() => {
 const departmentLabel = computed(() => {
   const dept = authStore.user?.department?.name
   return dept ? `${t.value.departmentLabel}: ${dept}` : ''
-})
-
-watch(locale, (next) => {
-  if (next) {
-    localStorage.setItem(LOCALE_KEY, next)
-  }
 })
 
 const logout = async () => {

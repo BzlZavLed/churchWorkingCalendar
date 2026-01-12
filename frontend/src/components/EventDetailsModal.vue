@@ -2,53 +2,53 @@
   <div v-if="open && event" class="modal-backdrop" @click.self="$emit('close')">
     <div class="modal-panel modal-panel--lg">
       <header class="modal-header">
-        <h2>{{ labels.title }}</h2>
+        <h2>{{ resolvedLabels.title }}</h2>
         <button type="button" class="modal-close" @click="$emit('close')">×</button>
       </header>
 
       <div class="event-details">
         <p class="event-details-title">{{ event.title }}</p>
         <p v-if="event.description" class="event-details-text">
-          <strong>{{ labels.description }}:</strong> {{ event.description }}
+          <strong>{{ resolvedLabels.description }}:</strong> {{ event.description }}
         </p>
         <p class="event-details-text">
-          <strong>{{ labels.department }}:</strong> {{ event.department?.name || '—' }}
+          <strong>{{ resolvedLabels.department }}:</strong> {{ event.department?.name || '—' }}
         </p>
         <p class="event-details-text">
-          <strong>{{ labels.objective }}:</strong> {{ event.objective?.name || '—' }}
+          <strong>{{ resolvedLabels.objective }}:</strong> {{ event.objective?.name || '—' }}
         </p>
         <p class="event-details-text">
-          <strong>{{ labels.location }}:</strong> {{ event.location || '—' }}
+          <strong>{{ resolvedLabels.location }}:</strong> {{ event.location || '—' }}
         </p>
         <template v-if="showStatusDetails">
           <p class="event-details-text">
-            <strong>{{ labels.status }}:</strong> {{ statusLabel }}
+            <strong>{{ resolvedLabels.status }}:</strong> {{ statusLabel }}
           </p>
           <p class="event-details-text">
-            <strong>{{ labels.reviewStatus }}:</strong> {{ reviewStatusLabel }}
+            <strong>{{ resolvedLabels.reviewStatus }}:</strong> {{ reviewStatusLabel }}
           </p>
           <p class="event-details-text">
-            <strong>{{ labels.finalOutcome }}:</strong>
+            <strong>{{ resolvedLabels.finalOutcome }}:</strong>
             <span class="status-pill" :class="finalOutcomeClass">{{ finalOutcomeLabel }}</span>
           </p>
           <p v-if="event.review_note" class="event-details-text">
-            <strong>{{ labels.reviewNote }}:</strong> {{ event.review_note }}
+            <strong>{{ resolvedLabels.reviewNote }}:</strong> {{ event.review_note }}
           </p>
         </template>
         <p v-else class="event-details-text">
-          <strong>{{ labels.finalOutcome }}:</strong>
+          <strong>{{ resolvedLabels.finalOutcome }}:</strong>
           <span class="status-pill" :class="finalOutcomeClass">{{ finalOutcomeLabel }}</span>
         </p>
         <p class="event-details-text">
-          <strong>{{ labels.start }}:</strong> {{ formatDate(event.start_at) }}
+          <strong>{{ resolvedLabels.start }}:</strong> {{ formatDate(event.start_at) }}
         </p>
         <p class="event-details-text">
-          <strong>{{ labels.end }}:</strong> {{ formatDate(event.end_at) }}
+          <strong>{{ resolvedLabels.end }}:</strong> {{ formatDate(event.end_at) }}
         </p>
       </div>
 
       <div v-if="visibleNotes.length" class="event-details mt-3">
-        <h3 class="history-title">{{ labels.notesTitle }}</h3>
+        <h3 class="history-title">{{ resolvedLabels.notesTitle }}</h3>
         <div class="event-details-scroll">
           <ul class="history-list">
             <li v-for="note in visibleNotes" :key="note.id" class="history-item note-item" :class="noteClass(note)">
@@ -64,7 +64,7 @@
             v-model="replyDraft"
             class="form-control"
             rows="3"
-            :placeholder="labels.replyPlaceholder"
+            :placeholder="resolvedLabels.replyPlaceholder"
           ></textarea>
           <button
             type="button"
@@ -72,13 +72,13 @@
             :disabled="!replyDraft || !replyDraft.trim()"
             @click="submitReply"
           >
-            {{ labels.replyButton }}
+            {{ resolvedLabels.replyButton }}
           </button>
         </div>
       </div>
 
       <div v-if="historyEntries.length" class="event-details mt-3">
-        <h3 class="history-title">{{ labels.historyTitle }}</h3>
+        <h3 class="history-title">{{ resolvedLabels.historyTitle }}</h3>
         <div class="event-details-scroll">
           <ul class="history-list">
             <li v-for="entry in historyEntries" :key="entry.id" class="history-item">
@@ -100,9 +100,9 @@
           class="btn btn-outline-secondary"
           @click="$emit('edit-event')"
         >
-          {{ labels.editEvent }}
+          {{ resolvedLabels.editEvent }}
         </button>
-        <button type="button" @click="$emit('close')">{{ labels.close }}</button>
+        <button type="button" @click="$emit('close')">{{ resolvedLabels.close }}</button>
       </div>
     </div>
   </div>
@@ -110,6 +110,9 @@
 
 <script setup>
 import { computed, ref } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useUiStore } from '../stores/uiStore'
+import { translations } from '../i18n/translations'
 const emit = defineEmits(['close', 'reply-note', 'edit-event'])
 
 const props = defineProps({
@@ -143,40 +146,15 @@ const props = defineProps({
   },
   labels: {
     type: Object,
-    default: () => ({
-      title: 'Event details',
-      close: 'Close',
-      department: 'Department',
-      objective: 'Objective',
-      status: 'Status',
-      reviewStatus: 'Review',
-      reviewNote: 'Review note',
-      finalOutcome: 'Final outcome',
-      reviewPending: 'Pending review',
-      statusHold: 'Hold',
-      statusLocked: 'Locked',
-      statusCancelled: 'Cancelled',
-      reviewApproved: 'Approved',
-      reviewDenied: 'Denied',
-      reviewChanges: 'Changes requested',
-      finalOutcomeAccepted: 'Accepted',
-      finalOutcomeRejected: 'Rejected',
-      finalOutcomeUpdateRequested: 'Changes requested',
-      editEvent: 'Edit event',
-      location: 'Location',
-      start: 'Start',
-      end: 'End',
-      description: 'Description',
-      historyTitle: 'History',
-      notesTitle: 'Notes',
-      replyButton: 'Reply',
-      replyLabel: 'Reply',
-      replyPlaceholder: 'Write a reply...',
-    }),
+    default: null,
   },
 })
 
 const replyDraft = ref('')
+const uiStore = useUiStore()
+const { locale } = storeToRefs(uiStore)
+const fallbackLabels = computed(() => translations[locale.value].calendar.eventDetails)
+const resolvedLabels = computed(() => props.labels || fallbackLabels.value)
 
 const visibleNotes = computed(() => props.notes || [])
 
@@ -191,9 +169,9 @@ const statusLabel = computed(() => {
     return '—'
   }
   const map = {
-    hold: props.labels.statusHold || 'Hold',
-    locked: props.labels.statusLocked || 'Locked',
-    cancelled: props.labels.statusCancelled || 'Cancelled',
+    hold: resolvedLabels.value.statusHold,
+    locked: resolvedLabels.value.statusLocked,
+    cancelled: resolvedLabels.value.statusCancelled,
   }
   return map[value] || value
 })
@@ -201,13 +179,13 @@ const statusLabel = computed(() => {
 const reviewStatusLabel = computed(() => {
   const value = props.event?.review_status
   if (!value) {
-    return props.labels.reviewPending || 'Pending review'
+    return resolvedLabels.value.reviewPending
   }
   const map = {
-    pending: props.labels.reviewPending || 'Pending review',
-    approved: props.labels.reviewApproved || 'Approved',
-    denied: props.labels.reviewDenied || 'Denied',
-    changes_requested: props.labels.reviewChanges || 'Changes requested',
+    pending: resolvedLabels.value.reviewPending,
+    approved: resolvedLabels.value.reviewApproved,
+    denied: resolvedLabels.value.reviewDenied,
+    changes_requested: resolvedLabels.value.reviewChanges,
   }
   return map[value] || value
 })
@@ -215,12 +193,12 @@ const reviewStatusLabel = computed(() => {
 const finalOutcomeLabel = computed(() => {
   const value = props.event?.final_validation
   if (!value) {
-    return props.labels.reviewPending || 'Pending review'
+    return resolvedLabels.value.reviewPending
   }
   const map = {
-    accepted: props.labels.finalOutcomeAccepted || 'Accepted',
-    rejected: props.labels.finalOutcomeRejected || 'Rejected',
-    update_requested: props.labels.finalOutcomeUpdateRequested || 'Changes requested',
+    accepted: resolvedLabels.value.finalOutcomeAccepted,
+    rejected: resolvedLabels.value.finalOutcomeRejected,
+    update_requested: resolvedLabels.value.finalOutcomeUpdateRequested,
   }
   return map[value] || value
 })

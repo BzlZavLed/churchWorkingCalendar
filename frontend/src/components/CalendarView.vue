@@ -24,15 +24,6 @@
             </option>
           </select>
         </label>
-        <label class="col-3">
-          <span class="form-label small mb-1">Language</span>
-          <select v-model="locale" class="form-select">
-            <option value="es">Espanol</option>
-            <option value="en">English</option>
-          </select>
-        </label>
-        
-
         <div class="col-3">
           <div class="calendar-export d-flex flex-column align-items-start gap-2">
             <span class="export-label">{{ t.exportLabel }}</span>
@@ -607,6 +598,8 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '../stores/authStore'
 import { useCalendarStore } from '../stores/calendarStore'
+import { useUiStore } from '../stores/uiStore'
+import { translations } from '../i18n/translations'
 import { objectiveApi } from '../services/objectiveApi'
 import { publicApi } from '../services/publicApi'
 import { calendarApi } from '../services/calendarApi'
@@ -615,7 +608,9 @@ import EventDetailsModal from './EventDetailsModal.vue'
 
 const authStore = useAuthStore()
 const calendarStore = useCalendarStore()
+const uiStore = useUiStore()
 const { events } = storeToRefs(calendarStore)
+const { locale } = storeToRefs(uiStore)
 
 const user = computed(() => authStore.user)
 const isSuperAdmin = computed(() => authStore.isSuperAdmin)
@@ -648,14 +643,12 @@ const unseenCount = computed(() => unseenNotes.value.length)
 const showMonthDropdown = computed(() => isSecretary.value && !isDayView.value)
 const departmentName = computed(() => {
   if (user.value?.role === 'secretary') {
-    return locale.value === 'es' ? 'Secretaria' : 'Secretary'
+    return translations[locale.value].appLayout.roleLabels.secretary
   }
-  return user.value?.department?.name || 'Unassigned'
+  return user.value?.department?.name || t.value.unknownDepartment
 })
 
-const LOCALE_KEY = 'ui_locale'
 const currentMonth = ref(new Date())
-const locale = ref('es')
 const isMobile = ref(false)
 const selectedDate = ref(null)
 const weekAnchor = ref(new Date())
@@ -700,283 +693,9 @@ const form = reactive({
   objectiveId: '',
 })
 
-const translations = {
-  es: {
-    title: 'Calendario',
-    welcome: 'Bienvenido',
-    department: 'Departamento',
-    prev: 'Anterior',
-    next: 'Siguiente',
-    back: 'Volver',
-    toggle: 'English',
-    days: ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'],
-    drawer: {
-      createEvent: 'Crear evento',
-      title: 'Titulo',
-      description: 'Descripcion',
-      location: 'Ubicacion',
-      objective: 'Objetivo',
-      start: 'Inicio',
-      end: 'Fin',
-      createHold: 'Crear reserva',
-      lockEvent: 'Confirmar evento',
-      saveEvent: 'Guardar cambios',
-      close: 'Cerrar',
-    },
-    dayView: 'Dia',
-    dayHint: 'Para crear un evento, selecciona la hora de inicio.',
-    dayHintReadonly: 'Vista solo lectura para revisar eventos.',
-    filterDepartment: 'Filtrar por departamento',
-    filterStatus: 'Filtrar por estado',
-    allDepartments: 'Todos los departamentos',
-    allStatuses: 'Todos los estados',
-    statusPending: 'Pendiente',
-    statusApproved: 'Aprobado',
-    statusDenied: 'Rechazado',
-    statusChanges: 'Cambios solicitados',
-    monthSelect: 'Seleccionar mes',
-    monthSelected: 'Mes seleccionado',
-    exportLabel: 'Descargar',
-    exportCalendar: 'Exportar calendario',
-    exportList: 'Exportar lista',
-    exportIncludeHistory: 'Incluir historial',
-    viewMore: 'Ver mas',
-    eventDetails: {
-      title: 'Detalles del evento',
-      close: 'Cerrar',
-      department: 'Departamento',
-      objective: 'Objetivo',
-      location: 'Ubicacion',
-      status: 'Estado',
-      reviewStatus: 'Revision',
-      reviewNote: 'Nota de revision',
-      finalOutcome: 'Resultado final',
-      reviewPending: 'En revision',
-      statusHold: 'Reservado',
-      statusLocked: 'Confirmado',
-      statusCancelled: 'Cancelado',
-      reviewApproved: 'Aprobado',
-      reviewDenied: 'Rechazado',
-      reviewChanges: 'Cambios solicitados',
-      finalOutcomeAccepted: 'Aceptado',
-      finalOutcomeRejected: 'Rechazado',
-      finalOutcomeUpdateRequested: 'Cambios solicitados',
-      editEvent: 'Editar evento',
-      start: 'Inicio',
-      end: 'Fin',
-      description: 'Descripcion',
-      historyTitle: 'Historial',
-      notesTitle: 'Notas',
-      replyButton: 'Responder',
-      replyLabel: 'Respuesta',
-      replyPlaceholder: 'Escribe una respuesta...',
-    },
-    unseenNotesAlert: 'Notas sin ver',
-    unseenNotesButton: 'Ver notas',
-    unseenNotesTitle: 'Notas sin ver',
-    unseenNotesLoading: 'Cargando notas...',
-    unseenNotesEmpty: 'No hay notas sin ver.',
-    unseenNotesEvent: 'Evento',
-    unseenNotesDate: 'Fecha',
-    unseenNotesOpenEvent: 'Ver detalles',
-    reviewTitle: 'Revision mensual',
-    reviewSubtitle: 'Aprueba, rechaza o solicita cambios en eventos bloqueados.',
-    reviewMonthly: 'Revision mensual',
-    reviewWeekly: 'Revision semanal',
-    reviewDaily: 'Revision diaria',
-    changeRequestsTitle: 'Cambios solicitados',
-    changeRequestsSubtitle: 'Eventos que necesitan ajustes antes de aprobarse.',
-    changeRequestsEmpty: 'No hay eventos con cambios solicitados.',
-    editEventButton: 'Editar evento',
-    viewDetailsButton: 'Ver detalles',
-    reviewModalTitle: 'Revision enviada',
-    reviewModalClose: 'Cerrar',
-    statusModalTitle: 'Actualizar estado',
-    statusModalNote: 'Nota para el departamento',
-    statusModalSubmit: 'Guardar estado',
-    publishToFeed: 'Publicar evento al feed',
-    statusAcceptedAt: 'Fecha de votacion',
-    notesModalTitle: 'Notas del evento',
-    notesModalSubmit: 'Enviar nota',
-    statusUpdateButton: 'Actualizar estado',
-    notesButton: 'Notas',
-    locationLabel: 'Ubicacion',
-    historyTitle: 'Historial',
-    historyEmpty: 'No se encontraron cambios.',
-    historyShow: 'Ver historial',
-    historyHide: 'Ocultar historial',
-    notesTitle: 'Notas',
-    notesEmpty: 'No se encontraron notas.',
-    notesShow: 'Ver notas',
-    notesHide: 'Ocultar notas',
-    notesAdd: 'Enviar nota',
-    notesReply: 'Responder',
-    historyFields: {
-      title: 'Titulo',
-      description: 'Descripcion',
-      location: 'Ubicacion',
-      start_at: 'Inicio',
-      end_at: 'Fin',
-      objective_id: 'Objetivo',
-    },
-    historyActions: {
-      update: 'Actualizado',
-      review: 'Revision',
-    },
-    reviewEmpty: 'No hay eventos bloqueados para revisar.',
-    reviewStatus: 'Estado',
-    reviewAcceptedAt: 'Fecha de votacion',
-    reviewNotePlaceholder: 'Nota para el departamento (opcional).',
-    reviewNoteRequired: 'La nota es obligatoria para esta accion.',
-    approve: 'Aprobar',
-    requestChanges: 'Solicitar cambios',
-    deny: 'Rechazar',
-    sendNote: 'Enviar nota',
-    unknownDepartment: 'Sin departamento',
-  },
-  en: {
-    title: 'Calendar',
-    welcome: 'Welcome',
-    department: 'Department',
-    prev: 'Prev',
-    next: 'Next',
-    back: 'Back',
-    toggle: 'Espanol',
-    days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
-    drawer: {
-      createEvent: 'Create Event',
-      title: 'Title',
-      description: 'Description',
-      location: 'Location',
-      objective: 'Objective',
-      start: 'Start',
-      end: 'End',
-      createHold: 'Create Hold',
-      lockEvent: 'Lock Event',
-      saveEvent: 'Save changes',
-      close: 'Close',
-    },
-    dayView: 'Day view',
-    dayHint: 'To create an event, select the starting hour.',
-    dayHintReadonly: 'Read-only view for reviewing events.',
-    filterDepartment: 'Filter by department',
-    filterStatus: 'Filter by status',
-    allDepartments: 'All departments',
-    allStatuses: 'All statuses',
-    statusPending: 'Pending',
-    statusApproved: 'Approved',
-    statusDenied: 'Denied',
-    statusChanges: 'Changes requested',
-    monthSelect: 'Select month',
-    monthSelected: 'Selected month',
-    exportLabel: 'Download',
-    exportCalendar: 'Export calendar',
-    exportList: 'Export list',
-    exportIncludeHistory: 'Include history',
-    viewMore: 'View more',
-    eventDetails: {
-      title: 'Event details',
-      close: 'Close',
-      department: 'Department',
-      objective: 'Objective',
-      location: 'Location',
-      status: 'Status',
-      reviewStatus: 'Review',
-      reviewNote: 'Review note',
-      finalOutcome: 'Final outcome',
-      reviewPending: 'Pending review',
-      statusHold: 'Hold',
-      statusLocked: 'Locked',
-      statusCancelled: 'Cancelled',
-      reviewApproved: 'Approved',
-      reviewDenied: 'Denied',
-      reviewChanges: 'Changes requested',
-      finalOutcomeAccepted: 'Accepted',
-      finalOutcomeRejected: 'Rejected',
-      finalOutcomeUpdateRequested: 'Changes requested',
-      editEvent: 'Edit event',
-      start: 'Start',
-      end: 'End',
-      description: 'Description',
-      historyTitle: 'History',
-      notesTitle: 'Notes',
-      replyButton: 'Reply',
-      replyLabel: 'Reply',
-      replyPlaceholder: 'Write a reply...',
-    },
-    unseenNotesAlert: 'Unseen notes',
-    unseenNotesButton: 'View notes',
-    unseenNotesTitle: 'Unseen notes',
-    unseenNotesLoading: 'Loading notes...',
-    unseenNotesEmpty: 'No unseen notes.',
-    unseenNotesEvent: 'Event',
-    unseenNotesDate: 'Date',
-    unseenNotesOpenEvent: 'View details',
-    reviewTitle: 'Monthly review',
-    reviewSubtitle: 'Approve, deny, or request changes for locked events.',
-    reviewMonthly: 'Monthly review',
-    reviewWeekly: 'Weekly review',
-    reviewDaily: 'Daily review',
-    changeRequestsTitle: 'Changes requested',
-    changeRequestsSubtitle: 'Events that need updates before approval.',
-    changeRequestsEmpty: 'No events with changes requested.',
-    editEventButton: 'Edit event',
-    viewDetailsButton: 'View details',
-    reviewModalTitle: 'Review sent',
-    reviewModalClose: 'Close',
-    statusModalTitle: 'Update status',
-    statusModalNote: 'Note for the department',
-    statusModalSubmit: 'Save status',
-    publishToFeed: 'Publish event to feed',
-    statusAcceptedAt: 'Approval date',
-    notesModalTitle: 'Event notes',
-    notesModalSubmit: 'Send note',
-    statusUpdateButton: 'Update event status',
-    notesButton: 'Notes',
-    locationLabel: 'Location',
-    historyTitle: 'History',
-    historyEmpty: 'No history found.',
-    historyShow: 'View history',
-    historyHide: 'Hide history',
-    notesTitle: 'Notes',
-    notesEmpty: 'No notes found.',
-    notesShow: 'View notes',
-    notesHide: 'Hide notes',
-    notesAdd: 'Send note',
-    notesReply: 'Reply',
-    historyFields: {
-      title: 'Title',
-      description: 'Description',
-      location: 'Location',
-      start_at: 'Start',
-      end_at: 'End',
-      objective_id: 'Objective',
-    },
-    historyActions: {
-      update: 'Updated',
-      review: 'Review',
-    },
-    reviewEmpty: 'No locked events to review.',
-    reviewStatus: 'Status',
-    reviewAcceptedAt: 'Approval date',
-    reviewNotePlaceholder: 'Note for the department (optional).',
-    reviewNoteRequired: 'A note is required for this action.',
-    approve: 'Approve',
-    requestChanges: 'Request changes',
-    deny: 'Deny',
-    sendNote: 'Send note',
-    unknownDepartment: 'Unknown department',
-  },
-}
+const t = computed(() => translations[locale.value].calendar)
 
-const t = computed(() => translations[locale.value])
 const weekDays = computed(() => t.value.days)
-
-const storedLocale = localStorage.getItem(LOCALE_KEY)
-if (storedLocale && translations[storedLocale]) {
-  locale.value = storedLocale
-}
-
 
 const monthLabel = computed(() =>
   currentMonth.value.toLocaleDateString(locale.value, { month: 'long', year: 'numeric' })
@@ -1004,7 +723,7 @@ const weekLabel = computed(() => {
   const diff = start - startOfMonth
   const oneWeek = 7 * 24 * 60 * 60 * 1000
   const weekNumber = Math.max(1, Math.floor(diff / oneWeek) + 1)
-  return locale.value === 'es' ? `Semana ${weekNumber}` : `Week ${weekNumber}`
+  return `${t.value.weekPrefix} ${weekNumber}`
 })
 
 const dayLabel = computed(() => {
@@ -1311,13 +1030,13 @@ const createHold = async () => {
   }
 
   if (!form.objectiveId) {
-    formError.value = locale.value === 'es' ? 'Seleccione un objetivo.' : 'Select an objective.'
+    formError.value = t.value.errors.selectObjective
     return
   }
 
   try {
     const event = await calendarStore.createHold({
-      title: form.title || 'Untitled',
+      title: form.title || t.value.untitled,
       description: form.description || null,
       location: form.location || null,
       objective_id: form.objectiveId,
@@ -1372,11 +1091,11 @@ const saveEditedEvent = async () => {
       start_at: startAt.toISOString(),
       end_at: endAt.toISOString(),
     })
-    formNotice.value = locale.value === 'es' ? 'Evento actualizado.' : 'Event updated.'
+    formNotice.value = t.value.errors.eventUpdated
     editEventId.value = null
     isModalOpen.value = false
   } catch {
-    formError.value = locale.value === 'es' ? 'No se pudo actualizar.' : 'Unable to update event.'
+    formError.value = t.value.errors.eventUpdateFailed
   }
 }
 
@@ -1644,13 +1363,13 @@ const toIsoDate = (value) => {
 
 const reviewStatusLabel = (status) => {
   if (!status) {
-    return locale.value === 'es' ? 'Pendiente' : 'Pending'
+    return t.value.statusPending
   }
   const map = {
-    pending: locale.value === 'es' ? 'Pendiente' : 'Pending',
-    approved: locale.value === 'es' ? 'Aprobado' : 'Approved',
-    denied: locale.value === 'es' ? 'Rechazado' : 'Denied',
-    changes_requested: locale.value === 'es' ? 'Cambios solicitados' : 'Changes requested',
+    pending: t.value.statusPending,
+    approved: t.value.statusApproved,
+    denied: t.value.statusDenied,
+    changes_requested: t.value.statusChanges,
   }
   return map[status] || status
 }
@@ -1804,7 +1523,7 @@ const submitReview = async (event, status, noteOverride = '', publishToFeedFlag 
   reviewErrors[event.id] = ''
   const note = noteOverride || ''
   if ((status === 'denied' || status === 'changes_requested') && !note.trim()) {
-    reviewErrors[event.id] = t.value.reviewNoteRequired || 'Note required.'
+    reviewErrors[event.id] = t.value.reviewNoteRequired
     return
   }
 
@@ -1816,12 +1535,10 @@ const submitReview = async (event, status, noteOverride = '', publishToFeedFlag 
       accepted_at: acceptedAt,
     })
     reviewErrors[event.id] = ''
-    reviewModalMessage.value = locale.value === 'es'
-      ? 'La revision fue registrada.'
-      : 'Review recorded successfully.'
+    reviewModalMessage.value = t.value.errors.reviewUpdated
     reviewModalOpen.value = true
   } catch {
-    reviewErrors[event.id] = locale.value === 'es' ? 'No se pudo actualizar.' : 'Unable to update.'
+    reviewErrors[event.id] = t.value.errors.reviewFailed
     reviewModalMessage.value = reviewErrors[event.id]
     reviewModalOpen.value = true
   }
@@ -1889,13 +1606,11 @@ const submitNoteModal = async () => {
     await calendarStore.addNote(activeReviewEvent.value.id, { note: note.trim() })
     noteDraft.value = ''
     closeNotesModal()
-    reviewModalMessage.value = locale.value === 'es'
-      ? 'Nota enviada.'
-      : 'Note sent.'
+    reviewModalMessage.value = t.value.errors.noteSent
     reviewModalOpen.value = true
   } catch {
     closeNotesModal()
-    reviewModalMessage.value = locale.value === 'es' ? 'No se pudo enviar.' : 'Unable to send.'
+    reviewModalMessage.value = t.value.errors.noteSendFailed
     reviewModalOpen.value = true
   }
 }
@@ -1934,12 +1649,6 @@ watch(statusSelection, (next) => {
   }
   if (!statusAcceptedAt.value) {
     statusAcceptedAt.value = formatDateLocal(new Date())
-  }
-})
-
-watch(locale, (next) => {
-  if (next) {
-    localStorage.setItem(LOCALE_KEY, next)
   }
 })
 

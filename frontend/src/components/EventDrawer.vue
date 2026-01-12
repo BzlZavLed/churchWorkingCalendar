@@ -1,25 +1,25 @@
 <template>
   <aside v-if="selectedDate" class="event-drawer">
-    <h2>{{ labels.createEvent }}</h2>
+    <h2>{{ resolvedLabels.createEvent }}</h2>
     <p class="event-date">{{ formattedDate }}</p>
 
     <label>
-      {{ labels.title }}
+      {{ resolvedLabels.title }}
       <input :value="title" type="text" @input="emitUpdate('title', $event.target.value)" />
     </label>
 
     <label>
-      {{ labels.description }}
+      {{ resolvedLabels.description }}
       <textarea :value="description" rows="3" @input="emitUpdate('description', $event.target.value)"></textarea>
     </label>
 
     <div class="time-row">
       <label>
-        {{ labels.start }}
+        {{ resolvedLabels.start }}
         <input :value="startTime" type="time" @input="emitUpdate('startTime', $event.target.value)" />
       </label>
       <label>
-        {{ labels.end }}
+        {{ resolvedLabels.end }}
         <input :value="endTime" type="time" @input="emitUpdate('endTime', $event.target.value)" />
       </label>
     </div>
@@ -28,17 +28,20 @@
     <p v-if="notice" class="event-notice">{{ notice }}</p>
 
     <div class="action-row">
-      <button type="button" @click="$emit('create-hold')">{{ labels.createHold }}</button>
+      <button type="button" @click="$emit('create-hold')">{{ resolvedLabels.createHold }}</button>
       <button type="button" :disabled="!activeHoldId" @click="$emit('lock-hold')">
-        {{ labels.lockEvent }}
+        {{ resolvedLabels.lockEvent }}
       </button>
-      <button type="button" @click="$emit('close')">{{ labels.close }}</button>
+      <button type="button" @click="$emit('close')">{{ resolvedLabels.close }}</button>
     </div>
   </aside>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useUiStore } from '../stores/uiStore'
+import { translations } from '../i18n/translations'
 
 const props = defineProps({
   selectedDate: {
@@ -75,20 +78,16 @@ const props = defineProps({
   },
   labels: {
     type: Object,
-    default: () => ({
-      createEvent: 'Create Event',
-      title: 'Title',
-      description: 'Description',
-      start: 'Start',
-      end: 'End',
-      createHold: 'Create Hold',
-      lockEvent: 'Lock Event',
-      close: 'Close',
-    }),
+    default: null,
   },
 })
 
 const emit = defineEmits(['update:title', 'update:description', 'update:startTime', 'update:endTime', 'create-hold', 'lock-hold', 'close'])
+
+const uiStore = useUiStore()
+const { locale } = storeToRefs(uiStore)
+const fallbackLabels = computed(() => translations[locale.value].calendar.drawer)
+const resolvedLabels = computed(() => props.labels || fallbackLabels.value)
 
 const formattedDate = computed(() => {
   if (!props.selectedDate) {

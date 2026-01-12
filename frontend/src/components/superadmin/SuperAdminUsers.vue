@@ -1,60 +1,60 @@
 <template>
   <section class="container py-4">
     <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3">
-      <h1 class="h3 m-0">Users</h1>
+      <h1 class="h3 m-0">{{ t.title }}</h1>
     </div>
 
     <div class="bg-white border rounded p-3 mb-4">
       <label class="form-label">
-        Invitation Code
+        {{ t.invitationCode }}
         <div class="d-flex flex-column flex-md-row gap-2">
           <input v-model="inviteCode" class="form-control" type="text" />
-          <button class="btn btn-outline-primary" type="button" @click="lookupInvite">Check Code</button>
+          <button class="btn btn-outline-primary" type="button" @click="lookupInvite">{{ t.checkCode }}</button>
         </div>
       </label>
       <p v-if="inviteStatus === 'active'" class="text-success mb-0">
-        Invite active for: {{ inviteChurchName }}
+        {{ t.inviteActive }} {{ inviteChurchName }}
       </p>
-      <p v-else-if="inviteStatus === 'inactive'" class="text-danger mb-0">Invite is inactive.</p>
-      <p v-else-if="inviteStatus === 'not_found'" class="text-danger mb-0">Invite not found.</p>
+      <p v-else-if="inviteStatus === 'inactive'" class="text-danger mb-0">{{ t.inviteInactive }}</p>
+      <p v-else-if="inviteStatus === 'not_found'" class="text-danger mb-0">{{ t.inviteNotFound }}</p>
     </div>
 
     <form v-if="selectedChurchId" class="bg-white border rounded p-4 mb-4" @submit.prevent="createUser">
-      <h2 class="h5 mb-3">Create User</h2>
+      <h2 class="h5 mb-3">{{ t.createTitle }}</h2>
       <div class="row g-3">
         <div class="col-12 col-md-6">
           <label class="form-label">
-            Name
+            {{ t.name }}
             <input v-model="createForm.name" class="form-control" type="text" required />
           </label>
         </div>
         <div class="col-12 col-md-6">
           <label class="form-label">
-            Email
+            {{ t.email }}
             <input v-model="createForm.email" class="form-control" type="email" required />
           </label>
         </div>
         <div class="col-12 col-md-6">
           <label class="form-label">
-            Password
+            {{ t.password }}
             <input v-model="createForm.password" class="form-control" type="password" required />
           </label>
         </div>
         <div class="col-12 col-md-6">
           <label class="form-label">
-            Role
-              <select v-model="createForm.role" class="form-select">
-                <option value="admin">admin</option>
-                <option value="member">member</option>
-                <option value="secretary">secretary</option>
-              </select>
+            {{ t.role }}
+            <select v-model="createForm.role" class="form-select">
+              <option value="admin">{{ roleLabels.admin }}</option>
+              <option value="member">{{ roleLabels.member }}</option>
+              <option value="secretary">{{ roleLabels.secretary }}</option>
+            </select>
           </label>
         </div>
         <div class="col-12">
           <label class="form-label">
-            Department (optional)
+            {{ t.department }}
             <select v-model="createForm.department_id" class="form-select" :disabled="departments.length === 0">
-              <option value="">Select...</option>
+              <option value="">{{ common.select }}</option>
               <option v-for="department in departments" :key="department.id" :value="department.id">
                 {{ department.name }}
               </option>
@@ -62,19 +62,19 @@
           </label>
         </div>
       </div>
-      <button class="btn btn-primary mt-3" type="submit">Create User</button>
+      <button class="btn btn-primary mt-3" type="submit">{{ t.create }}</button>
     </form>
 
-    <div v-if="loading">Loading users...</div>
+    <div v-if="loading">{{ t.loading }}</div>
     <p v-if="error" class="text-danger">{{ error }}</p>
 
-    <div v-if="users.length === 0 && !loading && selectedChurchId">No users yet.</div>
+    <div v-if="users.length === 0 && !loading && selectedChurchId">{{ t.empty }}</div>
     <div v-else-if="selectedChurchId" class="bg-white border rounded p-3">
       <div class="row g-2 align-items-center mb-3">
         <div class="col-12 col-md-6">
           <label class="form-label mb-0 w-100">
-            <span class="d-block small mb-1">Search</span>
-            <input v-model="filterText" class="form-control" type="search" placeholder="Search by name, email, or role" />
+            <span class="d-block small mb-1">{{ t.search }}</span>
+            <input v-model="filterText" class="form-control" type="search" :placeholder="t.searchPlaceholder" />
           </label>
         </div>
       </div>
@@ -83,13 +83,13 @@
         <table class="table table-sm align-middle mb-0" data-dt="off">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Department</th>
-              <th>Security</th>
-              <th class="text-end">Actions</th>
+              <th>{{ t.columns.id }}</th>
+              <th>{{ t.columns.name }}</th>
+              <th>{{ t.columns.email }}</th>
+              <th>{{ t.columns.role }}</th>
+              <th>{{ t.columns.department }}</th>
+              <th>{{ t.columns.password }}</th>
+              <th class="text-end">{{ t.columns.actions }}</th>
             </tr>
           </thead>
           <tbody>
@@ -98,20 +98,20 @@
               <td>
                 <div class="d-flex align-items-center gap-2">
                   <input v-model="user.name" class="form-control" type="text" />
-                  <span v-if="user.id === currentUserId" class="badge bg-info text-dark">Logged in</span>
+                  <span v-if="user.id === currentUserId" class="badge bg-info text-dark">{{ common.loggedIn }}</span>
                 </div>
               </td>
               <td><input v-model="user.email" class="form-control" type="email" /></td>
               <td>
                 <select v-model="user.role" class="form-select">
-                  <option value="admin">admin</option>
-                  <option value="member">member</option>
-                  <option value="secretary">secretary</option>
+                  <option value="admin">{{ roleLabels.admin }}</option>
+                  <option value="member">{{ roleLabels.member }}</option>
+                  <option value="secretary">{{ roleLabels.secretary }}</option>
                 </select>
               </td>
               <td>
                 <select v-model="user.department_id" class="form-select">
-                  <option value="">Select...</option>
+                  <option value="">{{ common.select }}</option>
                   <option v-for="department in departments" :key="department.id" :value="department.id">
                     {{ department.name }}
                   </option>
@@ -119,13 +119,13 @@
               </td>
               <td>
                 <button class="btn btn-sm btn-outline-primary" type="button" @click="openPasswordModal(user)">
-                  Change password
+                  {{ t.changePassword }}
                 </button>
               </td>
               <td class="text-end">
                 <div class="d-flex flex-column flex-md-row justify-content-end gap-2">
-                  <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateUser(user)">Save</button>
-                  <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteUser(user)">Delete</button>
+                  <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateUser(user)">{{ t.save }}</button>
+                  <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteUser(user)">{{ t.delete }}</button>
                 </div>
               </td>
             </tr>
@@ -142,30 +142,30 @@
                 <p class="card-subtitle text-muted mb-0">#{{ user.id }}</p>
               </div>
               <div class="d-flex flex-column align-items-end gap-1">
-                <span class="badge bg-secondary">{{ user.role }}</span>
-                <span v-if="user.id === currentUserId" class="badge bg-info text-dark">Logged in</span>
+                <span class="badge bg-secondary">{{ roleLabels[user.role] || user.role }}</span>
+                <span v-if="user.id === currentUserId" class="badge bg-info text-dark">{{ common.loggedIn }}</span>
               </div>
             </div>
             <div class="mb-2">
-              <label class="form-label small mb-1">Email</label>
+              <label class="form-label small mb-1">{{ t.email }}</label>
               <input v-model="user.email" class="form-control" type="email" />
             </div>
             <div class="mb-2">
-              <label class="form-label small mb-1">Name</label>
+              <label class="form-label small mb-1">{{ t.name }}</label>
               <input v-model="user.name" class="form-control" type="text" />
             </div>
             <div class="mb-2">
-              <label class="form-label small mb-1">Role</label>
+              <label class="form-label small mb-1">{{ t.role }}</label>
               <select v-model="user.role" class="form-select">
-                <option value="admin">admin</option>
-                <option value="member">member</option>
-                <option value="secretary">secretary</option>
+                <option value="admin">{{ roleLabels.admin }}</option>
+                <option value="member">{{ roleLabels.member }}</option>
+                <option value="secretary">{{ roleLabels.secretary }}</option>
               </select>
             </div>
             <div class="mb-3">
-              <label class="form-label small mb-1">Department</label>
+              <label class="form-label small mb-1">{{ t.department }}</label>
               <select v-model="user.department_id" class="form-select">
-                <option value="">Select...</option>
+                <option value="">{{ common.select }}</option>
                 <option v-for="department in departments" :key="department.id" :value="department.id">
                   {{ department.name }}
                 </option>
@@ -173,12 +173,12 @@
             </div>
             <div class="d-flex flex-wrap gap-2 mb-2">
               <button class="btn btn-sm btn-outline-primary" type="button" @click="openPasswordModal(user)">
-                Change password
+                {{ t.changePassword }}
               </button>
             </div>
             <div class="d-flex flex-wrap gap-2">
-              <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateUser(user)">Save</button>
-              <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteUser(user)">Delete</button>
+              <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateUser(user)">{{ t.save }}</button>
+              <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteUser(user)">{{ t.delete }}</button>
             </div>
           </div>
         </div>
@@ -188,27 +188,27 @@
     <div v-if="passwordModalOpen && activeUser" class="modal-backdrop" @click.self="closePasswordModal">
       <div class="modal-panel">
         <header class="modal-header">
-          <h2>Update password</h2>
+          <h2>{{ t.updatePassword }}</h2>
           <button type="button" class="modal-close" @click="closePasswordModal">×</button>
         </header>
         <div class="event-details">
           <p class="event-details-text">
-            <strong>User:</strong> {{ activeUser.name }} ({{ activeUser.email }})
+            <strong>{{ t.title }}:</strong> {{ activeUser.name }} ({{ activeUser.email }})
           </p>
           <label class="form-label mt-2">
-            New password
+            {{ t.password }}
             <input v-model="passwordForm.password" class="form-control" type="password" minlength="8" />
           </label>
         </div>
         <div class="action-row">
-          <button type="button" class="btn btn-outline-secondary" @click="closePasswordModal">Cancel</button>
+          <button type="button" class="btn btn-outline-secondary" @click="closePasswordModal">{{ common.cancel }}</button>
           <button
             type="button"
             class="btn btn-outline-primary"
             :disabled="!passwordForm.password"
             @click="submitPasswordUpdate"
           >
-            Save password
+            {{ t.updatePassword }}
           </button>
         </div>
       </div>
@@ -217,16 +217,14 @@
     <div v-if="passwordSuccessOpen" class="modal-backdrop" @click.self="passwordSuccessOpen = false">
       <div class="modal-panel">
         <header class="modal-header">
-          <h2>Password updated</h2>
+          <h2>{{ t.passwordSuccessTitle }}</h2>
           <button type="button" class="modal-close" @click="passwordSuccessOpen = false">×</button>
         </header>
         <div class="event-details">
-          <p class="event-details-text">The password was updated successfully.</p>
+          <p class="event-details-text">{{ t.passwordSuccessBody }}</p>
         </div>
         <div class="action-row">
-          <button type="button" class="btn btn-outline-primary" @click="passwordSuccessOpen = false">
-            Close
-          </button>
+          <button type="button" class="btn btn-outline-primary" @click="passwordSuccessOpen = false">{{ t.close }}</button>
         </div>
       </div>
     </div>
@@ -239,9 +237,14 @@ import { useRoute } from 'vue-router'
 import { superAdminApi } from '../../services/superAdminApi'
 import { useAuthStore } from '../../stores/authStore'
 import { publicApi } from '../../services/publicApi'
+import { useUiStore } from '../../stores/uiStore'
+import { storeToRefs } from 'pinia'
+import { translations } from '../../i18n/translations'
 
 const route = useRoute()
 const authStore = useAuthStore()
+const uiStore = useUiStore()
+const { locale } = storeToRefs(uiStore)
 const selectedChurchId = ref('')
 const inviteCode = ref('')
 const inviteStatus = ref('')
@@ -258,6 +261,9 @@ const passwordForm = reactive({
 })
 const passwordSuccessOpen = ref(false)
 
+const t = computed(() => translations[locale.value].superadmin.users)
+const common = computed(() => translations[locale.value].common)
+const roleLabels = computed(() => translations[locale.value].appLayout.roleLabels)
 const createForm = reactive({
   name: '',
   email: '',
@@ -297,7 +303,7 @@ const loadUsers = async () => {
   try {
     users.value = await superAdminApi.listUsers(selectedChurchId.value)
   } catch {
-    error.value = 'Unable to load users.'
+    error.value = t.value.loadError
   } finally {
     loading.value = false
   }
@@ -364,7 +370,7 @@ const createUser = async () => {
     createForm.department_id = ''
     await loadUsers()
   } catch {
-    error.value = 'Unable to create user.'
+    error.value = t.value.createError
   }
 }
 
@@ -381,7 +387,7 @@ const updateUser = async (user) => {
       department_id: user.department_id || null,
     })
   } catch {
-    error.value = 'Unable to update user.'
+    error.value = t.value.updateError
   }
 }
 
@@ -394,7 +400,7 @@ const deleteUser = async (user) => {
     await superAdminApi.deleteUser(selectedChurchId.value, user.id)
     await loadUsers()
   } catch {
-    error.value = 'Unable to delete user.'
+    error.value = t.value.deleteError
   }
 }
 
@@ -422,7 +428,7 @@ const submitPasswordUpdate = async () => {
     closePasswordModal()
     passwordSuccessOpen.value = true
   } catch {
-    error.value = 'Unable to update password.'
+    error.value = t.value.passwordError
   }
 }
 

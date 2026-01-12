@@ -2,18 +2,18 @@
   <div v-if="open" class="modal-backdrop" @click.self="$emit('close')">
     <div class="modal-panel">
       <header class="modal-header">
-        <h2>{{ labels.createEvent }}</h2>
+        <h2>{{ resolvedLabels.createEvent }}</h2>
         <button type="button" class="modal-close" @click="$emit('close')">×</button>
       </header>
       <p class="event-date">{{ formattedDate }}</p>
 
       <label>
-        {{ labels.title }}
+        {{ resolvedLabels.title }}
         <input class="form-control" :value="title" type="text" @input="emitUpdate('title', $event.target.value)" />
       </label>
 
       <label>
-        {{ labels.description }}
+        {{ resolvedLabels.description }}
         <textarea
           class="form-control"
           :value="description"
@@ -23,14 +23,14 @@
       </label>
 
       <label>
-        {{ labels.location }}
+        {{ resolvedLabels.location }}
         <input class="form-control" :value="location" type="text" @input="emitUpdate('location', $event.target.value)" />
       </label>
 
       <label>
-        {{ labels.objective }}
+        {{ resolvedLabels.objective }}
         <select class="form-select" :value="objectiveId" @change="emitUpdate('objectiveId', $event.target.value)">
-          <option value="">Select...</option>
+          <option value="">{{ objectivePlaceholder }}</option>
           <option v-for="objective in objectives" :key="objective.id" :value="objective.id">
             {{ objective.display_name || objective.name }}
           </option>
@@ -39,7 +39,7 @@
 
       <div class="time-row">
       <label>
-        {{ labels.start }}
+        {{ resolvedLabels.start }}
         <input
           class="form-control"
           :value="startTime"
@@ -48,7 +48,7 @@
         />
       </label>
       <label>
-        {{ labels.end }}
+        {{ resolvedLabels.end }}
         <input
           class="form-control"
           :value="endTime"
@@ -63,15 +63,15 @@
 
       <div class="action-row">
         <template v-if="isEditing">
-          <button type="button" @click="$emit('save-edit')">{{ labels.saveEvent }}</button>
+          <button type="button" @click="$emit('save-edit')">{{ resolvedLabels.saveEvent }}</button>
         </template>
         <template v-else>
-          <button type="button" @click="$emit('create-hold')">{{ labels.createHold }}</button>
+          <button type="button" @click="$emit('create-hold')">{{ resolvedLabels.createHold }}</button>
           <button type="button" :disabled="!activeHoldId" @click="$emit('lock-hold')">
-            {{ labels.lockEvent }}
+            {{ resolvedLabels.lockEvent }}
           </button>
         </template>
-        <button type="button" @click="$emit('close')">{{ labels.close }}</button>
+        <button type="button" @click="$emit('close')">{{ resolvedLabels.close }}</button>
       </div>
     </div>
   </div>
@@ -79,6 +79,9 @@
 
 <script setup>
 import { computed } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useUiStore } from '../stores/uiStore'
+import { translations } from '../i18n/translations'
 
 const props = defineProps({
   open: {
@@ -135,19 +138,7 @@ const props = defineProps({
   },
   labels: {
     type: Object,
-    default: () => ({
-      createEvent: 'Create Event',
-      title: 'Title',
-      description: 'Description',
-      location: 'Location',
-      start: 'Start',
-      end: 'End',
-      createHold: 'Create Hold',
-      lockEvent: 'Lock Event',
-      saveEvent: 'Save changes',
-      close: 'Close',
-      objective: 'Objective',
-    }),
+    default: null,
   },
 })
 
@@ -163,6 +154,13 @@ const emit = defineEmits([
   'save-edit',
   'close',
 ])
+
+const uiStore = useUiStore()
+const { locale } = storeToRefs(uiStore)
+const fallbackLabels = computed(() => translations[locale.value].calendar.drawer)
+const common = computed(() => translations[locale.value].common)
+const resolvedLabels = computed(() => props.labels || fallbackLabels.value)
+const objectivePlaceholder = computed(() => resolvedLabels.value.selectObjective || common.value.select)
 
 const formattedDate = computed(() => {
   if (!props.selectedDate) {
