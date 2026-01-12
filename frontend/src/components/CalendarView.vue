@@ -365,6 +365,10 @@
             <input v-model="publishToFeed" type="checkbox" />
             <span>{{ t.publishToFeed }}</span>
           </label>
+          <label v-if="statusSelection === 'approved'" class="form-label mt-2">
+            {{ t.statusAcceptedAt }}
+            <input v-model="statusAcceptedAt" class="form-control" type="date" />
+          </label>
           <label class="form-label mt-2">
             {{ t.statusModalNote }}
             <textarea v-model="statusNote" class="form-control" rows="3"></textarea>
@@ -484,6 +488,9 @@
                 <span class="review-status">
                   <span class="status-dot" :class="statusClass(event.review_status)"></span>
                   {{ t.reviewStatus }}: {{ reviewStatusLabel(event.review_status) }}
+                </span>
+                <span v-if="event.accepted_at" class="review-status">
+                  {{ t.reviewAcceptedAt }}: {{ formatDateOnly(event.accepted_at) }}
                 </span>
               </div>
               <div class="review-actions">
@@ -676,6 +683,7 @@ const activeReviewEvent = ref(null)
 const statusSelection = ref('pending')
 const statusNote = ref('')
 const publishToFeed = ref(false)
+const statusAcceptedAt = ref('')
 const editEventId = ref(null)
 const noteDraft = ref('')
 const includeHistoryExport = ref(false)
@@ -787,6 +795,7 @@ const translations = {
     statusModalNote: 'Nota para el departamento',
     statusModalSubmit: 'Guardar estado',
     publishToFeed: 'Publicar evento al feed',
+    statusAcceptedAt: 'Fecha de votacion',
     notesModalTitle: 'Notas del evento',
     notesModalSubmit: 'Enviar nota',
     statusUpdateButton: 'Actualizar estado',
@@ -816,6 +825,7 @@ const translations = {
     },
     reviewEmpty: 'No hay eventos bloqueados para revisar.',
     reviewStatus: 'Estado',
+    reviewAcceptedAt: 'Fecha de votacion',
     reviewNotePlaceholder: 'Nota para el departamento (opcional).',
     reviewNoteRequired: 'La nota es obligatoria para esta accion.',
     approve: 'Aprobar',
@@ -918,6 +928,7 @@ const translations = {
     statusModalNote: 'Note for the department',
     statusModalSubmit: 'Save status',
     publishToFeed: 'Publish event to feed',
+    statusAcceptedAt: 'Approval date',
     notesModalTitle: 'Event notes',
     notesModalSubmit: 'Send note',
     statusUpdateButton: 'Update event status',
@@ -947,6 +958,7 @@ const translations = {
     },
     reviewEmpty: 'No locked events to review.',
     reviewStatus: 'Status',
+    reviewAcceptedAt: 'Approval date',
     reviewNotePlaceholder: 'Note for the department (optional).',
     reviewNoteRequired: 'A note is required for this action.',
     approve: 'Approve',
@@ -1597,6 +1609,39 @@ const formatEventTime = (event) => {
   )}`
 }
 
+const formatDateOnly = (value) => {
+  if (!value) {
+    return '—'
+  }
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return '—'
+  }
+  return date.toLocaleDateString(locale.value)
+}
+
+const formatDateLocal = (value) => {
+  const date = value ? new Date(value) : new Date()
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const toIsoDate = (value) => {
+  if (!value) {
+    return null
+  }
+  const date = new Date(`${value}T00:00:00`)
+  if (Number.isNaN(date.getTime())) {
+    return null
+  }
+  return date.toISOString()
+}
+
 const reviewStatusLabel = (status) => {
   if (!status) {
     return locale.value === 'es' ? 'Pendiente' : 'Pending'
@@ -1755,7 +1800,7 @@ const isHistoryExpanded = (eventId) => expandedHistoryIds.value.has(eventId)
 
 const canAddNote = computed(() => isSecretary.value || isSuperAdmin.value)
 
-const submitReview = async (event, status, noteOverride = '', publishToFeedFlag = false) => {
+const submitReview = async (event, status, noteOverride = '', publishToFeedFlag = false, acceptedAt = null) => {
   reviewErrors[event.id] = ''
   const note = noteOverride || ''
   if ((status === 'denied' || status === 'changes_requested') && !note.trim()) {
@@ -1768,6 +1813,7 @@ const submitReview = async (event, status, noteOverride = '', publishToFeedFlag 
       review_status: status,
       review_note: note || null,
       publish_to_feed: publishToFeedFlag,
+      accepted_at: acceptedAt,
     })
     reviewErrors[event.id] = ''
     reviewModalMessage.value = locale.value === 'es'
@@ -1791,6 +1837,9 @@ const openStatusModal = (event) => {
   statusSelection.value = event.review_status || 'pending'
   statusNote.value = ''
   publishToFeed.value = Boolean(event.publish_to_feed)
+  statusAcceptedAt.value = statusSelection.value === 'approved'
+    ? formatDateLocal(event.accepted_at)
+    : ''
   statusModalOpen.value = true
 }
 
@@ -1798,6 +1847,7 @@ const closeStatusModal = () => {
   statusModalOpen.value = false
   statusNote.value = ''
   publishToFeed.value = false
+  statusAcceptedAt.value = ''
   activeReviewEvent.value = null
 }
 
@@ -1809,7 +1859,8 @@ const submitStatusModal = async () => {
     activeReviewEvent.value,
     statusSelection.value,
     statusNote.value,
-    statusSelection.value === 'approved' ? publishToFeed.value : false
+    statusSelection.value === 'approved' ? publishToFeed.value : false,
+    statusSelection.value === 'approved' ? toIsoDate(statusAcceptedAt.value) : null
   )
   closeStatusModal()
 }
@@ -1851,7 +1902,7 @@ const submitNoteModal = async () => {
 
 const exportPdf = async (view) => {
   try {
-    const response = await calendarApi.exportCalendar(view, includeHistoryExport.value)
+    const response = await calendarApi.exportCalendar(view, includeHistoryExport.value, locale.value)
     const blob = new Blob([response.data], { type: 'application/pdf' })
     const link = document.createElement('a')
     const now = new Date().toISOString().slice(0, 10)
@@ -1878,6 +1929,11 @@ watch(currentMonth, async () => {
 watch(statusSelection, (next) => {
   if (next !== 'approved') {
     publishToFeed.value = false
+    statusAcceptedAt.value = ''
+    return
+  }
+  if (!statusAcceptedAt.value) {
+    statusAcceptedAt.value = formatDateLocal(new Date())
   }
 })
 

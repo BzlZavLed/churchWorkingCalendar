@@ -277,6 +277,7 @@ class EventController extends Controller
             'review_status' => ['required', 'in:approved,denied,changes_requested'],
             'review_note' => ['nullable', 'string'],
             'publish_to_feed' => ['nullable', 'boolean'],
+            'accepted_at' => ['nullable', 'date'],
         ]);
 
         if ($event->status !== 'locked') {
@@ -302,9 +303,17 @@ class EventController extends Controller
             $previousReviewStatus = $event->review_status;
             $previousFinalValidation = $event->final_validation;
             $previousPublishToFeed = $event->publish_to_feed;
+            $previousAcceptedAt = $event->accepted_at;
 
             $shouldPublish = $data['review_status'] === 'approved'
                 && ($data['publish_to_feed'] ?? false) === true;
+
+            $acceptedAt = null;
+            if ($finalValidation === 'accepted') {
+                $acceptedAt = !empty($data['accepted_at'])
+                    ? Carbon::parse($data['accepted_at'])
+                    : now();
+            }
 
             $event->update([
                 'review_status' => $data['review_status'],
@@ -312,6 +321,7 @@ class EventController extends Controller
                 'reviewed_by' => $request->user()->id,
                 'reviewed_at' => now(),
                 'final_validation' => $finalValidation,
+                'accepted_at' => $acceptedAt,
                 'publish_to_feed' => $shouldPublish,
                 'published_at' => $shouldPublish ? now() : null,
             ]);
@@ -329,6 +339,10 @@ class EventController extends Controller
                     'final_validation' => [
                         'from' => $previousFinalValidation,
                         'to' => $finalValidation,
+                    ],
+                    'accepted_at' => [
+                        'from' => $previousAcceptedAt,
+                        'to' => $acceptedAt,
                     ],
                     'publish_to_feed' => [
                         'from' => $previousPublishToFeed,

@@ -42,9 +42,9 @@ export const calendarApi = {
     const { data } = await apiClient.delete(`/events/${eventId}`)
     return data
   },
-  async exportCalendar(view, includeHistory) {
+  async exportCalendar(view, includeHistory, locale) {
     const response = await apiClient.get('/calendar/export', {
-      params: { view, include_history: includeHistory ? 1 : 0 },
+      params: { view, include_history: includeHistory ? 1 : 0, locale },
       responseType: 'blob',
     })
     return response

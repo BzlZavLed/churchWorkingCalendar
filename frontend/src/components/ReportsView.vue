@@ -166,6 +166,7 @@
                         <th>{{ t.columns.place }}</th>
                         <th>{{ t.columns.event }}</th>
                         <th>{{ t.columns.status }}</th>
+                        <th>{{ t.columns.acceptedAt }}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -175,9 +176,10 @@
                         <td>{{ event.location || '—' }}</td>
                         <td>{{ event.title }}</td>
                         <td>{{ statusLabel(event.review_status) }}</td>
+                        <td>{{ formatDate(event.accepted_at) }}</td>
                       </tr>
                       <tr v-if="(eventsByObjective.get(objective.id) || []).length === 0" class="child-row">
-                        <td colspan="5" class="text-muted">{{ t.labels.noEvents }}</td>
+                        <td colspan="6" class="text-muted">{{ t.labels.noEvents }}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -350,6 +352,7 @@
                   <span class="sort-indicator">{{ sortIndicator(eventSort, 'status') }}</span>
                 </button>
               </th>
+              <th>{{ t.columns.acceptedAt }}</th>
             </tr>
           </thead>
           <tbody>
@@ -370,6 +373,7 @@
                 <span class="status-dot" :class="statusClass(event.review_status)"></span>
                 {{ statusLabel(event.review_status) }}
               </td>
+              <td>{{ formatDate(event.accepted_at) }}</td>
             </tr>
           </tbody>
         </table>
@@ -436,6 +440,7 @@ const translations = {
       event: 'Evento',
       objective: 'Objetivo',
       status: 'Estado',
+      acceptedAt: 'Fecha de votacion',
       actions: 'Acciones',
       note: 'Nota',
       author: 'Autor',
@@ -511,6 +516,7 @@ const translations = {
       event: 'Event',
       objective: 'Objective',
       status: 'Status',
+      acceptedAt: 'Approval date',
       actions: 'Actions',
       note: 'Note',
       author: 'Author',
@@ -938,6 +944,7 @@ const exportEvents = () => {
       t.value.columns.event,
       t.value.columns.objective,
       t.value.columns.status,
+      t.value.columns.acceptedAt,
     ],
   ]
 
@@ -950,6 +957,7 @@ const exportEvents = () => {
       event.title,
       event.objective?.name || '',
       statusLabel(event.review_status),
+      formatDate(event.accepted_at),
     ])
   })
 
@@ -1003,6 +1011,7 @@ const exportEventsPdf = () => {
     t.value.columns.event,
     t.value.columns.objective,
     t.value.columns.status,
+    t.value.columns.acceptedAt,
   ]
 
   const rows = sortedEvents.value.map((event) => [
@@ -1013,6 +1022,7 @@ const exportEventsPdf = () => {
     event.title,
     event.objective?.name || '',
     statusLabel(event.review_status),
+    formatDate(event.accepted_at),
   ])
 
   exportPdf('reports-events.pdf', t.value.tabs.events, headers, rows)

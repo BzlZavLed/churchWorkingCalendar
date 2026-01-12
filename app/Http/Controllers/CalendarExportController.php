@@ -14,6 +14,7 @@ class CalendarExportController extends Controller
         $data = $request->validate([
             'view' => ['required', 'in:calendar,list'],
             'include_history' => ['nullable', 'boolean'],
+            'locale' => ['nullable', 'in:es,en'],
         ]);
 
         $query = Event::query()
@@ -67,6 +68,7 @@ class CalendarExportController extends Controller
         $pdf = Pdf::loadView($view, [
             'months' => $months,
             'includeHistory' => (bool) ($data['include_history'] ?? false),
+            'locale' => $data['locale'] ?? 'es',
         ])->setPaper('letter', 'portrait');
 
         $filename = $data['view'] === 'calendar' ? 'calendar-export.pdf' : 'calendar-list-export.pdf';

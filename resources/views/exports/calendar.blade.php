@@ -17,20 +17,24 @@
     </style>
   </head>
   <body>
-    <h1>Calendar Export</h1>
+    @php
+      $locale = $locale ?? 'es';
+      $isEs = $locale === 'es';
+    @endphp
+    <h1>{{ $isEs ? 'Exportacion de calendario' : 'Calendar Export' }}</h1>
 
     @foreach ($months as $month)
       <h2>{{ $month['label'] }}</h2>
       <table>
         <thead>
           <tr>
-            <th>Sun</th>
-            <th>Mon</th>
-            <th>Tue</th>
-            <th>Wed</th>
-            <th>Thu</th>
-            <th>Fri</th>
-            <th>Sat</th>
+            <th>{{ $isEs ? 'Dom' : 'Sun' }}</th>
+            <th>{{ $isEs ? 'Lun' : 'Mon' }}</th>
+            <th>{{ $isEs ? 'Mar' : 'Tue' }}</th>
+            <th>{{ $isEs ? 'Mie' : 'Wed' }}</th>
+            <th>{{ $isEs ? 'Jue' : 'Thu' }}</th>
+            <th>{{ $isEs ? 'Vie' : 'Fri' }}</th>
+            <th>{{ $isEs ? 'Sab' : 'Sat' }}</th>
           </tr>
         </thead>
         <tbody>
@@ -46,6 +50,7 @@
                       <div class="event-title">{{ $event->title }}</div>
                       <div class="muted">{{ $event->start_at->format('H:i') }} - {{ $event->end_at->format('H:i') }}</div>
                       <div class="muted">{{ $event->department->name ?? '—' }}</div>
+                      <div class="muted">{{ $isEs ? 'Votado en' : 'Approved on' }}: {{ $event->accepted_at?->format('Y-m-d') ?? '—' }}</div>
                     </div>
                   @endforeach
                 </td>
@@ -58,15 +63,15 @@
 
     @if (!empty($includeHistory))
       <div style="page-break-before: always;"></div>
-      <h2>Status History</h2>
+      <h2>{{ $isEs ? 'Historial de estado' : 'Status History' }}</h2>
       <table>
         <thead>
           <tr>
-            <th>Event</th>
-            <th>Status Change</th>
-            <th>User</th>
-            <th>Date</th>
-            <th>Note</th>
+            <th>{{ $isEs ? 'Evento' : 'Event' }}</th>
+            <th>{{ $isEs ? 'Cambio de estado' : 'Status Change' }}</th>
+            <th>{{ $isEs ? 'Usuario' : 'User' }}</th>
+            <th>{{ $isEs ? 'Fecha' : 'Date' }}</th>
+            <th>{{ $isEs ? 'Nota' : 'Note' }}</th>
           </tr>
         </thead>
         <tbody>
@@ -85,7 +90,7 @@
               @endphp
               <tr>
                 <td>{{ $event->title }}</td>
-                <td>{{ $from }} to {{ $to }}</td>
+                <td>{{ $from }} {{ $isEs ? 'a' : 'to' }} {{ $to }}</td>
                 <td>{{ $history->user->name ?? '—' }}</td>
                 <td>{{ $history->created_at->format('Y-m-d H:i') }}</td>
                 <td>{{ $history->note ?? '—' }}</td>
@@ -93,26 +98,26 @@
             @empty
               <tr>
                 <td>{{ $event->title }}</td>
-                <td colspan="4" class="muted">No status history</td>
+                <td colspan="4" class="muted">{{ $isEs ? 'Sin historial' : 'No status history' }}</td>
               </tr>
             @endforelse
           @empty
             <tr>
-              <td colspan="5" class="muted">No events</td>
+              <td colspan="5" class="muted">{{ $isEs ? 'Sin eventos' : 'No events' }}</td>
             </tr>
           @endforelse
         </tbody>
       </table>
 
-      <h2>Notes</h2>
+      <h2>{{ $isEs ? 'Notas' : 'Notes' }}</h2>
       <table>
         <thead>
           <tr>
-            <th>Event</th>
-            <th>Author</th>
-            <th>Date</th>
-            <th>Note</th>
-            <th>Reply</th>
+            <th>{{ $isEs ? 'Evento' : 'Event' }}</th>
+            <th>{{ $isEs ? 'Autor' : 'Author' }}</th>
+            <th>{{ $isEs ? 'Fecha' : 'Date' }}</th>
+            <th>{{ $isEs ? 'Nota' : 'Note' }}</th>
+            <th>{{ $isEs ? 'Respuesta' : 'Reply' }}</th>
           </tr>
         </thead>
         <tbody>
@@ -129,12 +134,12 @@
             @empty
               <tr>
                 <td>{{ $event->title }}</td>
-                <td colspan="4" class="muted">No notes</td>
+                <td colspan="4" class="muted">{{ $isEs ? 'Sin notas' : 'No notes' }}</td>
               </tr>
             @endforelse
           @empty
             <tr>
-              <td colspan="5" class="muted">No events</td>
+              <td colspan="5" class="muted">{{ $isEs ? 'Sin eventos' : 'No events' }}</td>
             </tr>
           @endforelse
         </tbody>

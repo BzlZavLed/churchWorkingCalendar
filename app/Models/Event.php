@@ -28,6 +28,7 @@ class Event extends Model
         'reviewed_by',
         'reviewed_at',
         'final_validation',
+        'accepted_at',
         'publish_to_feed',
         'published_at',
         'created_by',
@@ -41,6 +42,7 @@ class Event extends Model
         'reviewed_at' => 'datetime',
         'publish_to_feed' => 'boolean',
         'published_at' => 'datetime',
+        'accepted_at' => 'datetime',
     ];
 
     public function department(): BelongsTo

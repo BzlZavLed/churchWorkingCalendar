@@ -17,21 +17,26 @@
     </style>
   </head>
   <body>
-    <h1>Calendar Export (List)</h1>
+    @php
+      $locale = $locale ?? 'es';
+      $isEs = $locale === 'es';
+    @endphp
+    <h1>{{ $isEs ? 'Exportacion de calendario (Lista)' : 'Calendar Export (List)' }}</h1>
 
     @foreach ($months as $month)
       <h2>{{ $month['label'] }}</h2>
       <table>
         <thead>
           <tr>
-            <th>Date</th>
-            <th>Time</th>
-            <th>Title</th>
-            <th>Department</th>
-            <th>Objective</th>
-            <th>Location</th>
-            <th>Status</th>
-            <th>Final Validation</th>
+            <th>{{ $isEs ? 'Fecha' : 'Date' }}</th>
+            <th>{{ $isEs ? 'Hora' : 'Time' }}</th>
+            <th>{{ $isEs ? 'Titulo' : 'Title' }}</th>
+            <th>{{ $isEs ? 'Departamento' : 'Department' }}</th>
+            <th>{{ $isEs ? 'Objetivo' : 'Objective' }}</th>
+            <th>{{ $isEs ? 'Lugar' : 'Location' }}</th>
+            <th>{{ $isEs ? 'Estado' : 'Status' }}</th>
+            <th>{{ $isEs ? 'Resultado final' : 'Final Validation' }}</th>
+            <th>{{ $isEs ? 'Votado en' : 'Voted' }}</th>
           </tr>
         </thead>
         <tbody>
@@ -45,11 +50,12 @@
               <td>{{ $event->location ?? '—' }}</td>
               <td class="muted">{{ $event->status }}</td>
               <td class="muted">{{ $event->final_validation ?? '—' }}</td>
+              <td class="muted">{{ $event->accepted_at?->format('Y-m-d') ?? '—' }}</td>
             </tr>
             @if ($includeHistory)
               <tr class="child-row">
-                <td colspan="8">
-                  <strong>Status history</strong>
+                <td colspan="9">
+                  <strong>{{ $isEs ? 'Historial de estado' : 'Status history' }}</strong>
                   <ul>
                     @php
                       $statusHistory = $event->histories->filter(function ($history) {
@@ -69,20 +75,20 @@
                         @endif
                       </li>
                     @empty
-                      <li class="muted">No status history</li>
+                      <li class="muted">{{ $isEs ? 'Sin historial' : 'No status history' }}</li>
                     @endforelse
                   </ul>
-                  <strong>Notes</strong>
+                  <strong>{{ $isEs ? 'Notas' : 'Notes' }}</strong>
                   <ul>
                     @forelse ($event->notes as $note)
                       <li>
                         {{ $note->author->name ?? '—' }} · {{ $note->created_at->format('Y-m-d H:i') }} — {{ $note->note }}
                         @if ($note->reply)
-                          <div class="muted">Reply: {{ $note->reply }}</div>
+                          <div class="muted">{{ $isEs ? 'Respuesta' : 'Reply' }}: {{ $note->reply }}</div>
                         @endif
                       </li>
                     @empty
-                      <li class="muted">No notes</li>
+                      <li class="muted">{{ $isEs ? 'Sin notas' : 'No notes' }}</li>
                     @endforelse
                   </ul>
                 </td>
