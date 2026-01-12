@@ -558,6 +558,15 @@
             <option value="changes_requested">{{ t.statusChanges }}</option>
           </select>
         </label>
+        <label class="col-12 col-sm-6 col-lg-3">
+          <span class="form-label small mb-1">{{ t.filterDepartment }}</span>
+          <select v-model="reviewDepartmentFilter" class="form-select">
+            <option value="all">{{ t.allDepartments }}</option>
+            <option v-for="dept in departments" :key="dept.id" :value="String(dept.id)">
+              {{ dept.name }}
+            </option>
+          </select>
+        </label>
       </div>
       <div v-if="reviewGroups.length === 0" class="review-empty">
         {{ t.reviewEmpty }}
@@ -763,6 +772,7 @@ const isEventDetailsOpen = ref(false)
 const selectedEvent = ref(null)
 const departmentFilter = ref('all')
 const statusFilter = ref('all')
+const reviewDepartmentFilter = ref('all')
 const reviewErrors = reactive({})
 const monthSelection = ref('')
 const expandedHistoryIds = ref(new Set())
@@ -1357,9 +1367,14 @@ const reviewGroups = computed(() => {
   if (!canReview.value) {
     return []
   }
-  const list = displayEvents.value
+  let list = displayEvents.value
     .filter((event) => event.status === 'locked')
     .sort((a, b) => new Date(a.start_at) - new Date(b.start_at))
+
+  if (reviewDepartmentFilter.value && reviewDepartmentFilter.value !== 'all') {
+    const departmentId = Number(reviewDepartmentFilter.value)
+    list = list.filter((event) => event.department_id === departmentId)
+  }
 
   const range = reviewRange.value
   const grouped = new Map()
