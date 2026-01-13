@@ -2,9 +2,14 @@
   <section class="container py-4">
     <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3">
       <h1 class="h3 m-0">{{ t.title }}</h1>
-      <button class="btn btn-outline-secondary" type="button" :disabled="!selectedChurchId" @click="loadEvents">
-        {{ t.refresh }}
-      </button>
+      <div class="d-flex flex-wrap gap-2">
+        <button class="btn btn-outline-secondary" type="button" :disabled="!selectedChurchId" @click="loadEvents">
+          {{ t.refresh }}
+        </button>
+        <button class="btn btn-outline-danger" type="button" :disabled="!selectedChurchId" @click="deleteCalendar">
+          {{ t.deleteCalendar }}
+        </button>
+      </div>
     </div>
 
     <div class="bg-white border rounded p-3 mb-4">
@@ -21,6 +26,7 @@
 
     <div v-if="loading">{{ t.loading }}</div>
     <p v-if="error" class="text-danger">{{ error }}</p>
+    <p v-if="success" class="text-success">{{ success }}</p>
 
     <div v-if="!loading && selectedChurchId && events.length === 0" class="text-muted">
       {{ t.empty }}
@@ -29,6 +35,9 @@
     <div v-else-if="selectedChurchId" class="bg-white border rounded">
       <div class="table-responsive d-none d-md-block">
         <table class="table mb-0" data-dt="off">
+          <caption class="caption-top px-3 pt-3 text-muted">
+            {{ t.rangeLabel }}: {{ rangeLabel }}
+          </caption>
           <thead>
             <tr>
               <th>{{ t.columns.id }}</th>
@@ -55,6 +64,9 @@
       </div>
 
       <div class="d-md-none p-3">
+        <div class="text-muted mb-3">
+          <strong>{{ t.rangeLabel }}:</strong> {{ rangeLabel }}
+        </div>
         <div v-for="event in events" :key="event.id" class="card mb-3">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-start mb-2">
@@ -86,7 +98,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { superAdminApi } from '../../services/superAdminApi'
 import { useUiStore } from '../../stores/uiStore'
 import { storeToRefs } from 'pinia'
@@ -97,6 +109,8 @@ const selectedChurchId = ref('')
 const events = ref([])
 const loading = ref(false)
 const error = ref('')
+const success = ref('')
+const successTimer = ref(null)
 const uiStore = useUiStore()
 const { locale } = storeToRefs(uiStore)
 const t = computed(() => translations[locale.value].superadmin.calendarManager)
@@ -114,6 +128,7 @@ const loadEvents = async () => {
   }
   loading.value = true
   error.value = ''
+  success.value = ''
   try {
     events.value = await superAdminApi.listChurchEvents(selectedChurchId.value)
   } catch {
@@ -131,9 +146,64 @@ const formatDateTime = (value) => {
   return date.toLocaleString(locale.value)
 }
 
+const setSuccessMessage = (message) => {
+  success.value = message
+  if (successTimer.value) {
+    clearTimeout(successTimer.value)
+  }
+  successTimer.value = setTimeout(() => {
+    success.value = ''
+    successTimer.value = null
+  }, 3000)
+}
+
+const formatCountMessage = (template, count) => template.replace('{count}', count)
+
+const deleteCalendar = async () => {
+  if (!selectedChurchId.value) {
+    return
+  }
+  const selectedId = Number(selectedChurchId.value)
+  const churchName = churches.value.find((church) => church.id === selectedId)?.name || ''
+  const confirmMessage = t.value.deleteCalendarConfirm.replace('{name}', churchName)
+  if (!window.confirm(confirmMessage)) {
+    return
+  }
+  error.value = ''
+  success.value = ''
+  try {
+    const response = await superAdminApi.deleteChurchEvents(selectedChurchId.value)
+    events.value = []
+    const message = formatCountMessage(t.value.deleteCalendarSuccess, response.deleted ?? 0)
+    setSuccessMessage(message)
+  } catch {
+    error.value = t.value.deleteCalendarError
+  }
+}
+
+const rangeLabel = computed(() => {
+  if (events.value.length === 0) {
+    return t.value.rangeEmpty
+  }
+  const starts = events.value.map((event) => new Date(event.start_at)).filter((date) => !Number.isNaN(date.getTime()))
+  const ends = events.value.map((event) => new Date(event.end_at)).filter((date) => !Number.isNaN(date.getTime()))
+  if (starts.length === 0 || ends.length === 0) {
+    return t.value.rangeEmpty
+  }
+  const earliest = new Date(Math.min(...starts.map((date) => date.getTime())))
+  const latest = new Date(Math.max(...ends.map((date) => date.getTime())))
+  return `${earliest.toLocaleDateString(locale.value)} - ${latest.toLocaleDateString(locale.value)}`
+})
+
 watch(selectedChurchId, () => {
   loadEvents()
 })
 
 onMounted(loadChurches)
+
+onUnmounted(() => {
+  if (successTimer.value) {
+    clearTimeout(successTimer.value)
+  }
+})
 </script>
