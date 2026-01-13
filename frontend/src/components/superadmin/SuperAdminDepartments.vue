@@ -79,6 +79,7 @@
             <td class="text-end">
               <div class="d-flex flex-column flex-md-row justify-content-end gap-2">
                 <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateDepartment(department)">{{ t.save }}</button>
+                <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteDepartmentEvents(department)">{{ t.deleteEvents }}</button>
                 <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteDepartment(department)">{{ t.delete }}</button>
               </div>
             </td>
@@ -113,6 +114,7 @@
             </div>
             <div class="d-flex flex-wrap gap-2">
               <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateDepartment(department)">{{ t.save }}</button>
+              <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteDepartmentEvents(department)">{{ t.deleteEvents }}</button>
               <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteDepartment(department)">{{ t.delete }}</button>
             </div>
           </div>
@@ -170,8 +172,8 @@ const loadDepartments = async () => {
   }
 }
 
-const setSuccessMessage = () => {
-  success.value = locale.value === 'es' ? 'Guardado correctamente.' : 'Saved successfully.'
+const setSuccessMessage = (message = '') => {
+  success.value = message || (locale.value === 'es' ? 'Guardado correctamente.' : 'Saved successfully.')
   if (successTimer.value) {
     clearTimeout(successTimer.value)
   }
@@ -203,6 +205,27 @@ const createDepartment = async () => {
     await loadDepartments()
   } catch {
     error.value = t.value.createError
+  }
+}
+
+const formatCountMessage = (template, count) => template.replace('{count}', count)
+
+const deleteDepartmentEvents = async (department) => {
+  if (!selectedChurchId.value) {
+    return
+  }
+  const confirmMessage = t.value.deleteEventsConfirm.replace('{name}', department.name)
+  if (!window.confirm(confirmMessage)) {
+    return
+  }
+  error.value = ''
+  success.value = ''
+  try {
+    const response = await superAdminApi.deleteDepartmentEvents(selectedChurchId.value, department.id)
+    const message = formatCountMessage(t.value.deleteEventsSuccess, response.deleted ?? 0)
+    setSuccessMessage(message)
+  } catch {
+    error.value = t.value.deleteEventsError
   }
 }
 

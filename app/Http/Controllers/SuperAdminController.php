@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Church;
 use App\Models\Department;
+use App\Models\Event;
 use App\Models\Invitation;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -188,6 +189,43 @@ class SuperAdminController extends Controller
         $department->delete();
 
         return response()->noContent();
+    }
+
+    public function destroyDepartmentEvents(Church $church, Department $department)
+    {
+        if ($department->church_id !== $church->id) {
+            abort(404);
+        }
+
+        $deleted = Event::query()
+            ->where('department_id', $department->id)
+            ->delete();
+
+        return response()->json(['deleted' => $deleted]);
+    }
+
+    public function listChurchEvents(Church $church)
+    {
+        $events = Event::query()
+            ->with('department')
+            ->whereHas('department', function ($query) use ($church) {
+                $query->where('church_id', $church->id);
+            })
+            ->orderBy('start_at', 'desc')
+            ->get();
+
+        return response()->json($events);
+    }
+
+    public function destroyChurchEvents(Church $church)
+    {
+        $deleted = Event::query()
+            ->whereHas('department', function ($query) use ($church) {
+                $query->where('church_id', $church->id);
+            })
+            ->delete();
+
+        return response()->json(['deleted' => $deleted]);
     }
 
     public function listUsers(Church $church)

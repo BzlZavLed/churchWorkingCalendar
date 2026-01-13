@@ -35,6 +35,18 @@ export const superAdminApi = {
   async deleteDepartment(churchId, departmentId) {
     await apiClient.delete(`/superadmin/churches/${churchId}/departments/${departmentId}`)
   },
+  async deleteDepartmentEvents(churchId, departmentId) {
+    const { data } = await apiClient.delete(`/superadmin/churches/${churchId}/departments/${departmentId}/events`)
+    return data
+  },
+  async listChurchEvents(churchId) {
+    const { data } = await apiClient.get(`/superadmin/churches/${churchId}/events`)
+    return data
+  },
+  async deleteChurchEvents(churchId) {
+    const { data } = await apiClient.delete(`/superadmin/churches/${churchId}/events`)
+    return data
+  },
   async listUsers(churchId) {
     const { data } = await apiClient.get(`/superadmin/churches/${churchId}/users`)
     return data

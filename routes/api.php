@@ -84,6 +84,9 @@ Route::middleware(['auth:sanctum', 'superadmin'])->group(function () {
     Route::post('superadmin/churches/{church}/departments', [SuperAdminController::class, 'storeDepartment']);
     Route::put('superadmin/churches/{church}/departments/{department}', [SuperAdminController::class, 'updateDepartment']);
     Route::delete('superadmin/churches/{church}/departments/{department}', [SuperAdminController::class, 'destroyDepartment']);
+    Route::delete('superadmin/churches/{church}/departments/{department}/events', [SuperAdminController::class, 'destroyDepartmentEvents']);
+    Route::get('superadmin/churches/{church}/events', [SuperAdminController::class, 'listChurchEvents']);
+    Route::delete('superadmin/churches/{church}/events', [SuperAdminController::class, 'destroyChurchEvents']);
     Route::get('superadmin/churches/{church}/users', [SuperAdminController::class, 'listUsers']);
     Route::post('superadmin/churches/{church}/users', [SuperAdminController::class, 'storeUser']);
     Route::put('superadmin/churches/{church}/users/{user}', [SuperAdminController::class, 'updateUser']);

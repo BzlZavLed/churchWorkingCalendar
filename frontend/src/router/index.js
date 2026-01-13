@@ -10,6 +10,7 @@ import SuperAdminLogin from '../components/superadmin/SuperAdminLogin.vue'
 import SuperAdminChurches from '../components/superadmin/SuperAdminChurches.vue'
 import SuperAdminDepartments from '../components/superadmin/SuperAdminDepartments.vue'
 import SuperAdminUsers from '../components/superadmin/SuperAdminUsers.vue'
+import SuperAdminCalendarManager from '../components/superadmin/SuperAdminCalendarManager.vue'
 
 const routes = [
   { path: '/', redirect: '/calendar' },
@@ -23,6 +24,7 @@ const routes = [
   { path: '/superadmin/login', component: SuperAdminLogin, meta: { guestOnly: true, noLayout: true } },
   { path: '/superadmin/churches', component: SuperAdminChurches, meta: { requiresAuth: true, superadminOnly: true } },
   { path: '/superadmin/departments', component: SuperAdminDepartments, meta: { requiresAuth: true, superadminOnly: true } },
+  { path: '/superadmin/calendars', component: SuperAdminCalendarManager, meta: { requiresAuth: true, superadminOnly: true } },
   { path: '/superadmin/users', component: SuperAdminUsers, meta: { requiresAuth: true, superadminOnly: true } },
 ]
 

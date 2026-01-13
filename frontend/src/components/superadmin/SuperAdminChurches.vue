@@ -75,6 +75,7 @@
 
         <div v-if="loading">{{ t.loading }}</div>
         <p v-if="error" class="text-danger">{{ error }}</p>
+        <p v-if="success" class="text-success">{{ success }}</p>
 
         <div v-if="churches.length === 0 && !loading">{{ t.empty }}</div>
         <div v-else class="table-responsive bg-white border rounded">
@@ -112,6 +113,9 @@
                     <div class="d-flex flex-column flex-md-row justify-content-end gap-2">
                       <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateChurch(church)">
                         {{ t.save }}
+                      </button>
+                      <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteChurchEvents(church)">
+                        {{ t.deleteEvents }}
                       </button>
                       <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteChurch(church)">
                         {{ t.delete }}
@@ -163,7 +167,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { superAdminApi } from '../../services/superAdminApi'
 import { useUiStore } from '../../stores/uiStore'
 import { storeToRefs } from 'pinia'
@@ -173,6 +177,8 @@ const churches = ref([])
 const loading = ref(false)
 const error = ref('')
 const inviteCode = ref('')
+const success = ref('')
+const successTimer = ref(null)
 const expandedIds = ref(new Set())
 const uiStore = useUiStore()
 const { locale } = storeToRefs(uiStore)
@@ -207,6 +213,7 @@ const loadChurches = async () => {
 const createChurch = async () => {
   error.value = ''
   inviteCode.value = ''
+  success.value = ''
   try {
     const payload = {
       ...createForm,
@@ -228,6 +235,7 @@ const createChurch = async () => {
 
 const updateChurch = async (church) => {
   error.value = ''
+  success.value = ''
   try {
     await superAdminApi.updateChurch(church.id, { name: church.name })
   } catch {
@@ -237,6 +245,7 @@ const updateChurch = async (church) => {
 
 const deleteChurch = async (church) => {
   error.value = ''
+  success.value = ''
   try {
     await superAdminApi.deleteChurch(church.id)
     await loadChurches()
@@ -248,12 +257,42 @@ const deleteChurch = async (church) => {
 const generateInvite = async (church) => {
   error.value = ''
   inviteCode.value = ''
+  success.value = ''
   try {
     const response = await superAdminApi.generateInvite(church.id, { invite_role: 'admin' })
     inviteCode.value = response.code
     await loadChurches()
   } catch {
     error.value = t.value.inviteError
+  }
+}
+
+const setSuccessMessage = (message) => {
+  success.value = message
+  if (successTimer.value) {
+    clearTimeout(successTimer.value)
+  }
+  successTimer.value = setTimeout(() => {
+    success.value = ''
+    successTimer.value = null
+  }, 3000)
+}
+
+const formatCountMessage = (template, count) => template.replace('{count}', count)
+
+const deleteChurchEvents = async (church) => {
+  error.value = ''
+  success.value = ''
+  const confirmMessage = t.value.deleteEventsConfirm.replace('{name}', church.name)
+  if (!window.confirm(confirmMessage)) {
+    return
+  }
+  try {
+    const response = await superAdminApi.deleteChurchEvents(church.id)
+    const message = formatCountMessage(t.value.deleteEventsSuccess, response.deleted ?? 0)
+    setSuccessMessage(message)
+  } catch {
+    error.value = t.value.deleteEventsError
   }
 }
 
@@ -270,4 +309,10 @@ const toggleDetails = (id) => {
 const isExpanded = (id) => expandedIds.value.has(id)
 
 onMounted(loadChurches)
+
+onUnmounted(() => {
+  if (successTimer.value) {
+    clearTimeout(successTimer.value)
+  }
+})
 </script>
