@@ -78,88 +78,168 @@
         <p v-if="success" class="text-success">{{ success }}</p>
 
         <div v-if="churches.length === 0 && !loading">{{ t.empty }}</div>
-        <div v-else class="table-responsive bg-white border rounded">
-          <table class="table mb-0" data-dt="off">
-            <thead>
-              <tr>
-                <th>{{ t.columns.id }}</th>
-                <th>{{ t.columns.name }}</th>
-                <th>{{ t.columns.slug }}</th>
-                <th>{{ t.columns.feedUrl }}</th>
-                <th>{{ t.columns.latestInvite }}</th>
-                <th class="text-end">{{ t.columns.actions }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <template v-for="church in churches" :key="church.id">
+        <div v-else class="bg-white border rounded">
+          <div class="table-responsive d-none d-md-block">
+            <table class="table mb-0" data-dt="off">
+              <thead>
                 <tr>
-                  <td>{{ church.id }}</td>
-                  <td>
-                    <input v-model="church.name" class="form-control" type="text" />
-                  </td>
-                  <td>{{ church.slug || '—' }}</td>
-                  <td>
-                    <input
-                      v-if="church.slug"
-                      class="form-control form-control-sm"
-                      type="text"
-                      :value="`https://www.mychurchadmin.net/api/public/churches/${church.slug}/events.ics`"
-                      readonly
-                    />
-                    <span v-else>—</span>
-                  </td>
-                  <td>{{ church.latest_invitation?.code || '—' }}</td>
-                  <td class="text-end">
-                    <div class="d-flex flex-column flex-md-row justify-content-end gap-2">
-                      <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateChurch(church)">
-                        {{ t.save }}
-                      </button>
-                      <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteChurchEvents(church)">
-                        {{ t.deleteEvents }}
-                      </button>
-                      <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteChurch(church)">
-                        {{ t.delete }}
-                      </button>
-                      <button class="btn btn-sm btn-outline-primary" type="button" @click="generateInvite(church)">
-                        {{ t.generateInvite }}
-                      </button>
-                      <router-link
-                        v-if="church.latest_invitation?.code"
-                        class="btn btn-sm btn-outline-success"
-                        :to="{ path: '/superadmin/users', query: { invite: church.latest_invitation.code } }"
-                      >
-                        {{ t.users }}
-                      </router-link>
-                      <button v-else class="btn btn-sm btn-outline-success" type="button" disabled>
-                        {{ t.users }}
-                      </button>
-                      <button class="btn btn-sm btn-outline-dark" type="button" @click="toggleDetails(church.id)">
-                        {{ isExpanded(church.id) ? t.hide : t.details }}
-                      </button>
-                    </div>
-                  </td>
+                  <th>{{ t.columns.id }}</th>
+                  <th>{{ t.columns.name }}</th>
+                  <th>{{ t.columns.slug }}</th>
+                  <th>{{ t.columns.feedUrl }}</th>
+                  <th>{{ t.columns.latestInvite }}</th>
+                  <th class="text-end">{{ t.columns.actions }}</th>
                 </tr>
-                <tr v-if="isExpanded(church.id)">
-                  <td colspan="6">
-                    <div class="row g-3">
-                      <div class="col-12 col-md-6">
-                        <strong>{{ t.conference }}:</strong> {{ church.conference_name || '—' }}
+              </thead>
+              <tbody>
+                <template v-for="church in churches" :key="church.id">
+                  <tr>
+                    <td>{{ church.id }}</td>
+                    <td>
+                      <input v-model="church.name" class="form-control" type="text" />
+                    </td>
+                    <td>{{ church.slug || '—' }}</td>
+                    <td>
+                      <input
+                        v-if="church.slug"
+                        class="form-control form-control-sm"
+                        type="text"
+                        :value="`https://www.mychurchadmin.net/api/public/churches/${church.slug}/events.ics`"
+                        readonly
+                      />
+                      <span v-else>—</span>
+                    </td>
+                    <td>{{ church.latest_invitation?.code || '—' }}</td>
+                    <td class="text-end">
+                      <div class="d-flex flex-column flex-md-row justify-content-end gap-2">
+                        <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateChurch(church)">
+                          {{ t.save }}
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteChurchEvents(church)">
+                          {{ t.deleteEvents }}
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteChurch(church)">
+                          {{ t.delete }}
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary" type="button" @click="generateInvite(church)">
+                          {{ t.generateInvite }}
+                        </button>
+                        <router-link
+                          v-if="church.latest_invitation?.code"
+                          class="btn btn-sm btn-outline-success"
+                          :to="{ path: '/superadmin/users', query: { invite: church.latest_invitation.code } }"
+                        >
+                          {{ t.users }}
+                        </router-link>
+                        <button v-else class="btn btn-sm btn-outline-success" type="button" disabled>
+                          {{ t.users }}
+                        </button>
+                        <button class="btn btn-sm btn-outline-dark" type="button" @click="toggleDetails(church.id)">
+                          {{ isExpanded(church.id) ? t.hide : t.details }}
+                        </button>
                       </div>
-                      <div class="col-12 col-md-6">
-                        <strong>{{ t.pastor }}:</strong> {{ church.pastor_name || '—' }}
+                    </td>
+                  </tr>
+                  <tr v-if="isExpanded(church.id)">
+                    <td colspan="6">
+                      <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                          <strong>{{ t.conference }}:</strong> {{ church.conference_name || '—' }}
+                        </div>
+                        <div class="col-12 col-md-6">
+                          <strong>{{ t.pastor }}:</strong> {{ church.pastor_name || '—' }}
+                        </div>
+                        <div class="col-12 col-md-6">
+                          <strong>{{ t.address }}:</strong> {{ church.address || '—' }}
+                        </div>
+                        <div class="col-12 col-md-6">
+                          <strong>{{ t.ethnicity }}:</strong> {{ church.ethnicity || '—' }}
+                        </div>
                       </div>
-                      <div class="col-12 col-md-6">
-                        <strong>{{ t.address }}:</strong> {{ church.address || '—' }}
-                      </div>
-                      <div class="col-12 col-md-6">
-                        <strong>{{ t.ethnicity }}:</strong> {{ church.ethnicity || '—' }}
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="d-md-none p-3">
+            <div v-for="church in churches" :key="church.id" class="card mb-3">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <div>
+                    <h5 class="card-title mb-1">{{ church.name }}</h5>
+                    <p class="card-subtitle text-muted mb-0">#{{ church.id }}</p>
+                  </div>
+                </div>
+
+                <div class="mb-2">
+                  <label class="form-label small mb-1">{{ t.name }}</label>
+                  <input v-model="church.name" class="form-control" type="text" />
+                </div>
+                <div class="mb-2">
+                  <strong>{{ t.columns.slug }}:</strong> {{ church.slug || '—' }}
+                </div>
+                <div class="mb-2">
+                  <strong>{{ t.columns.feedUrl }}:</strong>
+                  <input
+                    v-if="church.slug"
+                    class="form-control form-control-sm mt-1"
+                    type="text"
+                    :value="`https://www.mychurchadmin.net/api/public/churches/${church.slug}/events.ics`"
+                    readonly
+                  />
+                  <span v-else>—</span>
+                </div>
+                <div class="mb-3">
+                  <strong>{{ t.columns.latestInvite }}:</strong> {{ church.latest_invitation?.code || '—' }}
+                </div>
+
+                <div v-if="isExpanded(church.id)" class="border-top pt-3 mt-2">
+                  <div class="mb-2">
+                    <strong>{{ t.conference }}:</strong> {{ church.conference_name || '—' }}
+                  </div>
+                  <div class="mb-2">
+                    <strong>{{ t.pastor }}:</strong> {{ church.pastor_name || '—' }}
+                  </div>
+                  <div class="mb-2">
+                    <strong>{{ t.address }}:</strong> {{ church.address || '—' }}
+                  </div>
+                  <div>
+                    <strong>{{ t.ethnicity }}:</strong> {{ church.ethnicity || '—' }}
+                  </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                  <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateChurch(church)">
+                    {{ t.save }}
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteChurchEvents(church)">
+                    {{ t.deleteEvents }}
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteChurch(church)">
+                    {{ t.delete }}
+                  </button>
+                  <button class="btn btn-sm btn-outline-primary" type="button" @click="generateInvite(church)">
+                    {{ t.generateInvite }}
+                  </button>
+                  <router-link
+                    v-if="church.latest_invitation?.code"
+                    class="btn btn-sm btn-outline-success"
+                    :to="{ path: '/superadmin/users', query: { invite: church.latest_invitation.code } }"
+                  >
+                    {{ t.users }}
+                  </router-link>
+                  <button v-else class="btn btn-sm btn-outline-success" type="button" disabled>
+                    {{ t.users }}
+                  </button>
+                  <button class="btn btn-sm btn-outline-dark" type="button" @click="toggleDetails(church.id)">
+                    {{ isExpanded(church.id) ? t.hide : t.details }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
