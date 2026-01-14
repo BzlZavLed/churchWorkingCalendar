@@ -9,10 +9,27 @@
 
     <form class="bg-white border rounded p-4 mb-4" @submit.prevent="createObjective">
       <div class="row g-3 align-items-end">
+        <div v-if="isSuperAdmin" class="col-12 col-lg-4">
+          <label class="form-label">
+            {{ t.fields.church }}
+            <select v-model="selectedChurchId" class="form-select" required>
+              <option value="">{{ common.select }}</option>
+              <option v-for="church in churches" :key="church.id" :value="String(church.id)">
+                {{ church.name }}
+              </option>
+            </select>
+          </label>
+        </div>
         <div class="col-12 col-lg-4">
           <label class="form-label">
             {{ t.fields.department }}
-            <select v-if="canChooseDepartment" v-model="createForm.department_id" class="form-select" required>
+            <select
+              v-if="canChooseDepartment"
+              v-model="createForm.department_id"
+              class="form-select"
+              :disabled="isSuperAdmin && !selectedChurchId"
+              required
+            >
               <option value="" disabled>{{ t.labels.selectDepartment }}</option>
               <option v-for="dept in departments" :key="dept.id" :value="String(dept.id)">
                 {{ dept.name }}
@@ -197,6 +214,7 @@ import { useUiStore } from '../stores/uiStore'
 import { translations } from '../i18n/translations'
 import { objectiveApi } from '../services/objectiveApi'
 import { publicApi } from '../services/publicApi'
+import { superAdminApi } from '../services/superAdminApi'
 
 const authStore = useAuthStore()
 
@@ -204,10 +222,13 @@ const uiStore = useUiStore()
 const { locale } = storeToRefs(uiStore)
 
 const t = computed(() => translations[locale.value].objectives)
+const common = computed(() => translations[locale.value].common)
 
 
 const objectives = ref([])
 const departments = ref([])
+const churches = ref([])
+const selectedChurchId = ref('')
 const loading = ref(false)
 const error = ref('')
 const isActive = ref(true)
@@ -223,6 +244,7 @@ const canChooseDepartment = computed(() =>
 const showDepartmentColumn = computed(() =>
   ['superadmin', 'secretary', 'admin'].includes(authStore.user?.role || '')
 )
+const isSuperAdmin = computed(() => authStore.user?.role === 'superadmin')
 
 const createForm = reactive({
   department_id: '',
@@ -235,14 +257,19 @@ const filteredObjectives = computed(() => {
   const list = objectives.value || []
   const role = authStore.user?.role
   const term = filterText.value.trim().toLowerCase()
+  const churchId = Number(selectedChurchId.value || 0)
+  const scopedList =
+    role === 'superadmin' && churchId
+      ? list.filter((item) => item.department?.church_id === churchId)
+      : list
   if (role === 'member') {
     const deptId = authStore.user?.department_id
-    return list
+    return scopedList
       .filter((item) => item.department_id === deptId)
       .filter((item) => matchesFilter(item, term))
       .sort((a, b) => compareObjectives(a, b))
   }
-  return list
+  return scopedList
     .filter((item) => matchesFilter(item, term))
     .sort((a, b) => compareObjectives(a, b))
 })
@@ -335,11 +362,12 @@ const goNext = () => {
 }
 
 const loadDepartments = async () => {
-  if (!authStore.user?.church_id) {
+  const churchId = isSuperAdmin.value ? Number(selectedChurchId.value || 0) : authStore.user?.church_id
+  if (!churchId) {
     departments.value = []
     return
   }
-  departments.value = await publicApi.listDepartments(authStore.user.church_id)
+  departments.value = await publicApi.listDepartments(churchId)
 }
 
 const loadObjectives = async () => {
@@ -422,6 +450,10 @@ const loadData = async () => {
   if (!authStore.user) {
     return
   }
+  if (isSuperAdmin.value) {
+    const response = await superAdminApi.listChurches()
+    churches.value = response.data
+  }
   await loadDepartments()
   await loadObjectives()
 }
@@ -449,6 +481,15 @@ onUnmounted(() => {
 // Locale is managed by the sidebar selector.
 
 watch(filterText, () => {
+  currentPage.value = 1
+})
+
+watch(selectedChurchId, () => {
+  if (!isSuperAdmin.value) {
+    return
+  }
+  createForm.department_id = ''
+  loadDepartments()
   currentPage.value = 1
 })
 

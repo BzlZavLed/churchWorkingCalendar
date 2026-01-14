@@ -304,6 +304,7 @@ export const translations = {
     objectives: {
       title: 'Objetivos',
       fields: {
+        church: 'Iglesia',
         department: 'Departamento',
         name: 'Nombre',
         description: 'Descripcion',
@@ -838,6 +839,7 @@ export const translations = {
     objectives: {
       title: 'Objectives',
       fields: {
+        church: 'Church',
         department: 'Department',
         name: 'Name',
         description: 'Description',
