@@ -17,7 +17,7 @@ class EnsureIntegrationToken
                 'path' => $request->path(),
                 'ip' => $request->ip(),
                 'method' => $request->method(),
-                'expected' => $expected,
+                'token_present' => false,
             ]);
             return response()->json(['message' => 'Integration token is not configured.'], 500);
         }
@@ -29,6 +29,9 @@ class EnsureIntegrationToken
                 'ip' => $request->ip(),
                 'method' => $request->method(),
                 'has_token' => (bool) $token,
+                'token_length' => $token ? strlen($token) : 0,
+                'expected_length' => strlen($expected),
+                'expected_prefix' => substr($expected, 0, 6),
             ]);
             return response()->json(['message' => 'Unauthorized.'], 401);
         }
