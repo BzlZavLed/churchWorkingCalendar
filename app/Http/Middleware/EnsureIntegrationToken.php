@@ -11,7 +11,7 @@ class EnsureIntegrationToken
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $expected = env('INTEGRATION_TOKEN');
+        $expected = config('services.integration.token');
         if (!$expected) {
             Log::error('Integration token missing for request.', [
                 'path' => $request->path(),

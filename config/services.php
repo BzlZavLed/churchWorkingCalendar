@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'integration' => [
+        'token' => env('INTEGRATION_TOKEN'),
+    ],
+
 ];
