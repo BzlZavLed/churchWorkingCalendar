@@ -17,6 +17,7 @@ class EnsureIntegrationToken
                 'path' => $request->path(),
                 'ip' => $request->ip(),
                 'method' => $request->method(),
+                'expected' => $expected,
             ]);
             return response()->json(['message' => 'Integration token is not configured.'], 500);
         }
