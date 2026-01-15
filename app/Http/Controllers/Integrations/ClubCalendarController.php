@@ -12,6 +12,7 @@ use App\Models\Objective;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
 class ClubCalendarController extends Controller
@@ -69,6 +70,10 @@ class ClubCalendarController extends Controller
 
     public function importCalendar(Request $request)
     {
+        Log::info('Club calendar import payload received.', [
+            'payload' => $request->all(),
+        ]);
+
         $data = $request->validate([
             'church_slug' => ['required', 'string'],
             'calendar_year' => ['required', 'integer'],
@@ -274,14 +279,20 @@ class ClubCalendarController extends Controller
 
         $status = $conflicts ? ($imported > 0 ? 'partial' : 'conflicts') : 'ok';
 
-        return response()->json([
+        $responsePayload = [
             'status' => $status,
             'imported' => $imported,
             'skipped' => $skipped,
             'successes' => $successes,
             'conflicts' => $conflicts,
             'overrides' => [],
+        ];
+
+        Log::info('Club calendar import response.', [
+            'response' => $responsePayload,
         ]);
+
+        return response()->json($responsePayload);
     }
 
     private function resolveImportUser(int $churchId): ?User
