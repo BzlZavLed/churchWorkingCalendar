@@ -118,12 +118,14 @@
           v-for="(cell, index) in calendarCells"
           :key="index"
           class="calendar-cell"
-          :class="{ empty: !cell.date, selected: isSelected(cell.date) }"
+          :class="{ empty: !cell.date, selected: isSelected(cell.date), today: isToday(cell.date) }"
           @click="isSecretary && cell.date && enterDayView(cell.date)"
         >
           <div v-if="cell.date" class="cell-inner">
             <div class="cell-date">
-              <span>{{ cell.date.getDate() }}</span>
+              <span class="cell-date-label" :class="{ 'is-today': isToday(cell.date) }">
+                {{ cell.date.getDate() }}
+              </span>
               <div class="cell-actions">
                 <button type="button" class="day-link" @click.stop="enterDayView(cell.date)">
                   {{ t.dayView }}
@@ -165,12 +167,14 @@
           v-for="cell in weekCells"
           :key="cell.date.toISOString()"
           class="calendar-cell"
-          :class="{ selected: isSelected(cell.date) }"
+          :class="{ selected: isSelected(cell.date), today: isToday(cell.date) }"
           @click="enterDayView(cell.date)"
         >
           <div class="cell-inner">
             <div class="cell-date">
-              {{ cell.date.toLocaleDateString(locale, { weekday: 'short', day: 'numeric' }) }}
+              <span class="cell-date-label" :class="{ 'is-today': isToday(cell.date) }">
+                {{ cell.date.toLocaleDateString(locale, { weekday: 'short', day: 'numeric' }) }}
+              </span>
             </div>
             <ul class="cell-events">
               <li
@@ -1090,6 +1094,14 @@ const isSelected = (date) => {
   return date.toDateString() === selectedDate.value.toDateString()
 }
 
+const isToday = (date) => {
+  if (!date) {
+    return false
+  }
+  const today = new Date()
+  return date.toDateString() === today.toDateString()
+}
+
 const enterDayView = (date) => {
   selectedDate.value = date
   weekAnchor.value = new Date(date)
@@ -1346,7 +1358,8 @@ const loadDepartments = async (churchId) => {
 }
 
 const shiftPeriod = (direction) => {
-  const date = selectedDate.value ? new Date(selectedDate.value) : new Date(weekAnchor.value || currentMonth.value)
+  const base = isMobile.value ? weekAnchor.value || currentMonth.value : currentMonth.value
+  const date = new Date(base)
   if (isMobile.value) {
     date.setDate(date.getDate() + direction * 7)
     weekAnchor.value = date

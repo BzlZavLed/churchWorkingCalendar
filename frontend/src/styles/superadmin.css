@@ -397,12 +397,27 @@ tbody td {
   outline: 2px solid var(--dominant);
 }
 
+.calendar-cell.today {
+  background: rgba(31, 111, 92, 0.12);
+  border-color: var(--dominant);
+}
+
 .cell-date {
   font-weight: 600;
   margin-bottom: 4px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.cell-date-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cell-date-label.is-today {
+  color: var(--dominant);
 }
 
 .cell-actions {
