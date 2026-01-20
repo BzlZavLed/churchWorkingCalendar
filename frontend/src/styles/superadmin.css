@@ -442,6 +442,33 @@ tbody td {
   font-size: 0.68rem;
 }
 
+.event-status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+  background: #d7d3c8;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.event-status-dot--locked {
+  background: #6c757d;
+}
+
+.event-status-dot--pending {
+  background: #f5b301;
+}
+
+.event-status-dot--accepted {
+  background: #2f9e44;
+}
+
+.event-status-dot--rejected {
+  background: #d9480f;
+}
+
 .event-pill-button {
   border: none;
   background: transparent;

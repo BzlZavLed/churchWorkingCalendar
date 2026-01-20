@@ -147,6 +147,7 @@
                   :title="eventMarkerDetails(event)"
                   @click.stop="openEventDetails(event)"
                 >
+                  <span class="event-status-dot" :class="statusDotClass(event)"></span>
                   {{ eventMarkerLabel(event) }}
                 </button>
               </li>
@@ -189,6 +190,7 @@
                   :title="eventMarkerDetails(event)"
                   @click.stop="openEventDetails(event)"
                 >
+                  <span class="event-status-dot" :class="statusDotClass(event)"></span>
                   {{ eventMarkerLabel(event) }}
                 </button>
               </li>
@@ -1098,6 +1100,19 @@ const eventMarkerDetails = (event) => {
   const objective = event.objective?.name || '—'
   const status = event.status || '—'
   return `• ${title}\n• ${objectiveLabel}: ${objective}\n• ${statusLabel}: ${status}`
+}
+
+const statusDotClass = (event) => {
+  if (event.final_validation === 'accepted') {
+    return 'event-status-dot--accepted'
+  }
+  if (event.final_validation === 'rejected') {
+    return 'event-status-dot--rejected'
+  }
+  if (event.status === 'locked') {
+    return 'event-status-dot--locked'
+  }
+  return 'event-status-dot--pending'
 }
 
 const objectiveOptions = computed(() => {
