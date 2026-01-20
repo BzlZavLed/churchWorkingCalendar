@@ -117,8 +117,8 @@ class ClubCalendarController extends Controller
         $successes = [];
 
         foreach ($data['events'] as $payload) {
-            $startAt = $this->parseUtc($payload['start_at'], $timezone);
-            $endAt = $this->parseUtc($payload['end_at'], $timezone);
+            $startAt = $this->parseUtcWithFallback($payload['start_at'], $timezone, false);
+            $endAt = $this->parseUtcWithFallback($payload['end_at'], $timezone, true);
 
             if ($endAt->lessThanOrEqualTo($startAt)) {
                 $conflicts[] = $this->buildErrorConflict($payload, 'invalid_range', 'End time must be after start time.');
@@ -313,10 +313,18 @@ class ClubCalendarController extends Controller
             ->first();
     }
 
-    private function parseUtc(string $value, ?string $timezone): Carbon
+    private function parseUtcWithFallback(string $value, ?string $timezone, bool $isEnd): Carbon
     {
         $date = $timezone ? Carbon::parse($value, $timezone) : Carbon::parse($value);
+        if (!$this->hasTimeComponent($value)) {
+            $date = $isEnd ? $date->endOfDay() : $date->startOfDay();
+        }
         return $date->utc();
+    }
+
+    private function hasTimeComponent(string $value): bool
+    {
+        return (bool) preg_match('/\\d{2}:\\d{2}/', $value);
     }
 
     private function buildErrorConflict(array $payload, string $type, string $message): array

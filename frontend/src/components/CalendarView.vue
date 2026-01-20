@@ -934,14 +934,24 @@ const eventsByDate = computed(() => {
   const list = displayEvents.value
   list.forEach((event) => {
     const parsed = new Date(event.start_at)
-    if (Number.isNaN(parsed.getTime())) {
+    const parsedEnd = new Date(event.end_at || event.start_at)
+    if (Number.isNaN(parsed.getTime()) || Number.isNaN(parsedEnd.getTime())) {
       return
     }
-    const dateKey = parsed.toISOString().slice(0, 10)
-    if (!map[dateKey]) {
-      map[dateKey] = []
+    const startDay = new Date(parsed)
+    startDay.setHours(0, 0, 0, 0)
+    const endDay = new Date(parsedEnd)
+    endDay.setHours(0, 0, 0, 0)
+    if (endDay < startDay) {
+      return
     }
-    map[dateKey].push(event)
+    for (let day = new Date(startDay); day <= endDay; day.setDate(day.getDate() + 1)) {
+      const dateKey = day.toISOString().slice(0, 10)
+      if (!map[dateKey]) {
+        map[dateKey] = []
+      }
+      map[dateKey].push(event)
+    }
   })
   return map
 })
