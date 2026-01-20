@@ -246,6 +246,16 @@
       </ul>
     </div>
 
+    <div class="calendar-legend" v-if="statusLegend.length">
+      <h3 class="legend-title">{{ locale === 'es' ? 'Estados' : 'Statuses' }}</h3>
+      <ul class="legend-list">
+        <li v-for="item in statusLegend" :key="item.key" class="legend-item">
+          <span class="legend-swatch" :class="item.className"></span>
+          <span>{{ item.label }}</span>
+        </li>
+      </ul>
+    </div>
+
     <section v-if="canViewChangeRequests" class="review-panel">
       <div class="review-header">
         <h2 class="review-title">{{ t.changeRequestsTitle }}</h2>
@@ -1038,6 +1048,28 @@ const eventPillStyle = (event) => {
 }
 
 const legendDepartments = computed(() => departmentOptions.value)
+const statusLegend = computed(() => [
+  {
+    key: 'locked',
+    label: t.value.eventDetails?.statusLocked || 'Locked',
+    className: 'legend-swatch-status legend-swatch-status--locked',
+  },
+  {
+    key: 'pending',
+    label: t.value.eventDetails?.reviewPending || 'Pending',
+    className: 'legend-swatch-status legend-swatch-status--pending',
+  },
+  {
+    key: 'accepted',
+    label: t.value.eventDetails?.finalOutcomeAccepted || 'Accepted',
+    className: 'legend-swatch-status legend-swatch-status--accepted',
+  },
+  {
+    key: 'rejected',
+    label: t.value.eventDetails?.finalOutcomeRejected || 'Rejected',
+    className: 'legend-swatch-status legend-swatch-status--rejected',
+  },
+])
 
 const eventsForDate = (date) => {
   if (!date) {

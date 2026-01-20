@@ -439,7 +439,7 @@ tbody td {
   padding: 2px 6px;
   border-radius: 6px;
   color: #ffffff;
-  font-size: 0.75rem;
+  font-size: 0.68rem;
 }
 
 .event-pill-button {
@@ -556,6 +556,26 @@ tbody td {
   border-radius: 50%;
   display: inline-block;
   border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.legend-swatch-status {
+  background: #d7d3c8;
+}
+
+.legend-swatch-status--locked {
+  background: #6c757d;
+}
+
+.legend-swatch-status--pending {
+  background: #f5b301;
+}
+
+.legend-swatch-status--accepted {
+  background: #2f9e44;
+}
+
+.legend-swatch-status--rejected {
+  background: #d9480f;
 }
 
 .review-panel {
