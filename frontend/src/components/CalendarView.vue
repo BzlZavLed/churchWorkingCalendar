@@ -144,9 +144,10 @@
                   type="button"
                   class="event-pill event-pill-button"
                   :style="eventPillStyle(event)"
+                  :title="eventMarkerDetails(event)"
                   @click.stop="openEventDetails(event)"
                 >
-                  {{ event.title }} - {{ event.objective?.name || '' }} ({{ event.status }})
+                  {{ eventMarkerLabel(event) }}
                 </button>
               </li>
             </ul>
@@ -185,9 +186,10 @@
                   type="button"
                   class="event-pill event-pill-button"
                   :style="eventPillStyle(event)"
+                  :title="eventMarkerDetails(event)"
                   @click.stop="openEventDetails(event)"
                 >
-                  {{ event.title }} - {{ event.objective?.name || '' }} ({{ event.status }})
+                  {{ eventMarkerLabel(event) }}
                 </button>
               </li>
             </ul>
@@ -1035,7 +1037,7 @@ const eventPillStyle = (event) => {
   return { backgroundColor: color }
 }
 
-const legendDepartments = computed(() => departments.value)
+const legendDepartments = computed(() => departmentOptions.value)
 
 const eventsForDate = (date) => {
   if (!date) {
@@ -1043,6 +1045,27 @@ const eventsForDate = (date) => {
   }
   const key = date.toISOString().slice(0, 10)
   return eventsByDate.value[key] || []
+}
+
+const eventMarkerLabel = (event) => {
+  const title = (event.title || '').trim()
+  if (!title) {
+    return t.value.untitled
+  }
+  const words = title.split(/\s+/).filter(Boolean)
+  if (words.length <= 3) {
+    return title
+  }
+  return `${words.slice(0, 3).join(' ')}...`
+}
+
+const eventMarkerDetails = (event) => {
+  const title = event.title || t.value.untitled
+  const objectiveLabel = t.value.eventDetails?.objective || 'Objective'
+  const statusLabel = t.value.eventDetails?.status || 'Status'
+  const objective = event.objective?.name || '—'
+  const status = event.status || '—'
+  return `• ${title}\n• ${objectiveLabel}: ${objective}\n• ${statusLabel}: ${status}`
 }
 
 const objectiveOptions = computed(() => {
