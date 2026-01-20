@@ -51,7 +51,6 @@
 
     <div v-if="loading">{{ t.loading }}</div>
     <p v-if="error" class="text-danger">{{ error }}</p>
-    <p v-if="success" class="text-success">{{ success }}</p>
 
     <div v-if="departments.length === 0 && !loading && selectedChurchId">{{ t.empty }}</div>
     <div v-else-if="selectedChurchId" class="bg-white border rounded">
@@ -167,8 +166,6 @@ const selectedChurchId = ref('')
 const departments = ref([])
 const loading = ref(false)
 const error = ref('')
-const success = ref('')
-const successTimer = ref(null)
 const confirmOpen = ref(false)
 const confirmMessage = ref('')
 const confirmActionLabel = ref('')
@@ -178,6 +175,10 @@ const { locale } = storeToRefs(uiStore)
 const t = computed(() => translations[locale.value].superadmin.departments)
 const common = computed(() => translations[locale.value].common)
 const confirmTitle = computed(() => t.value.confirmTitle || t.value.delete)
+const showSuccessToast = (message = '') => {
+  const fallback = locale.value === 'es' ? 'Guardado correctamente.' : 'Saved successfully.'
+  uiStore.showToast(message || fallback, 'success')
+}
 
 const createForm = reactive({
   name: '',
@@ -198,7 +199,6 @@ const loadDepartments = async () => {
   }
   loading.value = true
   error.value = ''
-  success.value = ''
   try {
     departments.value = await superAdminApi.listDepartments(selectedChurchId.value)
   } catch {
@@ -209,14 +209,7 @@ const loadDepartments = async () => {
 }
 
 const setSuccessMessage = (message = '') => {
-  success.value = message || (locale.value === 'es' ? 'Guardado correctamente.' : 'Saved successfully.')
-  if (successTimer.value) {
-    clearTimeout(successTimer.value)
-  }
-  successTimer.value = setTimeout(() => {
-    success.value = ''
-    successTimer.value = null
-  }, 3000)
+  showSuccessToast(message)
 }
 
 const createDepartment = async () => {
@@ -224,7 +217,6 @@ const createDepartment = async () => {
     return
   }
   error.value = ''
-  success.value = ''
   try {
     const payload = {
       ...createForm,
@@ -251,7 +243,6 @@ const deleteDepartmentEvents = async (department) => {
     return
   }
   error.value = ''
-  success.value = ''
   try {
     const response = await superAdminApi.deleteDepartmentEvents(selectedChurchId.value, department.id)
     const message = formatCountMessage(t.value.deleteEventsSuccess, response.deleted ?? 0)
@@ -317,7 +308,6 @@ const updateDepartment = async (department) => {
     return
   }
   error.value = ''
-  success.value = ''
   try {
     await superAdminApi.updateDepartment(selectedChurchId.value, department.id, {
       name: department.name,
@@ -336,7 +326,6 @@ const deleteDepartment = async (department) => {
     return
   }
   error.value = ''
-  success.value = ''
   try {
     await superAdminApi.deleteDepartment(selectedChurchId.value, department.id)
     await loadDepartments()
@@ -351,9 +340,6 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  if (successTimer.value) {
-    clearTimeout(successTimer.value)
-  }
   document.body.style.overflow = ''
 })
 

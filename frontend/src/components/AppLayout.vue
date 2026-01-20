@@ -59,6 +59,7 @@
     <main class="app-main">
       <slot />
     </main>
+    <ToastMessage />
   </div>
 </template>
 
@@ -71,6 +72,7 @@ import { useUiStore } from '../stores/uiStore'
 import { translations } from '../i18n/translations'
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import ToastMessage from './ToastMessage.vue'
 
 const authStore = useAuthStore()
 const uiStore = useUiStore()

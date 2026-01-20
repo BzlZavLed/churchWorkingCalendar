@@ -75,7 +75,6 @@
 
         <div v-if="loading">{{ t.loading }}</div>
         <p v-if="error" class="text-danger">{{ error }}</p>
-        <p v-if="success" class="text-success">{{ success }}</p>
 
         <div v-if="churches.length === 0 && !loading">{{ t.empty }}</div>
         <div v-else class="bg-white border rounded">
@@ -272,8 +271,6 @@ const churches = ref([])
 const loading = ref(false)
 const error = ref('')
 const inviteCode = ref('')
-const success = ref('')
-const successTimer = ref(null)
 const expandedIds = ref(new Set())
 const confirmOpen = ref(false)
 const confirmMessage = ref('')
@@ -284,6 +281,10 @@ const { locale } = storeToRefs(uiStore)
 const t = computed(() => translations[locale.value].superadmin.churches)
 const roleLabels = computed(() => translations[locale.value].appLayout.roleLabels)
 const confirmTitle = computed(() => t.value.confirmTitle || t.value.delete)
+const showSuccessToast = (message = '') => {
+  const fallback = locale.value === 'es' ? 'Guardado correctamente.' : 'Saved successfully.'
+  uiStore.showToast(message || fallback, 'success')
+}
 
 const createForm = reactive({
   name: '',
@@ -313,7 +314,6 @@ const loadChurches = async () => {
 const createChurch = async () => {
   error.value = ''
   inviteCode.value = ''
-  success.value = ''
   try {
     const payload = {
       ...createForm,
@@ -328,6 +328,7 @@ const createChurch = async () => {
     createForm.address = ''
     createForm.ethnicity = ''
     await loadChurches()
+    showSuccessToast()
   } catch {
     error.value = t.value.createError
   }
@@ -335,9 +336,9 @@ const createChurch = async () => {
 
 const updateChurch = async (church) => {
   error.value = ''
-  success.value = ''
   try {
     await superAdminApi.updateChurch(church.id, { name: church.name })
+    showSuccessToast()
   } catch {
     error.value = t.value.updateError
   }
@@ -345,10 +346,10 @@ const updateChurch = async (church) => {
 
 const deleteChurch = async (church) => {
   error.value = ''
-  success.value = ''
   try {
     await superAdminApi.deleteChurch(church.id)
     await loadChurches()
+    showSuccessToast()
   } catch {
     error.value = t.value.deleteError
   }
@@ -357,36 +358,24 @@ const deleteChurch = async (church) => {
 const generateInvite = async (church) => {
   error.value = ''
   inviteCode.value = ''
-  success.value = ''
   try {
     const response = await superAdminApi.generateInvite(church.id, { invite_role: 'admin' })
     inviteCode.value = response.code
     await loadChurches()
+    showSuccessToast()
   } catch {
     error.value = t.value.inviteError
   }
-}
-
-const setSuccessMessage = (message) => {
-  success.value = message
-  if (successTimer.value) {
-    clearTimeout(successTimer.value)
-  }
-  successTimer.value = setTimeout(() => {
-    success.value = ''
-    successTimer.value = null
-  }, 3000)
 }
 
 const formatCountMessage = (template, count) => template.replace('{count}', count)
 
 const deleteChurchEvents = async (church) => {
   error.value = ''
-  success.value = ''
   try {
     const response = await superAdminApi.deleteChurchEvents(church.id)
     const message = formatCountMessage(t.value.deleteEventsSuccess, response.deleted ?? 0)
-    setSuccessMessage(message)
+    showSuccessToast(message)
   } catch {
     error.value = t.value.deleteEventsError
   }
@@ -445,9 +434,6 @@ const isExpanded = (id) => expandedIds.value.has(id)
 onMounted(loadChurches)
 
 onUnmounted(() => {
-  if (successTimer.value) {
-    clearTimeout(successTimer.value)
-  }
   document.body.style.overflow = ''
 })
 

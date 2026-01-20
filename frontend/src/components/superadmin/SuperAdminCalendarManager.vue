@@ -26,7 +26,6 @@
 
     <div v-if="loading">{{ t.loading }}</div>
     <p v-if="error" class="text-danger">{{ error }}</p>
-    <p v-if="success" class="text-success">{{ success }}</p>
 
     <div v-if="!loading && selectedChurchId && events.length === 0" class="text-muted">
       {{ t.empty }}
@@ -124,13 +123,15 @@ const selectedChurchId = ref('')
 const events = ref([])
 const loading = ref(false)
 const error = ref('')
-const success = ref('')
-const successTimer = ref(null)
 const confirmDeleteOpen = ref(false)
 const uiStore = useUiStore()
 const { locale } = storeToRefs(uiStore)
 const t = computed(() => translations[locale.value].superadmin.calendarManager)
 const common = computed(() => translations[locale.value].common)
+const showSuccessToast = (message = '') => {
+  const fallback = locale.value === 'es' ? 'Guardado correctamente.' : 'Saved successfully.'
+  uiStore.showToast(message || fallback, 'success')
+}
 
 const loadChurches = async () => {
   const response = await superAdminApi.listChurches()
@@ -144,7 +145,6 @@ const loadEvents = async () => {
   }
   loading.value = true
   error.value = ''
-  success.value = ''
   try {
     events.value = await superAdminApi.listChurchEvents(selectedChurchId.value)
   } catch {
@@ -160,17 +160,6 @@ const formatDateTime = (value) => {
     return '—'
   }
   return date.toLocaleString(locale.value)
-}
-
-const setSuccessMessage = (message) => {
-  success.value = message
-  if (successTimer.value) {
-    clearTimeout(successTimer.value)
-  }
-  successTimer.value = setTimeout(() => {
-    success.value = ''
-    successTimer.value = null
-  }, 3000)
 }
 
 const formatCountMessage = (template, count) => template.replace('{count}', count)
@@ -197,12 +186,11 @@ const deleteCalendar = async () => {
     return
   }
   error.value = ''
-  success.value = ''
   try {
     const response = await superAdminApi.deleteChurchEvents(selectedChurchId.value)
     events.value = []
     const message = formatCountMessage(t.value.deleteCalendarSuccess, response.deleted ?? 0)
-    setSuccessMessage(message)
+    showSuccessToast(message)
     closeDeleteConfirm()
   } catch {
     error.value = t.value.deleteCalendarError
@@ -235,9 +223,6 @@ watch(confirmDeleteOpen, (next) => {
 onMounted(loadChurches)
 
 onUnmounted(() => {
-  if (successTimer.value) {
-    clearTimeout(successTimer.value)
-  }
   document.body.style.overflow = ''
 })
 </script>

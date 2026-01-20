@@ -313,6 +313,11 @@ const filteredUsers = computed(() => {
 
 const currentUserId = computed(() => authStore.user?.id || null)
 
+const showSuccessToast = (message = '') => {
+  const fallback = locale.value === 'es' ? 'Guardado correctamente.' : 'Saved successfully.'
+  uiStore.showToast(message || fallback, 'success')
+}
+
 const loadUsers = async () => {
   if (!selectedChurchId.value) {
     users.value = []
@@ -389,6 +394,7 @@ const createUser = async () => {
     createForm.role = 'member'
     createForm.department_id = ''
     await loadUsers()
+    showSuccessToast()
   } catch {
     error.value = t.value.createError
   }
@@ -406,6 +412,7 @@ const updateUser = async (user) => {
       role: user.role,
       department_id: user.department_id || null,
     })
+    showSuccessToast()
   } catch {
     error.value = t.value.updateError
   }
@@ -419,6 +426,7 @@ const deleteUser = async (user) => {
   try {
     await superAdminApi.deleteUser(selectedChurchId.value, user.id)
     await loadUsers()
+    showSuccessToast()
   } catch {
     error.value = t.value.deleteError
   }
@@ -477,6 +485,7 @@ const submitPasswordUpdate = async () => {
     })
     closePasswordModal()
     passwordSuccessOpen.value = true
+    showSuccessToast()
   } catch {
     error.value = t.value.passwordError
   }
