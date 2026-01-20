@@ -63,6 +63,7 @@
             <th>{{ t.columns.name }}</th>
             <th>{{ t.columns.color }}</th>
             <th>{{ t.columns.userName }}</th>
+            <th>{{ t.columns.users }}</th>
             <th>{{ t.columns.club }}</th>
             <th class="text-end">{{ t.columns.actions }}</th>
           </tr>
@@ -73,6 +74,12 @@
             <td><input v-model="department.name" class="form-control" type="text" /></td>
             <td><input v-model="department.color" class="form-control form-control-color" type="color" /></td>
             <td><input v-model="department.user_name" class="form-control" type="text" /></td>
+            <td>
+              <span v-if="department.users?.length">
+                {{ department.users.map((user) => user.name || user.email).filter(Boolean).join(', ') }}
+              </span>
+              <span v-else>—</span>
+            </td>
             <td>
               <input v-model="department.is_club" class="form-check-input" type="checkbox" />
             </td>
@@ -105,6 +112,15 @@
             <div class="mb-2">
               <label class="form-label small mb-1">{{ t.userName }}</label>
               <input v-model="department.user_name" class="form-control" type="text" />
+            </div>
+            <div class="mb-2">
+              <label class="form-label small mb-1">{{ t.columns.users }}</label>
+              <p class="mb-0">
+                <span v-if="department.users?.length">
+                  {{ department.users.map((user) => user.name || user.email).filter(Boolean).join(', ') }}
+                </span>
+                <span v-else>—</span>
+              </p>
             </div>
             <div class="form-check mb-3">
               <input :id="`dept-club-${department.id}`" v-model="department.is_club" class="form-check-input" type="checkbox" />

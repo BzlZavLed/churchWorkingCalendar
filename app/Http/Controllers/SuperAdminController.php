@@ -131,6 +131,7 @@ class SuperAdminController extends Controller
     {
         $departments = Department::query()
             ->where('church_id', $church->id)
+            ->with(['users:id,name,department_id,email'])
             ->orderBy('name')
             ->get();
 
