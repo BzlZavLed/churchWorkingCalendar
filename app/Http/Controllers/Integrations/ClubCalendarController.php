@@ -117,13 +117,24 @@ class ClubCalendarController extends Controller
         $successes = [];
 
         foreach ($data['events'] as $payload) {
-            $startAt = $this->parseUtcWithFallback($payload['start_at'], $timezone, false);
-            $endAt = $this->parseUtcWithFallback($payload['end_at'], $timezone, true);
+            $startRaw = (string) $payload['start_at'];
+            $endRaw = (string) $payload['end_at'];
+            $startAt = $this->parseUtcWithFallback($startRaw, $timezone, false);
+            $endAt = $this->parseUtcWithFallback($endRaw, $timezone, true);
 
             if ($endAt->lessThanOrEqualTo($startAt)) {
-                $conflicts[] = $this->buildErrorConflict($payload, 'invalid_range', 'End time must be after start time.');
-                $skipped++;
-                continue;
+                $sameDay = $startAt->toDateString() === $endAt->toDateString();
+                $hasStartTime = $this->hasTimeComponent($startRaw);
+                $hasEndTime = $this->hasTimeComponent($endRaw);
+                $zeroTime = $this->isZeroTime($startRaw) && $this->isZeroTime($endRaw);
+
+                if ($sameDay && (!$hasStartTime || !$hasEndTime || $zeroTime)) {
+                    $endAt = $startAt->copy()->endOfDay();
+                } else {
+                    $conflicts[] = $this->buildErrorConflict($payload, 'invalid_range', 'End time must be after start time.');
+                    $skipped++;
+                    continue;
+                }
             }
 
             $department = Department::query()
@@ -325,6 +336,11 @@ class ClubCalendarController extends Controller
     private function hasTimeComponent(string $value): bool
     {
         return (bool) preg_match('/\\d{2}:\\d{2}/', $value);
+    }
+
+    private function isZeroTime(string $value): bool
+    {
+        return (bool) preg_match('/T00:00(:00)?/', $value);
     }
 
     private function buildErrorConflict(array $payload, string $type, string $message): array
