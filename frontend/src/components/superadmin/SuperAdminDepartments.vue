@@ -79,8 +79,8 @@
             <td class="text-end">
               <div class="d-flex flex-column flex-md-row justify-content-end gap-2">
                 <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateDepartment(department)">{{ t.save }}</button>
-                <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteDepartmentEvents(department)">{{ t.deleteEvents }}</button>
-                <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteDepartment(department)">{{ t.delete }}</button>
+                <button class="btn btn-sm btn-outline-danger" type="button" @click="confirmDeleteDepartmentEvents(department)">{{ t.deleteEvents }}</button>
+                <button class="btn btn-sm btn-outline-danger" type="button" @click="confirmDeleteDepartment(department)">{{ t.delete }}</button>
               </div>
             </td>
           </tr>
@@ -114,10 +114,25 @@
             </div>
             <div class="d-flex flex-wrap gap-2">
               <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateDepartment(department)">{{ t.save }}</button>
-              <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteDepartmentEvents(department)">{{ t.deleteEvents }}</button>
-              <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteDepartment(department)">{{ t.delete }}</button>
+              <button class="btn btn-sm btn-outline-danger" type="button" @click="confirmDeleteDepartmentEvents(department)">{{ t.deleteEvents }}</button>
+              <button class="btn btn-sm btn-outline-danger" type="button" @click="confirmDeleteDepartment(department)">{{ t.delete }}</button>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="confirmOpen" class="confirm-modal-backdrop" role="presentation">
+      <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-action-title">
+        <h2 id="confirm-action-title" class="confirm-modal-title">{{ confirmTitle }}</h2>
+        <p class="confirm-modal-text">{{ confirmMessage }}</p>
+        <div class="confirm-modal-actions">
+          <button class="btn btn-outline-secondary" type="button" @click="closeConfirm">
+            {{ common.cancel }}
+          </button>
+          <button class="btn btn-outline-danger" type="button" @click="runConfirmAction">
+            {{ confirmActionLabel }}
+          </button>
         </div>
       </div>
     </div>
@@ -125,7 +140,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { superAdminApi } from '../../services/superAdminApi'
 import { useUiStore } from '../../stores/uiStore'
 import { storeToRefs } from 'pinia'
@@ -138,10 +153,15 @@ const loading = ref(false)
 const error = ref('')
 const success = ref('')
 const successTimer = ref(null)
+const confirmOpen = ref(false)
+const confirmMessage = ref('')
+const confirmActionLabel = ref('')
+const confirmAction = ref(null)
 const uiStore = useUiStore()
 const { locale } = storeToRefs(uiStore)
 const t = computed(() => translations[locale.value].superadmin.departments)
 const common = computed(() => translations[locale.value].common)
+const confirmTitle = computed(() => t.value.confirmTitle || t.value.delete)
 
 const createForm = reactive({
   name: '',
@@ -214,10 +234,6 @@ const deleteDepartmentEvents = async (department) => {
   if (!selectedChurchId.value) {
     return
   }
-  const confirmMessage = t.value.deleteEventsConfirm.replace('{name}', department.name)
-  if (!window.confirm(confirmMessage)) {
-    return
-  }
   error.value = ''
   success.value = ''
   try {
@@ -227,6 +243,36 @@ const deleteDepartmentEvents = async (department) => {
   } catch {
     error.value = t.value.deleteEventsError
   }
+}
+
+const openConfirm = (message, actionLabel, action) => {
+  confirmMessage.value = message
+  confirmActionLabel.value = actionLabel
+  confirmAction.value = action
+  confirmOpen.value = true
+}
+
+const closeConfirm = () => {
+  confirmOpen.value = false
+  confirmAction.value = null
+}
+
+const runConfirmAction = async () => {
+  if (!confirmAction.value) {
+    return
+  }
+  await confirmAction.value()
+  closeConfirm()
+}
+
+const confirmDeleteDepartment = (department) => {
+  const message = t.value.deleteConfirm.replace('{name}', department.name)
+  openConfirm(message, t.value.delete, () => deleteDepartment(department))
+}
+
+const confirmDeleteDepartmentEvents = (department) => {
+  const message = t.value.deleteEventsConfirm.replace('{name}', department.name)
+  openConfirm(message, t.value.deleteEvents, () => deleteDepartmentEvents(department))
 }
 
 const updateDepartment = async (department) => {
@@ -271,5 +317,10 @@ onUnmounted(() => {
   if (successTimer.value) {
     clearTimeout(successTimer.value)
   }
+  document.body.style.overflow = ''
+})
+
+watch(confirmOpen, (next) => {
+  document.body.style.overflow = next ? 'hidden' : ''
 })
 </script>

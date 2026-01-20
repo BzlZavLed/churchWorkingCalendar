@@ -6,7 +6,7 @@
         <button class="btn btn-outline-secondary" type="button" :disabled="!selectedChurchId" @click="loadEvents">
           {{ t.refresh }}
         </button>
-        <button class="btn btn-outline-danger" type="button" :disabled="!selectedChurchId" @click="deleteCalendar">
+        <button class="btn btn-outline-danger" type="button" :disabled="!selectedChurchId" @click="openDeleteConfirm">
           {{ t.deleteCalendar }}
         </button>
       </div>
@@ -94,6 +94,21 @@
         </div>
       </div>
     </div>
+
+    <div v-if="confirmDeleteOpen" class="confirm-modal-backdrop" role="presentation">
+      <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-delete-title">
+        <h2 id="confirm-delete-title" class="confirm-modal-title">{{ t.deleteCalendar }}</h2>
+        <p class="confirm-modal-text">{{ confirmDeleteMessage }}</p>
+        <div class="confirm-modal-actions">
+          <button class="btn btn-outline-secondary" type="button" @click="closeDeleteConfirm">
+            {{ common.cancel }}
+          </button>
+          <button class="btn btn-outline-danger" type="button" @click="deleteCalendar">
+            {{ t.deleteCalendar }}
+          </button>
+        </div>
+      </div>
+    </div>
   </section>
 </template>
 
@@ -111,6 +126,7 @@ const loading = ref(false)
 const error = ref('')
 const success = ref('')
 const successTimer = ref(null)
+const confirmDeleteOpen = ref(false)
 const uiStore = useUiStore()
 const { locale } = storeToRefs(uiStore)
 const t = computed(() => translations[locale.value].superadmin.calendarManager)
@@ -159,14 +175,25 @@ const setSuccessMessage = (message) => {
 
 const formatCountMessage = (template, count) => template.replace('{count}', count)
 
-const deleteCalendar = async () => {
+const confirmDeleteMessage = computed(() => {
+  const selectedId = Number(selectedChurchId.value)
+  const churchName = churches.value.find((church) => church.id === selectedId)?.name || ''
+  return t.value.deleteCalendarConfirm.replace('{name}', churchName)
+})
+
+const openDeleteConfirm = () => {
   if (!selectedChurchId.value) {
     return
   }
-  const selectedId = Number(selectedChurchId.value)
-  const churchName = churches.value.find((church) => church.id === selectedId)?.name || ''
-  const confirmMessage = t.value.deleteCalendarConfirm.replace('{name}', churchName)
-  if (!window.confirm(confirmMessage)) {
+  confirmDeleteOpen.value = true
+}
+
+const closeDeleteConfirm = () => {
+  confirmDeleteOpen.value = false
+}
+
+const deleteCalendar = async () => {
+  if (!selectedChurchId.value) {
     return
   }
   error.value = ''
@@ -176,8 +203,10 @@ const deleteCalendar = async () => {
     events.value = []
     const message = formatCountMessage(t.value.deleteCalendarSuccess, response.deleted ?? 0)
     setSuccessMessage(message)
+    closeDeleteConfirm()
   } catch {
     error.value = t.value.deleteCalendarError
+    closeDeleteConfirm()
   }
 }
 
@@ -199,11 +228,16 @@ watch(selectedChurchId, () => {
   loadEvents()
 })
 
+watch(confirmDeleteOpen, (next) => {
+  document.body.style.overflow = next ? 'hidden' : ''
+})
+
 onMounted(loadChurches)
 
 onUnmounted(() => {
   if (successTimer.value) {
     clearTimeout(successTimer.value)
   }
+  document.body.style.overflow = ''
 })
 </script>

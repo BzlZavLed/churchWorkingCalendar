@@ -115,12 +115,12 @@
                         <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateChurch(church)">
                           {{ t.save }}
                         </button>
-                        <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteChurchEvents(church)">
-                          {{ t.deleteEvents }}
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteChurch(church)">
-                          {{ t.delete }}
-                        </button>
+                      <button class="btn btn-sm btn-outline-danger" type="button" @click="confirmDeleteChurchEvents(church)">
+                        {{ t.deleteEvents }}
+                      </button>
+                      <button class="btn btn-sm btn-outline-danger" type="button" @click="confirmDeleteChurch(church)">
+                        {{ t.delete }}
+                      </button>
                         <button class="btn btn-sm btn-outline-primary" type="button" @click="generateInvite(church)">
                           {{ t.generateInvite }}
                         </button>
@@ -214,10 +214,10 @@
                   <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateChurch(church)">
                     {{ t.save }}
                   </button>
-                  <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteChurchEvents(church)">
+                  <button class="btn btn-sm btn-outline-danger" type="button" @click="confirmDeleteChurchEvents(church)">
                     {{ t.deleteEvents }}
                   </button>
-                  <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteChurch(church)">
+                  <button class="btn btn-sm btn-outline-danger" type="button" @click="confirmDeleteChurch(church)">
                     {{ t.delete }}
                   </button>
                   <button class="btn btn-sm btn-outline-primary" type="button" @click="generateInvite(church)">
@@ -243,11 +243,26 @@
         </div>
       </div>
     </div>
+
+    <div v-if="confirmOpen" class="confirm-modal-backdrop" role="presentation">
+      <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-action-title">
+        <h2 id="confirm-action-title" class="confirm-modal-title">{{ confirmTitle }}</h2>
+        <p class="confirm-modal-text">{{ confirmMessage }}</p>
+        <div class="confirm-modal-actions">
+          <button class="btn btn-outline-secondary" type="button" @click="closeConfirm">
+            {{ common.cancel }}
+          </button>
+          <button class="btn btn-outline-danger" type="button" @click="runConfirmAction">
+            {{ confirmActionLabel }}
+          </button>
+        </div>
+      </div>
+    </div>
   </section>
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { superAdminApi } from '../../services/superAdminApi'
 import { useUiStore } from '../../stores/uiStore'
 import { storeToRefs } from 'pinia'
@@ -260,10 +275,15 @@ const inviteCode = ref('')
 const success = ref('')
 const successTimer = ref(null)
 const expandedIds = ref(new Set())
+const confirmOpen = ref(false)
+const confirmMessage = ref('')
+const confirmActionLabel = ref('')
+const confirmAction = ref(null)
 const uiStore = useUiStore()
 const { locale } = storeToRefs(uiStore)
 const t = computed(() => translations[locale.value].superadmin.churches)
 const roleLabels = computed(() => translations[locale.value].appLayout.roleLabels)
+const confirmTitle = computed(() => t.value.confirmTitle || t.value.delete)
 
 const createForm = reactive({
   name: '',
@@ -363,10 +383,6 @@ const formatCountMessage = (template, count) => template.replace('{count}', coun
 const deleteChurchEvents = async (church) => {
   error.value = ''
   success.value = ''
-  const confirmMessage = t.value.deleteEventsConfirm.replace('{name}', church.name)
-  if (!window.confirm(confirmMessage)) {
-    return
-  }
   try {
     const response = await superAdminApi.deleteChurchEvents(church.id)
     const message = formatCountMessage(t.value.deleteEventsSuccess, response.deleted ?? 0)
@@ -374,6 +390,36 @@ const deleteChurchEvents = async (church) => {
   } catch {
     error.value = t.value.deleteEventsError
   }
+}
+
+const openConfirm = (message, actionLabel, action) => {
+  confirmMessage.value = message
+  confirmActionLabel.value = actionLabel
+  confirmAction.value = action
+  confirmOpen.value = true
+}
+
+const closeConfirm = () => {
+  confirmOpen.value = false
+  confirmAction.value = null
+}
+
+const runConfirmAction = async () => {
+  if (!confirmAction.value) {
+    return
+  }
+  await confirmAction.value()
+  closeConfirm()
+}
+
+const confirmDeleteChurch = (church) => {
+  const message = t.value.deleteConfirm.replace('{name}', church.name)
+  openConfirm(message, t.value.delete, () => deleteChurch(church))
+}
+
+const confirmDeleteChurchEvents = (church) => {
+  const message = t.value.deleteEventsConfirm.replace('{name}', church.name)
+  openConfirm(message, t.value.deleteEvents, () => deleteChurchEvents(church))
 }
 
 const toggleDetails = (id) => {
@@ -394,5 +440,10 @@ onUnmounted(() => {
   if (successTimer.value) {
     clearTimeout(successTimer.value)
   }
+  document.body.style.overflow = ''
+})
+
+watch(confirmOpen, (next) => {
+  document.body.style.overflow = next ? 'hidden' : ''
 })
 </script>
