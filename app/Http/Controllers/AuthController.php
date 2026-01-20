@@ -55,11 +55,22 @@ class AuthController extends Controller
                 }
             }
 
+            $role = $invitation->role ?? User::ROLE_MEMBER;
+            if ($departmentId !== null && $role === User::ROLE_ADMIN) {
+                $hasAdmin = User::query()
+                    ->where('department_id', $departmentId)
+                    ->where('role', User::ROLE_ADMIN)
+                    ->exists();
+                if ($hasAdmin) {
+                    $role = User::ROLE_MEMBER;
+                }
+            }
+
             $user = User::create([
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'password' => $data['password'],
-                'role' => $invitation->role ?? User::ROLE_MEMBER,
+                'role' => $role,
                 'church_id' => $invitation->church_id,
                 'department_id' => $departmentId ?? $invitation->department_id,
             ]);

@@ -73,10 +73,10 @@
             <td>{{ department.id }}</td>
             <td><input v-model="department.name" class="form-control" type="text" /></td>
             <td><input v-model="department.color" class="form-control form-control-color" type="color" /></td>
-            <td><input v-model="department.user_name" class="form-control" type="text" /></td>
+            <td>{{ adminNameForDepartment(department) }}</td>
             <td>
-              <span v-if="department.users?.length">
-                {{ department.users.map((user) => user.name || user.email).filter(Boolean).join(', ') }}
+              <span v-if="memberNamesForDepartment(department)">
+                {{ memberNamesForDepartment(department) }}
               </span>
               <span v-else>—</span>
             </td>
@@ -111,13 +111,13 @@
             </div>
             <div class="mb-2">
               <label class="form-label small mb-1">{{ t.userName }}</label>
-              <input v-model="department.user_name" class="form-control" type="text" />
+              <p class="mb-0">{{ adminNameForDepartment(department) }}</p>
             </div>
             <div class="mb-2">
               <label class="form-label small mb-1">{{ t.columns.users }}</label>
               <p class="mb-0">
-                <span v-if="department.users?.length">
-                  {{ department.users.map((user) => user.name || user.email).filter(Boolean).join(', ') }}
+                <span v-if="memberNamesForDepartment(department)">
+                  {{ memberNamesForDepartment(department) }}
                 </span>
                 <span v-else>—</span>
               </p>
@@ -259,6 +259,19 @@ const deleteDepartmentEvents = async (department) => {
   } catch {
     error.value = t.value.deleteEventsError
   }
+}
+
+const adminNameForDepartment = (department) => {
+  const admin = department.users?.find((user) => user.role === 'admin')
+  return admin?.name || admin?.email || '—'
+}
+
+const memberNamesForDepartment = (department) => {
+  const names = (department.users || [])
+    .filter((user) => user.role !== 'admin')
+    .map((user) => user.name || user.email)
+    .filter(Boolean)
+  return names.length ? names.join(', ') : ''
 }
 
 const openConfirm = (message, actionLabel, action) => {

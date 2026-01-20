@@ -131,7 +131,7 @@ class SuperAdminController extends Controller
     {
         $departments = Department::query()
             ->where('church_id', $church->id)
-            ->with(['users:id,name,department_id,email'])
+            ->with(['users:id,name,department_id,email,role'])
             ->orderBy('name')
             ->get();
 
@@ -258,11 +258,22 @@ class SuperAdminController extends Controller
             }
         }
 
+        $role = $data['role'];
+        if (!empty($data['department_id']) && $role === User::ROLE_ADMIN) {
+            $hasAdmin = User::query()
+                ->where('department_id', $data['department_id'])
+                ->where('role', User::ROLE_ADMIN)
+                ->exists();
+            if ($hasAdmin) {
+                $role = User::ROLE_MEMBER;
+            }
+        }
+
         $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
-            'role' => $data['role'],
+            'role' => $role,
             'church_id' => $church->id,
             'department_id' => $data['department_id'] ?? null,
         ]);
