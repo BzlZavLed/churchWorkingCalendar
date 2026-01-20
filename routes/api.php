@@ -10,6 +10,7 @@ use App\Http\Controllers\PublicEventFeedController;
 use App\Http\Controllers\CalendarExportController;
 use App\Http\Controllers\EventNoteController;
 use App\Http\Controllers\SuperAdminController;
+use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\Integrations\ClubCalendarController;
 use Illuminate\Support\Facades\Route;
 
@@ -59,6 +60,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('invitations', [InvitationController::class, 'index']);
     Route::post('invitations', [InvitationController::class, 'store']);
     Route::post('invitations/{invitation}/revoke', [InvitationController::class, 'revoke']);
+
+    Route::get('inventory', [InventoryController::class, 'index']);
+    Route::post('inventory', [InventoryController::class, 'store']);
+    Route::put('inventory/{inventory}', [InventoryController::class, 'update']);
+    Route::delete('inventory/{inventory}', [InventoryController::class, 'destroy']);
 });
 
 Route::middleware('integration.token')->prefix('integrations/clubs')->group(function () {

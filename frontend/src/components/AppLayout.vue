@@ -22,6 +22,7 @@
             <li><router-link to="/superadmin/churches">{{ t.churches }}</router-link></li>
             <li><router-link to="/superadmin/departments">{{ t.departments }}</router-link></li>
             <li><router-link to="/superadmin/calendars">{{ t.calendarManager }}</router-link></li>
+            <li><router-link to="/inventory">{{ t.inventory }}</router-link></li>
             <li><router-link to="/superadmin/users">{{ t.users }}</router-link></li>
           </ul>
         </nav>
@@ -34,6 +35,9 @@
             </li>
             <li v-if="authStore.user?.role !== 'secretary'">
               <router-link to="/objectives">{{ t.objectives }}</router-link>
+            </li>
+            <li v-if="['admin', 'secretary'].includes(authStore.user?.role || '')">
+              <router-link to="/inventory">{{ t.inventory }}</router-link>
             </li>
             <li v-if="authStore.user?.role === 'admin'">
               <router-link to="/admin/users">{{ t.users }}</router-link>

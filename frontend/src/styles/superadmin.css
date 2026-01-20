@@ -642,6 +642,22 @@ tbody td {
   background: #d9480f;
 }
 
+.inventory-description {
+  font-size: 0.6rem;
+}
+
+.inventory-table th:nth-child(4),
+.inventory-table td:nth-child(4) {
+  width: 35%;
+  min-width: 240px;
+}
+
+@media (max-width: 768px) {
+  .inventory-card .inventory-description {
+    font-size: 0.8rem;
+  }
+}
+
 .review-panel {
   margin-top: 16px;
   background: var(--card);

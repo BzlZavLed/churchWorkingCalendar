@@ -11,6 +11,7 @@ import SuperAdminChurches from '../components/superadmin/SuperAdminChurches.vue'
 import SuperAdminDepartments from '../components/superadmin/SuperAdminDepartments.vue'
 import SuperAdminUsers from '../components/superadmin/SuperAdminUsers.vue'
 import SuperAdminCalendarManager from '../components/superadmin/SuperAdminCalendarManager.vue'
+import InventoryView from '../components/InventoryView.vue'
 
 const routes = [
   { path: '/', redirect: '/calendar' },
@@ -20,6 +21,7 @@ const routes = [
   { path: '/objectives', component: ObjectivesView, meta: { requiresAuth: true } },
   { path: '/reports', component: ReportsView, meta: { requiresAuth: true } },
   { path: '/admin/users', component: AdminUsers, meta: { requiresAuth: true, adminOnly: true } },
+  { path: '/inventory', component: InventoryView, meta: { requiresAuth: true, inventoryOnly: true } },
   { path: '/superadmin', redirect: '/superadmin/churches' },
   { path: '/superadmin/login', component: SuperAdminLogin, meta: { guestOnly: true, noLayout: true } },
   { path: '/superadmin/churches', component: SuperAdminChurches, meta: { requiresAuth: true, superadminOnly: true } },
@@ -56,6 +58,10 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.adminOnly && !['admin', 'superadmin'].includes(authStore.user?.role || '')) {
+    return '/calendar'
+  }
+
+  if (to.meta.inventoryOnly && !['admin', 'secretary', 'superadmin'].includes(authStore.user?.role || '')) {
     return '/calendar'
   }
 
