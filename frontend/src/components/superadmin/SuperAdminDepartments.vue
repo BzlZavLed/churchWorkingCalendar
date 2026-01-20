@@ -282,12 +282,20 @@ const runConfirmAction = async () => {
 }
 
 const confirmDeleteDepartment = (department) => {
-  const message = t.value.deleteConfirm.replace('{name}', department.name)
+  const template = t.value.deleteConfirm
+    || (locale.value === 'es'
+      ? 'Esto eliminara {name}. Esta accion no se puede deshacer. Continuar?'
+      : 'This will delete {name}. This cannot be undone. Continue?')
+  const message = template.replace('{name}', department.name)
   openConfirm(message, t.value.delete, () => deleteDepartment(department))
 }
 
 const confirmDeleteDepartmentEvents = (department) => {
-  const message = t.value.deleteEventsConfirm.replace('{name}', department.name)
+  const template = t.value.deleteEventsConfirm
+    || (locale.value === 'es'
+      ? 'Esto eliminara todos los eventos de {name}. Esta accion no se puede deshacer. Continuar?'
+      : 'This will delete all events for {name}. This cannot be undone. Continue?')
+  const message = template.replace('{name}', department.name)
   openConfirm(message, t.value.deleteEvents, () => deleteDepartmentEvents(department))
 }
 

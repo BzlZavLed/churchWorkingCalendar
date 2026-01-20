@@ -446,7 +446,11 @@ const runConfirmAction = async () => {
 
 const confirmDeleteUser = (user) => {
   const label = user.email ? `${user.name} (${user.email})` : user.name
-  const message = t.value.deleteConfirm.replace('{name}', label)
+  const template = t.value.deleteConfirm
+    || (locale.value === 'es'
+      ? 'Esto eliminara {name}. Esta accion no se puede deshacer. Continuar?'
+      : 'This will delete {name}. This cannot be undone. Continue?')
+  const message = template.replace('{name}', label)
   openConfirm(message, t.value.delete, () => deleteUser(user))
 }
 
