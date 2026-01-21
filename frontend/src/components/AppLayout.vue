@@ -8,6 +8,9 @@
         <img :src="logoUrl" alt="Logo" class="login-logo" />
 
         <div v-if="authStore.isAuthenticated && authStore.user" class="sidebar-user">
+          <div class="sidebar-user-initials" aria-hidden="true">
+            {{ userInitials }}
+          </div>
           <div class="sidebar-user-name">{{ authStore.user.name }}</div>
           <div class="sidebar-user-role">{{ roleLabel }}</div>
           <div v-if="departmentLabel" class="sidebar-user-dept">{{ departmentLabel }}</div>
@@ -95,6 +98,17 @@ const roleLabel = computed(() => {
     return ''
   }
   return t.value.roleLabels?.[role] || role
+})
+
+const userInitials = computed(() => {
+  const name = authStore.user?.name || ''
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) {
+    return ''
+  }
+  const first = parts[0][0] || ''
+  const last = parts.length > 1 ? parts[parts.length - 1][0] || '' : ''
+  return `${first}${last}`.toUpperCase()
 })
 
 const departmentLabel = computed(() => {

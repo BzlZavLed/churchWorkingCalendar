@@ -17,10 +17,56 @@
                   </label>
                 </div>
                 <div class="mb-3">
-                  <label class="form-label">
-                    {{ t.password }}
-                    <input v-model="form.password" class="form-control" type="password" required />
-                  </label>
+                  <label class="form-label">{{ t.password }}</label>
+                  <div class="position-relative">
+                    <input
+                      v-model="form.password"
+                      class="form-control password-toggle-input"
+                      :type="showPassword ? 'text' : 'password'"
+                      required
+                    />
+                    <button
+                      class="password-toggle-btn"
+                      type="button"
+                      :aria-label="showPassword ? t.hidePassword : t.showPassword"
+                      @click="showPassword = !showPassword"
+                    >
+                      <svg
+                        v-if="!showPassword"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6-10-6-10-6Z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                      <svg
+                        v-else
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-6 0-10-8-10-8a21.77 21.77 0 0 1 5.06-6.06" />
+                        <path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c6 0 10 8 10 8a21.77 21.77 0 0 1-4.12 5.11" />
+                        <path d="M14.12 14.12a3 3 0 0 1-4.24-4.24" />
+                        <path d="M1 1l22 22" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
                 <button class="btn btn-primary w-100" type="submit">{{ t.login }}</button>
               </form>
@@ -88,6 +134,7 @@ const router = useRouter()
 const error = ref('')
 const notice = ref('')
 const showRecovery = ref(false)
+const showPassword = ref(false)
 const t = computed(() => translations[locale.value].login)
 
 const form = reactive({
