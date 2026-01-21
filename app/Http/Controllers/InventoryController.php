@@ -25,7 +25,7 @@ class InventoryController extends Controller
                 ->whereHas('department', function ($query) use ($user) {
                     $query->where('church_id', $user->church_id);
                 })
-                ->with('department')
+                ->with('department.church')
                 ->orderBy('description')
                 ->get();
         }
@@ -36,7 +36,7 @@ class InventoryController extends Controller
             }
             return InventoryItem::query()
                 ->where('department_id', $user->department_id)
-                ->with('department')
+                ->with('department.church')
                 ->orderBy('description')
                 ->get();
         }
@@ -52,6 +52,7 @@ class InventoryController extends Controller
         $data = $request->validate([
             'department_id' => ['nullable', 'exists:departments,id'],
             'quantity' => ['nullable', 'integer', 'min:1'],
+            'value' => ['nullable', 'numeric', 'min:0'],
             'description' => ['required', 'string', 'max:255'],
             'brand' => ['nullable', 'string', 'max:255'],
             'model' => ['nullable', 'string', 'max:255'],
@@ -62,6 +63,8 @@ class InventoryController extends Controller
         $item = InventoryItem::create([
             'department_id' => $departmentId,
             'quantity' => $data['quantity'] ?? 1,
+            'value' => $data['value'] ?? null,
+            'total_value' => $this->calculateTotalValue($data['quantity'] ?? 1, $data['value'] ?? null),
             'description' => $data['description'],
             'brand' => $data['brand'] ?? null,
             'model' => $data['model'] ?? null,
@@ -78,13 +81,23 @@ class InventoryController extends Controller
         $this->authorizeInventoryMutation($user, $inventory);
 
         $data = $request->validate([
+            'department_id' => ['sometimes', 'exists:departments,id'],
             'quantity' => ['nullable', 'integer', 'min:1'],
+            'value' => ['nullable', 'numeric', 'min:0'],
             'description' => ['sometimes', 'string', 'max:255'],
             'brand' => ['nullable', 'string', 'max:255'],
             'model' => ['nullable', 'string', 'max:255'],
             'serial_number' => ['nullable', 'string', 'max:255'],
             'location' => ['nullable', 'string'],
         ]);
+
+        if (array_key_exists('department_id', $data) && !$user->isSuperAdmin()) {
+            unset($data['department_id']);
+        }
+
+        $quantity = array_key_exists('quantity', $data) ? $data['quantity'] : $inventory->quantity;
+        $value = array_key_exists('value', $data) ? $data['value'] : $inventory->value;
+        $data['total_value'] = $this->calculateTotalValue($quantity, $value);
 
         $inventory->update($data);
 
@@ -139,5 +152,14 @@ class InventoryController extends Controller
         throw ValidationException::withMessages([
             'inventory' => ['Unauthorized.'],
         ]);
+    }
+
+    private function calculateTotalValue(?int $quantity, $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        $qty = $quantity ?? 0;
+        return number_format(((float) $value) * $qty, 2, '.', '');
     }
 }

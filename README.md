@@ -72,6 +72,7 @@ npm run dev
 - Update Benjamin password:
 ```bash
 php artisan db:seed --class=UpdateBenjaminPasswordSeeder
+php artisan db:seed --class=InventorySeeder
 ```
 
 ## Propuesta de proyecto (ES)

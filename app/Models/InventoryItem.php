@@ -13,6 +13,8 @@ class InventoryItem extends Model
     protected $fillable = [
         'department_id',
         'quantity',
+        'value',
+        'total_value',
         'description',
         'brand',
         'model',
@@ -22,6 +24,8 @@ class InventoryItem extends Model
 
     protected $casts = [
         'quantity' => 'integer',
+        'value' => 'decimal:2',
+        'total_value' => 'decimal:2',
     ];
 
     public function department(): BelongsTo

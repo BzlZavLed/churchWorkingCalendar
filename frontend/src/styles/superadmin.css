@@ -644,12 +644,31 @@ tbody td {
 
 .inventory-description {
   font-size: 0.6rem;
+  line-height: 1.2;
+  white-space: normal;
+  word-break: break-word;
 }
 
-.inventory-table th:nth-child(4),
-.inventory-table td:nth-child(4) {
-  width: 35%;
-  min-width: 240px;
+.inventory-notes {
+  font-size: 0.7rem;
+  line-height: 1.2;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.inventory-table {
+  table-layout: auto;
+}
+
+.inventory-table th,
+.inventory-table td {
+  vertical-align: top;
+}
+
+.inventory-table th,
+.inventory-table td {
+  white-space: normal;
+  word-break: break-word;
 }
 
 @media (max-width: 768px) {

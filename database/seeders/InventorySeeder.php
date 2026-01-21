@@ -76,6 +76,8 @@ class InventorySeeder extends Seeder
             InventoryItem::create([
                 'department_id' => $department->id,
                 'quantity' => (int) ($this->valueFor($row, $columnMap['quantity'] ?? null) ?: 1),
+                'value' => null,
+                'total_value' => null,
                 'description' => $description,
                 'brand' => $this->valueFor($row, $columnMap['brand'] ?? null),
                 'model' => $this->valueFor($row, $columnMap['model'] ?? null),
