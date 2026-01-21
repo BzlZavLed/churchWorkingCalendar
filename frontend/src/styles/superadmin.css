@@ -271,6 +271,19 @@ tbody td {
   display: block;
 }
 
+.login-remember .form-check-label {
+  font-size: 0.8em;
+}
+
+.login-form {
+  font-size: 0.8rem;
+}
+
+.login-faceid-btn {
+  width: 50%;
+  min-width: 120px;
+}
+
 .sidebar-user {
   text-align: center;
   margin-bottom: 16px;

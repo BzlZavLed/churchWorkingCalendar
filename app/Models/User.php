@@ -91,4 +91,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Invitation::class, 'created_by');
     }
+
+    public function webauthnCredentials(): HasMany
+    {
+        return $this->hasMany(WebAuthnCredential::class);
+    }
 }

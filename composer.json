@@ -7,12 +7,16 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
-        "laravel/framework": "^11.0",
         "barryvdh/laravel-dompdf": "^2.2",
-        "masterminds/html5": "^2.9",
-        "phpoffice/phpspreadsheet": "^2.1",
+        "laravel/framework": "^11.0",
         "laravel/sanctum": "^4.2",
-        "laravel/tinker": "^2.10.1"
+        "laravel/tinker": "^2.10.1",
+        "masterminds/html5": "^2.9",
+        "nyholm/psr7": "*",
+        "nyholm/psr7-server": "*",
+        "phpoffice/phpspreadsheet": "^2.1",
+        "symfony/psr-http-message-bridge": "*",
+        "web-auth/webauthn-lib": "*"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

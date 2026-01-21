@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\WebAuthnController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\InvitationController;
@@ -18,6 +19,10 @@ Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'registerWithInvite']);
     Route::post('login', [AuthController::class, 'login']);
     Route::post('recover', [AuthController::class, 'recoverPassword']);
+    Route::post('webauthn/register/options', [WebAuthnController::class, 'registerOptions']);
+    Route::post('webauthn/register/verify', [WebAuthnController::class, 'registerVerify']);
+    Route::post('webauthn/authenticate/options', [WebAuthnController::class, 'authenticateOptions']);
+    Route::post('webauthn/authenticate/verify', [WebAuthnController::class, 'authenticateVerify']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);

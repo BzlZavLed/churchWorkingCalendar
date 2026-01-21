@@ -9,7 +9,7 @@
             <div class="card-body p-4">
               <h1 class="h4 mb-3 text-center">{{ showRecovery ? t.recoverTitle : t.title }}</h1>
 
-              <form v-if="!showRecovery" @submit.prevent="submit">
+              <form v-if="!showRecovery" class="login-form" @submit.prevent="submit">
                 <div class="mb-3">
                   <label class="form-label">
                     {{ t.email }}
@@ -68,10 +68,25 @@
                     </button>
                   </div>
                 </div>
+                <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3">
+                  <label class="form-check mb-0 login-remember">
+                    <input v-model="rememberMe" class="form-check-input" type="checkbox" />
+                    <span class="form-check-label">{{ t.remember }}</span>
+                  </label>
+                  <button
+                    v-if="supportsWebAuthn"
+                    class="btn btn-outline-secondary btn-sm login-faceid-btn"
+                    type="button"
+                    :disabled="faceIdLoading"
+                    @click="startFaceIdLogin"
+                  >
+                    {{ t.faceId }}
+                  </button>
+                </div>
                 <button class="btn btn-primary w-100" type="submit">{{ t.login }}</button>
               </form>
 
-              <form v-else @submit.prevent="recover">
+              <form v-else class="login-form" @submit.prevent="recover">
                 <div class="mb-3">
                   <label class="form-label">
                     {{ t.email }}
@@ -110,11 +125,50 @@
 
               <p v-if="notice" class="alert alert-success mt-3 mb-0">{{ notice }}</p>
               <p v-if="error" class="alert alert-danger mt-3 mb-0">{{ error }}</p>
+              <p v-if="faceIdNotice" class="alert alert-info mt-3 mb-0">{{ faceIdNotice }}</p>
+              <p v-if="faceIdError" class="alert alert-danger mt-3 mb-0">{{ faceIdError }}</p>
             </div>
           </div>
         </div>
       </div>
     </section>
+
+    <div v-if="faceIdSetupOpen" class="modal-backdrop" @click.self="closeFaceIdSetup">
+      <div class="modal-panel">
+        <header class="modal-header">
+          <h2>{{ t.faceIdSetupTitle }}</h2>
+          <button type="button" class="modal-close" @click="closeFaceIdSetup">×</button>
+        </header>
+        <div class="event-details">
+          <p class="event-details-text">{{ t.faceIdSetupBody }}</p>
+          <label class="form-label mt-2">
+            {{ t.email }}
+            <input v-model="faceIdEmail" class="form-control" type="email" required />
+          </label>
+          <label class="form-label mt-2">
+            {{ t.password }}
+            <input v-model="faceIdPassword" class="form-control" type="password" minlength="8" />
+          </label>
+          <label class="form-label mt-2">
+            {{ t.faceIdDeviceName }}
+            <input v-model="faceIdDeviceName" class="form-control" type="text" :placeholder="t.faceIdDeviceHint" />
+          </label>
+        </div>
+        <div class="action-row">
+          <button type="button" class="btn btn-outline-secondary" @click="closeFaceIdSetup">
+            {{ t.cancel }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-outline-primary"
+            :disabled="faceIdLoading || !faceIdPassword || !faceIdEmail"
+            @click="registerFaceId"
+          >
+            {{ t.faceIdRegister }}
+          </button>
+        </div>
+      </div>
+    </div>
   </main>
 </template>
 
@@ -123,9 +177,15 @@ import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { authApi } from '../services/authApi'
+import { webauthnApi } from '../services/webauthnApi'
 import { useUiStore } from '../stores/uiStore'
 import { storeToRefs } from 'pinia'
 import { translations } from '../i18n/translations'
+import {
+  credentialToJSON,
+  prepareAuthenticationOptions,
+  prepareRegistrationOptions,
+} from '../utils/webauthn'
 
 const authStore = useAuthStore()
 const uiStore = useUiStore()
@@ -135,6 +195,15 @@ const error = ref('')
 const notice = ref('')
 const showRecovery = ref(false)
 const showPassword = ref(false)
+const rememberMe = ref(true)
+const supportsWebAuthn = ref(false)
+const faceIdError = ref('')
+const faceIdNotice = ref('')
+const faceIdLoading = ref(false)
+const faceIdSetupOpen = ref(false)
+const faceIdEmail = ref('')
+const faceIdPassword = ref('')
+const faceIdDeviceName = ref('')
 const t = computed(() => translations[locale.value].login)
 
 const form = reactive({
@@ -152,8 +221,10 @@ const recovery = reactive({
 const submit = async () => {
   error.value = ''
   notice.value = ''
+  faceIdError.value = ''
+  faceIdNotice.value = ''
   try {
-    await authStore.login(form)
+    await authStore.login(form, rememberMe.value)
     if (authStore.user?.role === 'superadmin') {
       await router.push('/superadmin/churches')
     } else {
@@ -183,7 +254,96 @@ const recover = async () => {
 const toggleRecovery = () => {
   error.value = ''
   notice.value = ''
+  faceIdError.value = ''
+  faceIdNotice.value = ''
   showRecovery.value = !showRecovery.value
+}
+
+const startFaceIdLogin = async () => {
+  faceIdError.value = ''
+  faceIdNotice.value = ''
+  faceIdLoading.value = true
+  try {
+    const payload = form.email ? { email: form.email } : {}
+    const { publicKey, options_id: optionsId } = await webauthnApi.authenticateOptions(payload)
+    const options = prepareAuthenticationOptions(publicKey)
+    const credential = await navigator.credentials.get({ publicKey: options })
+    const verifyPayload = {
+      options_id: optionsId,
+      credential: credentialToJSON(credential),
+    }
+    const session = await webauthnApi.authenticateVerify(verifyPayload)
+    authStore.setSession(session, rememberMe.value)
+    if (authStore.user?.role === 'superadmin') {
+      await router.push('/superadmin/churches')
+    } else {
+      await router.push('/calendar')
+    }
+  } catch (err) {
+    if (err?.response?.data?.status === 'no_credentials') {
+      faceIdNotice.value = t.value.faceIdRegisterPrompt
+      openFaceIdSetup()
+    } else if (err?.response?.data?.message === 'The credential ID is invalid.') {
+      faceIdNotice.value = t.value.faceIdRegisterPrompt
+      openFaceIdSetup()
+    } else if (err?.name === 'NotAllowedError' || err?.name === 'NotFoundError') {
+      faceIdNotice.value = t.value.faceIdRegisterPrompt
+      openFaceIdSetup()
+    } else {
+      faceIdError.value = t.value.faceIdError
+    }
+  } finally {
+    faceIdLoading.value = false
+  }
+}
+
+const openFaceIdSetup = () => {
+  faceIdNotice.value = t.value.faceIdRegisterPrompt
+  faceIdEmail.value = form.email || ''
+  faceIdPassword.value = ''
+  faceIdDeviceName.value = ''
+  faceIdSetupOpen.value = true
+}
+
+const closeFaceIdSetup = () => {
+  faceIdSetupOpen.value = false
+  faceIdEmail.value = ''
+  faceIdPassword.value = ''
+  faceIdDeviceName.value = ''
+}
+
+const registerFaceId = async () => {
+  faceIdError.value = ''
+  if (!faceIdEmail.value || !faceIdPassword.value) {
+    faceIdError.value = t.value.faceIdSetupError
+    return
+  }
+  faceIdLoading.value = true
+  try {
+    const { publicKey } = await webauthnApi.registerOptions({
+      email: faceIdEmail.value,
+      password: faceIdPassword.value,
+    })
+    const options = prepareRegistrationOptions(publicKey)
+    const credential = await navigator.credentials.create({ publicKey: options })
+    const payload = {
+      email: faceIdEmail.value,
+      credential: credentialToJSON(credential),
+      device_name: faceIdDeviceName.value || undefined,
+    }
+    const session = await webauthnApi.registerVerify(payload)
+    authStore.setSession(session, rememberMe.value)
+    closeFaceIdSetup()
+    if (authStore.user?.role === 'superadmin') {
+      await router.push('/superadmin/churches')
+    } else {
+      await router.push('/calendar')
+    }
+  } catch (err) {
+    faceIdError.value = t.value.faceIdError
+  } finally {
+    faceIdLoading.value = false
+  }
 }
 
 const extractErrorMessage = (err) => {
@@ -207,6 +367,15 @@ const goToRegister = async () => {
 
 onMounted(() => {
   document.body.classList.add('sidebar-open')
+  if (window.PublicKeyCredential?.isUserVerifyingPlatformAuthenticatorAvailable) {
+    window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+      .then((available) => {
+        supportsWebAuthn.value = available
+      })
+      .catch(() => {
+        supportsWebAuthn.value = false
+      })
+  }
 })
 
 onUnmounted(() => {

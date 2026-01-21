@@ -4,7 +4,9 @@ import { authApi, setAuthToken } from '../services/authApi'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
-  const token = ref(localStorage.getItem('auth_token'))
+  const storageKey = 'auth_token'
+  const getStoredToken = () => sessionStorage.getItem(storageKey) || localStorage.getItem(storageKey)
+  const token = ref(getStoredToken())
   const isInitializing = ref(true)
 
   const isAuthenticated = computed(() => Boolean(token.value))
@@ -12,12 +14,19 @@ export const useAuthStore = defineStore('auth', () => {
   const isSuperAdmin = computed(() => role.value === 'superadmin')
   const isSecretary = computed(() => role.value === 'secretary')
 
-  const applyToken = (nextToken) => {
+  const applyToken = (nextToken, persist = true) => {
     token.value = nextToken
     if (nextToken) {
-      localStorage.setItem('auth_token', nextToken)
+      if (persist) {
+        localStorage.setItem(storageKey, nextToken)
+        sessionStorage.removeItem(storageKey)
+      } else {
+        sessionStorage.setItem(storageKey, nextToken)
+        localStorage.removeItem(storageKey)
+      }
     } else {
-      localStorage.removeItem('auth_token')
+      localStorage.removeItem(storageKey)
+      sessionStorage.removeItem(storageKey)
     }
     setAuthToken(nextToken)
   }
@@ -41,16 +50,21 @@ export const useAuthStore = defineStore('auth', () => {
     isInitializing.value = false
   }
 
-  const login = async (payload) => {
+  const login = async (payload, remember = true) => {
     const response = await authApi.login(payload)
-    applyToken(response.token)
+    applyToken(response.token, remember)
     user.value = response.user
   }
 
-  const register = async (payload) => {
+  const register = async (payload, remember = true) => {
     const response = await authApi.register(payload)
-    applyToken(response.token)
+    applyToken(response.token, remember)
     user.value = response.user
+  }
+
+  const setSession = (session, remember = true) => {
+    applyToken(session.token, remember)
+    user.value = session.user
   }
 
   const logout = async () => {
@@ -72,6 +86,7 @@ export const useAuthStore = defineStore('auth', () => {
     initialize,
     login,
     register,
+    setSession,
     logout,
   }
 })
