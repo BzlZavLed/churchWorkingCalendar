@@ -119,6 +119,14 @@ body {
   background: rgba(255, 255, 255, 0.15);
 }
 
+.app-nav a.router-link-active,
+.app-nav a.router-link-exact-active {
+  background: #ffffff;
+  color: var(--dominant);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7);
+}
+
 .app-sidebar-title {
   color: rgba(255, 255, 255, 0.7);
 }

@@ -40,6 +40,22 @@ class AdminUserController extends Controller
         return response()->json($users);
     }
 
+    public function listDepartmentsWithUsers(Request $request)
+    {
+        $churchId = $request->user()?->church_id;
+        if (!$churchId) {
+            abort(403, 'Church required.');
+        }
+
+        $departments = Department::query()
+            ->where('church_id', $churchId)
+            ->with(['users:id,name,department_id,email,role'])
+            ->orderBy('name')
+            ->get();
+
+        return response()->json($departments);
+    }
+
     public function storeUser(Request $request)
     {
         $churchId = $request->user()?->church_id;
@@ -113,6 +129,34 @@ class AdminUserController extends Controller
         $user->update($data);
 
         return response()->json($user);
+    }
+
+    public function updateDepartment(Request $request, Department $department)
+    {
+        $churchId = $request->user()?->church_id;
+        if (!$churchId) {
+            abort(403, 'Church required.');
+        }
+
+        if ($department->church_id !== $churchId) {
+            abort(404);
+        }
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'color' => ['nullable', 'string', 'max:255'],
+            'user_name' => ['nullable', 'string', 'max:255'],
+            'is_club' => ['nullable', 'boolean'],
+        ]);
+
+        $department->update([
+            'name' => $data['name'],
+            'color' => $data['color'] ?? null,
+            'user_name' => $data['user_name'] ?? null,
+            'is_club' => $data['is_club'] ?? $department->is_club,
+        ]);
+
+        return response()->json($department);
     }
 
     public function destroyUser(Request $request, User $user)

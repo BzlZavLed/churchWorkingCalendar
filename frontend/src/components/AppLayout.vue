@@ -39,8 +39,11 @@
             <li v-if="['admin', 'secretary'].includes(authStore.user?.role || '')">
               <router-link to="/inventory">{{ t.inventory }}</router-link>
             </li>
-            <li v-if="authStore.user?.role === 'admin'">
-              <router-link to="/admin/users">{{ t.users }}</router-link>
+            <li v-if="authStore.user?.role === 'secretary'">
+              <router-link to="/secretary/departments">{{ t.departments }}</router-link>
+            </li>
+            <li v-if="authStore.user?.role === 'secretary'">
+              <router-link to="/secretary/users">{{ t.users }}</router-link>
             </li>
           </ul>
         </nav>

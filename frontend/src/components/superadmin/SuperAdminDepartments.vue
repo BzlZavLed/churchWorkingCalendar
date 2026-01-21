@@ -4,7 +4,7 @@
       <h1 class="h3 m-0">{{ t.title }}</h1>
     </div>
 
-    <div class="bg-white border rounded p-3 mb-4">
+    <div v-if="showChurchSelector" class="bg-white border rounded p-3 mb-4">
       <label class="form-label">
         {{ t.church }}
         <select v-model="selectedChurchId" class="form-select" @change="loadDepartments">
@@ -16,7 +16,11 @@
       </label>
     </div>
 
-    <form v-if="selectedChurchId" class="bg-white border rounded p-4 mb-4" @submit.prevent="createDepartment">
+    <form
+      v-if="canCreate && selectedChurchId"
+      class="bg-white border rounded p-4 mb-4"
+      @submit.prevent="createDepartment"
+    >
       <h2 class="h5 mb-3">{{ t.createTitle }}</h2>
       <div class="row g-3">
         <div class="col-12 col-md-6">
@@ -85,8 +89,22 @@
             <td class="text-end">
               <div class="d-flex flex-column flex-md-row justify-content-end gap-2">
                 <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateDepartment(department)">{{ t.save }}</button>
-                <button class="btn btn-sm btn-outline-danger" type="button" @click="confirmDeleteDepartmentEvents(department)">{{ t.deleteEvents }}</button>
-                <button class="btn btn-sm btn-outline-danger" type="button" @click="confirmDeleteDepartment(department)">{{ t.delete }}</button>
+                <button
+                  v-if="canDelete"
+                  class="btn btn-sm btn-outline-danger"
+                  type="button"
+                  @click="confirmDeleteDepartmentEvents(department)"
+                >
+                  {{ t.deleteEvents }}
+                </button>
+                <button
+                  v-if="canDelete"
+                  class="btn btn-sm btn-outline-danger"
+                  type="button"
+                  @click="confirmDeleteDepartment(department)"
+                >
+                  {{ t.delete }}
+                </button>
               </div>
             </td>
           </tr>
@@ -129,8 +147,22 @@
             </div>
             <div class="d-flex flex-wrap gap-2">
               <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateDepartment(department)">{{ t.save }}</button>
-              <button class="btn btn-sm btn-outline-danger" type="button" @click="confirmDeleteDepartmentEvents(department)">{{ t.deleteEvents }}</button>
-              <button class="btn btn-sm btn-outline-danger" type="button" @click="confirmDeleteDepartment(department)">{{ t.delete }}</button>
+              <button
+                v-if="canDelete"
+                class="btn btn-sm btn-outline-danger"
+                type="button"
+                @click="confirmDeleteDepartmentEvents(department)"
+              >
+                {{ t.deleteEvents }}
+              </button>
+              <button
+                v-if="canDelete"
+                class="btn btn-sm btn-outline-danger"
+                type="button"
+                @click="confirmDeleteDepartment(department)"
+              >
+                {{ t.delete }}
+              </button>
             </div>
           </div>
         </div>
@@ -157,6 +189,8 @@
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { superAdminApi } from '../../services/superAdminApi'
+import { secretaryApi } from '../../services/secretaryApi'
+import { useAuthStore } from '../../stores/authStore'
 import { useUiStore } from '../../stores/uiStore'
 import { storeToRefs } from 'pinia'
 import { translations } from '../../i18n/translations'
@@ -170,11 +204,17 @@ const confirmOpen = ref(false)
 const confirmMessage = ref('')
 const confirmActionLabel = ref('')
 const confirmAction = ref(null)
+const authStore = useAuthStore()
 const uiStore = useUiStore()
 const { locale } = storeToRefs(uiStore)
 const t = computed(() => translations[locale.value].superadmin.departments)
 const common = computed(() => translations[locale.value].common)
 const confirmTitle = computed(() => t.value.confirmTitle || t.value.delete)
+const isSuperAdmin = computed(() => authStore.user?.role === 'superadmin')
+const isSecretary = computed(() => authStore.user?.role === 'secretary')
+const showChurchSelector = computed(() => isSuperAdmin.value)
+const canCreate = computed(() => isSuperAdmin.value)
+const canDelete = computed(() => isSuperAdmin.value)
 const showSuccessToast = (message = '') => {
   const fallback = locale.value === 'es' ? 'Guardado correctamente.' : 'Saved successfully.'
   uiStore.showToast(message || fallback, 'success')
@@ -188,6 +228,9 @@ const createForm = reactive({
 })
 
 const loadChurches = async () => {
+  if (!isSuperAdmin.value) {
+    return
+  }
   const response = await superAdminApi.listChurches()
   churches.value = response.data
 }
@@ -200,7 +243,9 @@ const loadDepartments = async () => {
   loading.value = true
   error.value = ''
   try {
-    departments.value = await superAdminApi.listDepartments(selectedChurchId.value)
+    departments.value = isSecretary.value
+      ? await secretaryApi.listDepartments()
+      : await superAdminApi.listDepartments(selectedChurchId.value)
   } catch {
     error.value = t.value.loadError
   } finally {
@@ -309,12 +354,17 @@ const updateDepartment = async (department) => {
   }
   error.value = ''
   try {
-    await superAdminApi.updateDepartment(selectedChurchId.value, department.id, {
+    const payload = {
       name: department.name,
       color: department.color || null,
       user_name: department.user_name || null,
       is_club: Boolean(department.is_club),
-    })
+    }
+    if (isSecretary.value) {
+      await secretaryApi.updateDepartment(department.id, payload)
+    } else {
+      await superAdminApi.updateDepartment(selectedChurchId.value, department.id, payload)
+    }
     setSuccessMessage()
   } catch {
     error.value = t.value.updateError
@@ -337,6 +387,10 @@ const deleteDepartment = async (department) => {
 
 onMounted(async () => {
   await loadChurches()
+  if (isSecretary.value && authStore.user?.church_id) {
+    selectedChurchId.value = String(authStore.user.church_id)
+    await loadDepartments()
+  }
 })
 
 onUnmounted(() => {

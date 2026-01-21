@@ -80,6 +80,13 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::delete('admin/users/{user}', [AdminUserController::class, 'destroyUser']);
 });
 
+Route::middleware(['auth:sanctum', 'secretary'])->group(function () {
+    Route::get('secretary/departments', [AdminUserController::class, 'listDepartmentsWithUsers']);
+    Route::put('secretary/departments/{department}', [AdminUserController::class, 'updateDepartment']);
+    Route::get('secretary/users', [AdminUserController::class, 'listUsers']);
+    Route::put('secretary/users/{user}', [AdminUserController::class, 'updateUser']);
+});
+
 Route::middleware(['auth:sanctum', 'superadmin'])->group(function () {
     Route::get('superadmin/churches', [SuperAdminController::class, 'index']);
     Route::post('superadmin/churches', [SuperAdminController::class, 'storeChurch']);
