@@ -469,14 +469,14 @@ const paginatedItems = computed(() => {
 })
 
 const pageValueTotal = computed(() => {
-  return paginatedItems.value.reduce((sum, item) => {
+  return filteredItems.value.reduce((sum, item) => {
     const value = Number(item.value || 0)
     return Number.isNaN(value) ? sum : sum + value
   }, 0)
 })
 
 const pageTotalValue = computed(() => {
-  return paginatedItems.value.reduce((sum, item) => {
+  return filteredItems.value.reduce((sum, item) => {
     const total = totalValue(item)
     return Number.isNaN(total) ? sum : sum + total
   }, 0)
