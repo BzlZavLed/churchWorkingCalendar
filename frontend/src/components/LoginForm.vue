@@ -68,19 +68,41 @@
                     </button>
                   </div>
                 </div>
-                <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3">
+                <div class="mb-3">
                   <label class="form-check mb-0 login-remember">
                     <input v-model="rememberMe" class="form-check-input" type="checkbox" />
                     <span class="form-check-label">{{ t.remember }}</span>
                   </label>
+                </div>
+                <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3">
                   <button
                     v-if="supportsWebAuthn"
                     class="btn btn-outline-secondary btn-sm login-faceid-btn"
                     type="button"
                     :disabled="faceIdLoading"
                     @click="startFaceIdLogin"
+                    :aria-label="t.faceId"
                   >
-                    {{ t.faceId }}
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M4 7V6a2 2 0 0 1 2-2h1" />
+                      <path d="M17 4h1a2 2 0 0 1 2 2v1" />
+                      <path d="M20 17v1a2 2 0 0 1-2 2h-1" />
+                      <path d="M7 20H6a2 2 0 0 1-2-2v-1" />
+                      <path d="M8 12s1.5 2 4 2 4-2 4-2" />
+                      <path d="M9 9h.01" />
+                      <path d="M15 9h.01" />
+                    </svg>
                   </button>
                 </div>
                 <button class="btn btn-primary w-100" type="submit">{{ t.login }}</button>

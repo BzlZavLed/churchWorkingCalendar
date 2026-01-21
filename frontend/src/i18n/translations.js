@@ -21,7 +21,7 @@ export const translations = {
       },
     },
     login: {
-      title: 'Calendario de trabajo',
+      title: 'MyChurchAdmin',
       recoverTitle: 'Recuperar contrasena',
       email: 'Correo',
       password: 'Contrasena',
@@ -629,7 +629,7 @@ export const translations = {
       },
     },
     login: {
-      title: 'Work calendar',
+      title: 'MyChurchAdmin',
       recoverTitle: 'Recover password',
       email: 'Email',
       password: 'Password',
