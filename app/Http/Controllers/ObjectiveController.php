@@ -24,11 +24,9 @@ class ObjectiveController extends Controller
             });
         }
 
-        if (
-            !$request->user()->isAdmin()
-            && !$request->user()->isSuperAdmin()
-            && !$request->user()->isSecretary()
-        ) {
+        if ($request->user()->isAdmin() || $request->user()->role === User::ROLE_MEMBER) {
+            $query->where('department_id', $request->user()->department_id);
+        } elseif (!$request->user()->isSuperAdmin() && !$request->user()->isSecretary()) {
             $query->where('department_id', $request->user()->department_id);
         }
 

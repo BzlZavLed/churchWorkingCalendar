@@ -143,6 +143,7 @@
                 <button
                   type="button"
                   class="event-pill event-pill-button"
+                  :class="{ 'event-pill--expiring': isExpiringHold(event) }"
                   :style="eventPillStyle(event)"
                   :title="eventMarkerDetails(event)"
                   @click.stop="openEventDetails(event)"
@@ -186,6 +187,7 @@
                 <button
                   type="button"
                   class="event-pill event-pill-button"
+                  :class="{ 'event-pill--expiring': isExpiringHold(event) }"
                   :style="eventPillStyle(event)"
                   :title="eventMarkerDetails(event)"
                   @click.stop="openEventDetails(event)"
@@ -229,6 +231,7 @@
               v-for="event in eventsForHour(hour)"
               :key="event.id"
               class="event-pill event-pill-button"
+              :class="{ 'event-pill--expiring': isExpiringHold(event) }"
               :style="eventPillStyle(event)"
             >
               {{ event.title }}
@@ -326,7 +329,9 @@
       :objective-id="form.objectiveId"
       :objectives="objectiveOptions"
       :active-hold-id="activeHoldId"
+      :hold-expires-at="activeHold?.expires_at || ''"
       :is-editing="Boolean(editEventId)"
+      :is-resuming-hold="isResumingHold"
       :error="formError"
       :notice="formNotice"
       :labels="t.drawer"
@@ -736,7 +741,7 @@ import EventDetailsModal from './EventDetailsModal.vue'
 const authStore = useAuthStore()
 const calendarStore = useCalendarStore()
 const uiStore = useUiStore()
-const { events } = storeToRefs(calendarStore)
+const { events, holds } = storeToRefs(calendarStore)
 const { locale } = storeToRefs(uiStore)
 
 const user = computed(() => authStore.user)
@@ -752,6 +757,66 @@ const canReplyEventNotes = computed(() => canViewUnseenNotes.value)
 const showStatusDetails = computed(() => false)
 const canViewChangeRequests = computed(
   () => !isSecretary.value && !isSuperAdmin.value && Boolean(user.value?.department_id)
+)
+const isHoldExpired = (event) => {
+  if (!event || event.status !== 'hold') {
+    return false
+  }
+  if (!event.expires_at) {
+    return true
+  }
+  const expiresAt = new Date(event.expires_at).getTime()
+  if (Number.isNaN(expiresAt)) {
+    return true
+  }
+  return expiresAt <= Date.now()
+}
+
+const expiringHoldIds = ref(new Set())
+
+const isExpiringHold = (event) => {
+  if (!event) {
+    return false
+  }
+  return expiringHoldIds.value.has(event.id)
+}
+
+const markExpiringHold = (eventId) => {
+  const next = new Set(expiringHoldIds.value)
+  next.add(eventId)
+  expiringHoldIds.value = next
+}
+
+const clearExpiringHold = (eventId) => {
+  if (!expiringHoldIds.value.has(eventId)) {
+    return
+  }
+  const next = new Set(expiringHoldIds.value)
+  next.delete(eventId)
+  expiringHoldIds.value = next
+}
+
+const flashExpiredHold = (event) => {
+  if (!event || isExpiringHold(event)) {
+    return
+  }
+  markExpiringHold(event.id)
+  window.setTimeout(() => {
+    calendarStore.removeEvent(event.id)
+    clearExpiringHold(event.id)
+  }, 700)
+}
+
+const flashExpiredHolds = () => {
+  const expired = (events.value || []).filter((event) => isHoldExpired(event))
+  if (!expired.length) {
+    return
+  }
+  expired.forEach((event) => flashExpiredHold(event))
+}
+
+const activeHold = computed(() =>
+  holds.value.find((event) => event.id === activeHoldId.value && !isHoldExpired(event))
 )
 const canEditSelectedEvent = computed(() => {
   const event = selectedEvent.value
@@ -782,6 +847,7 @@ const weekAnchor = ref(new Date())
 const activeHoldId = ref(null)
 const formError = ref('')
 const formNotice = ref('')
+const isResumingHold = ref(false)
 const objectives = ref([])
 const isDayView = ref(false)
 const departments = ref([])
@@ -908,6 +974,7 @@ const weekCells = computed(() => {
 
 const displayEvents = computed(() => {
   let list = events.value || []
+  list = list.filter((event) => !isHoldExpired(event) || isExpiringHold(event))
   if (departmentFilter.value && departmentFilter.value !== 'all') {
     const departmentId = Number(departmentFilter.value)
     list = list.filter((event) => event.department_id === departmentId)
@@ -1200,11 +1267,20 @@ const closeModal = () => {
   isModalOpen.value = false
   activeHoldId.value = null
   editEventId.value = null
+  isResumingHold.value = false
   formError.value = ''
   formNotice.value = ''
 }
 
 const openEventDetails = async (event) => {
+  if (isHoldExpired(event)) {
+    flashExpiredHold(event)
+    return
+  }
+  if (canResumeHold(event)) {
+    openHoldModal(event)
+    return
+  }
   selectedEvent.value = event
   isEventDetailsOpen.value = true
   await markNotesSeenForEvent(event)
@@ -1236,6 +1312,7 @@ const exitDayView = () => {
   isDayView.value = false
   selectedDate.value = null
   activeHoldId.value = null
+  isResumingHold.value = false
   formError.value = ''
   formNotice.value = ''
   isModalOpen.value = false
@@ -1246,6 +1323,21 @@ const combineDateTime = (date, time) => {
   const combined = new Date(date)
   combined.setHours(hours || 0, minutes || 0, 0, 0)
   return combined
+}
+
+const extractErrorMessage = (err) => {
+  const data = err?.response?.data
+  if (!data) {
+    return ''
+  }
+  if (typeof data.message === 'string' && data.message.trim()) {
+    return data.message
+  }
+  const firstKey = data.errors ? Object.keys(data.errors)[0] : null
+  if (firstKey && Array.isArray(data.errors[firstKey]) && data.errors[firstKey][0]) {
+    return data.errors[firstKey][0]
+  }
+  return ''
 }
 
 const createHold = async () => {
@@ -1271,24 +1363,26 @@ const createHold = async () => {
     return
   }
 
-  if (!form.objectiveId) {
-    formError.value = t.value.errors.selectObjective
-    return
-  }
-
   try {
     const event = await calendarStore.createHold({
-      title: form.title || t.value.untitled,
+      title: form.title || null,
       description: form.description || null,
       location: form.location || null,
-      objective_id: form.objectiveId,
+      objective_id: form.objectiveId || null,
       start_at: startAt.toISOString(),
       end_at: endAt.toISOString(),
     })
     activeHoldId.value = event.id
-    formNotice.value = 'Hold created. Lock to confirm.'
-  } catch {
-    formError.value = 'Unable to create hold.'
+    const expiresAt = event.expires_at ? new Date(event.expires_at) : null
+    if (expiresAt && !Number.isNaN(expiresAt.getTime())) {
+      const time = expiresAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+      const template = t.value.drawer?.statusLegendHoldExpires || 'at {time}'
+      formNotice.value = `Hold created. Expira ${template.replace('{time}', time)}`
+    } else {
+      formNotice.value = 'Hold created. Lock to confirm.'
+    }
+  } catch (err) {
+    formError.value = extractErrorMessage(err) || 'Unable to create hold.'
   }
 }
 
@@ -1302,10 +1396,22 @@ const lockHold = async () => {
   formError.value = ''
   formNotice.value = ''
   try {
+    if (!form.objectiveId) {
+      formError.value = t.value.errors.selectObjective
+      return
+    }
+    await calendarStore.updateEvent(activeHoldId.value, {
+      title: form.title || t.value.untitled,
+      description: form.description || null,
+      location: form.location || null,
+      objective_id: form.objectiveId || null,
+      start_at: combineDateTime(selectedDate.value, form.startTime).toISOString(),
+      end_at: combineDateTime(selectedDate.value, form.endTime).toISOString(),
+    })
     await calendarStore.lockEvent(activeHoldId.value)
     formNotice.value = 'Event locked.'
-  } catch {
-    formError.value = 'Unable to lock event.'
+  } catch (err) {
+    formError.value = extractErrorMessage(err) || 'Unable to lock event.'
   }
 }
 
@@ -1352,6 +1458,10 @@ const handleHourClick = (hour) => {
 
   if (hourEvents.length > 0) {
     const event = hourEvents[0]
+    if (canResumeHold(event)) {
+      openHoldModal(event)
+      return
+    }
     if (canEditEvent(event)) {
       prefillFormFromEvent(event)
       isModalOpen.value = true
@@ -1397,7 +1507,28 @@ const canEditEvent = (event) => {
   return Boolean(user.value?.department_id) && user.value.department_id === event.department_id
 }
 
-const prefillFormFromEvent = (event) => {
+const canResumeHold = (event) => {
+  if (!event || event.status !== 'hold') {
+    return false
+  }
+  if (isSecretary.value || isSuperAdmin.value) {
+    return false
+  }
+  if (isHoldExpired(event)) {
+    return false
+  }
+  return Boolean(user.value?.department_id) && user.value.department_id === event.department_id
+}
+
+const openHoldModal = (event) => {
+  prefillFormFromEvent(event, { isHold: true })
+  activeHoldId.value = event.id
+  editEventId.value = null
+  isResumingHold.value = true
+  isModalOpen.value = true
+}
+
+const prefillFormFromEvent = (event, options = {}) => {
   if (!event) {
     return
   }
@@ -1410,7 +1541,9 @@ const prefillFormFromEvent = (event) => {
   form.objectiveId = event.objective_id ? String(event.objective_id) : ''
   form.startTime = start.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
   form.endTime = end.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-  editEventId.value = event.id
+  if (!options.isHold) {
+    editEventId.value = event.id
+  }
   formError.value = ''
   formNotice.value = ''
 }
@@ -1927,6 +2060,8 @@ const handleResize = () => {
   isMobile.value = window.innerWidth <= 900
 }
 
+let holdCleanupTimer = null
+
 watch(currentMonth, async () => {
   monthSelection.value = `${currentMonth.value.getFullYear()}-${String(currentMonth.value.getMonth() + 1).padStart(2, '0')}`
   await loadMonth()
@@ -1952,6 +2087,8 @@ onMounted(async () => {
   await loadMonth()
   await fetchUnseenNotes()
   calendarStore.connectRealtime()
+  flashExpiredHolds()
+  holdCleanupTimer = window.setInterval(flashExpiredHolds, 15000)
 })
 
 watch(user, async (next) => {
@@ -1963,5 +2100,9 @@ watch(user, async (next) => {
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
+  if (holdCleanupTimer) {
+    window.clearInterval(holdCleanupTimer)
+    holdCleanupTimer = null
+  }
 })
 </script>

@@ -239,10 +239,10 @@ const sortKey = ref('department')
 const sortDir = ref('asc')
 
 const canChooseDepartment = computed(() =>
-  ['superadmin', 'secretary', 'admin'].includes(authStore.user?.role || '')
+  ['superadmin', 'secretary'].includes(authStore.user?.role || '')
 )
 const showDepartmentColumn = computed(() =>
-  ['superadmin', 'secretary', 'admin'].includes(authStore.user?.role || '')
+  ['superadmin', 'secretary'].includes(authStore.user?.role || '')
 )
 const isSuperAdmin = computed(() => authStore.user?.role === 'superadmin')
 
@@ -262,7 +262,7 @@ const filteredObjectives = computed(() => {
     role === 'superadmin' && churchId
       ? list.filter((item) => item.department?.church_id === churchId)
       : list
-  if (role === 'member') {
+  if (role === 'member' || role === 'admin') {
     const deptId = authStore.user?.department_id
     return scopedList
       .filter((item) => item.department_id === deptId)

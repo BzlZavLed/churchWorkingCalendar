@@ -8,6 +8,7 @@ use App\Http\Middleware\EnsureSecretary;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureSuperAdminWeb;
 use App\Http\Middleware\EnsureIntegrationToken;
+use App\Http\Middleware\AuditLogMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -17,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->appendToGroup('api', AuditLogMiddleware::class);
         $middleware->alias([
             'admin' => EnsureAdmin::class,
             'secretary' => EnsureSecretary::class,

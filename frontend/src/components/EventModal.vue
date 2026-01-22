@@ -7,71 +7,92 @@
       </header>
       <p class="event-date">{{ formattedDate }}</p>
 
-      <label>
-        {{ resolvedLabels.title }}
-        <input class="form-control" :value="title" type="text" @input="emitUpdate('title', $event.target.value)" />
-      </label>
+      <div v-if="!isEditing && !isResumingHold" class="event-step">
+        <div class="event-step-title">{{ resolvedLabels.stepHoldTitle }}</div>
+        <div class="action-row action-row--top">
+          <button type="button" @click="$emit('create-hold')">{{ resolvedLabels.createHold }}</button>
+        </div>
+      </div>
 
-      <label>
-        {{ resolvedLabels.description }}
-        <textarea
-          class="form-control"
-          :value="description"
-          rows="3"
-          @input="emitUpdate('description', $event.target.value)"
-        ></textarea>
-      </label>
+      <div class="event-step">
+        <div class="event-step-title">{{ resolvedLabels.stepDetailsTitle }}</div>
+        <label>
+          {{ resolvedLabels.title }}
+          <input class="form-control" :value="title" type="text" @input="emitUpdate('title', $event.target.value)" />
+        </label>
 
-      <label>
-        {{ resolvedLabels.location }}
-        <input class="form-control" :value="location" type="text" @input="emitUpdate('location', $event.target.value)" />
-      </label>
+        <label>
+          {{ resolvedLabels.description }}
+          <textarea
+            class="form-control"
+            :value="description"
+            rows="3"
+            @input="emitUpdate('description', $event.target.value)"
+          ></textarea>
+        </label>
 
-      <label>
-        {{ resolvedLabels.objective }}
-        <select class="form-select" :value="objectiveId" @change="emitUpdate('objectiveId', $event.target.value)">
-          <option value="">{{ objectivePlaceholder }}</option>
-          <option v-for="objective in objectives" :key="objective.id" :value="objective.id">
-            {{ objective.display_name || objective.name }}
-          </option>
-        </select>
-      </label>
+        <label>
+          {{ resolvedLabels.location }}
+          <input class="form-control" :value="location" type="text" @input="emitUpdate('location', $event.target.value)" />
+        </label>
 
-      <div class="time-row">
-      <label>
-        {{ resolvedLabels.start }}
-        <input
-          class="form-control"
-          :value="startTime"
-          type="time"
-          @input="emitUpdate('startTime', $event.target.value)"
-        />
-      </label>
-      <label>
-        {{ resolvedLabels.end }}
-        <input
-          class="form-control"
-          :value="endTime"
-          type="time"
-          @input="emitUpdate('endTime', $event.target.value)"
-        />
-      </label>
+        <label>
+          {{ resolvedLabels.objective }}
+          <select class="form-select" :value="objectiveId" @change="emitUpdate('objectiveId', $event.target.value)">
+            <option value="">{{ objectivePlaceholder }}</option>
+            <option v-for="objective in objectives" :key="objective.id" :value="objective.id">
+              {{ objective.display_name || objective.name }}
+            </option>
+          </select>
+        </label>
+
+        <div class="time-row">
+          <label>
+            {{ resolvedLabels.start }}
+            <input
+              class="form-control"
+              :value="startTime"
+              type="time"
+              @input="emitUpdate('startTime', $event.target.value)"
+            />
+          </label>
+          <label>
+            {{ resolvedLabels.end }}
+            <input
+              class="form-control"
+              :value="endTime"
+              type="time"
+              @input="emitUpdate('endTime', $event.target.value)"
+            />
+          </label>
+        </div>
+
+        <div class="event-status-legend">
+          <h3 class="event-status-legend-title">{{ resolvedLabels.statusLegendTitle }}</h3>
+          <ul class="event-status-legend-list">
+            <li><strong>{{ resolvedLabels.statusLegendHoldLabel }}:</strong> {{ resolvedLabels.statusLegendHold }}</li>
+            <li v-if="holdExpiresLabel"><strong>{{ resolvedLabels.statusLegendHoldExpiresLabel }}:</strong> {{ holdExpiresLabel }}</li>
+            <li><strong>{{ resolvedLabels.statusLegendLockedLabel }}:</strong> {{ resolvedLabels.statusLegendLocked }}</li>
+          </ul>
+        </div>
       </div>
 
       <p v-if="error" class="event-error">{{ error }}</p>
       <p v-if="notice" class="event-notice">{{ notice }}</p>
 
-      <div class="action-row">
+      <div class="event-step">
+        <div class="event-step-title">{{ resolvedLabels.stepConfirmTitle }}</div>
+        <div class="action-row">
         <template v-if="isEditing">
           <button type="button" @click="$emit('save-edit')">{{ resolvedLabels.saveEvent }}</button>
         </template>
         <template v-else>
-          <button type="button" @click="$emit('create-hold')">{{ resolvedLabels.createHold }}</button>
           <button type="button" :disabled="!activeHoldId" @click="$emit('lock-hold')">
             {{ resolvedLabels.lockEvent }}
           </button>
         </template>
         <button type="button" @click="$emit('close')">{{ resolvedLabels.close }}</button>
+        </div>
       </div>
     </div>
   </div>
@@ -124,6 +145,14 @@ const props = defineProps({
     type: Number,
     default: null,
   },
+  holdExpiresAt: {
+    type: String,
+    default: '',
+  },
+  isResumingHold: {
+    type: Boolean,
+    default: false,
+  },
   isEditing: {
     type: Boolean,
     default: false,
@@ -167,6 +196,19 @@ const formattedDate = computed(() => {
     return ''
   }
   return props.selectedDate.toLocaleDateString()
+})
+
+const holdExpiresLabel = computed(() => {
+  if (!props.holdExpiresAt) {
+    return ''
+  }
+  const parsed = new Date(props.holdExpiresAt)
+  if (Number.isNaN(parsed.getTime())) {
+    return ''
+  }
+  const time = parsed.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+  const template = resolvedLabels.value.statusLegendHoldExpires || ''
+  return template ? template.replace('{time}', time) : time
 })
 
 const emitUpdate = (field, value) => {

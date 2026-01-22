@@ -123,16 +123,6 @@
                         <button class="btn btn-sm btn-outline-primary" type="button" @click="generateInvite(church)">
                           {{ t.generateInvite }}
                         </button>
-                        <router-link
-                          v-if="church.latest_invitation?.code"
-                          class="btn btn-sm btn-outline-success"
-                          :to="{ path: '/superadmin/users', query: { invite: church.latest_invitation.code } }"
-                        >
-                          {{ t.users }}
-                        </router-link>
-                        <button v-else class="btn btn-sm btn-outline-success" type="button" disabled>
-                          {{ t.users }}
-                        </button>
                         <button class="btn btn-sm btn-outline-dark" type="button" @click="toggleDetails(church.id)">
                           {{ isExpanded(church.id) ? t.hide : t.details }}
                         </button>
@@ -221,16 +211,6 @@
                   </button>
                   <button class="btn btn-sm btn-outline-primary" type="button" @click="generateInvite(church)">
                     {{ t.generateInvite }}
-                  </button>
-                  <router-link
-                    v-if="church.latest_invitation?.code"
-                    class="btn btn-sm btn-outline-success"
-                    :to="{ path: '/superadmin/users', query: { invite: church.latest_invitation.code } }"
-                  >
-                    {{ t.users }}
-                  </router-link>
-                  <button v-else class="btn btn-sm btn-outline-success" type="button" disabled>
-                    {{ t.users }}
                   </button>
                   <button class="btn btn-sm btn-outline-dark" type="button" @click="toggleDetails(church.id)">
                     {{ isExpanded(church.id) ? t.hide : t.details }}

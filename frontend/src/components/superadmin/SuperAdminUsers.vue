@@ -5,18 +5,16 @@
     </div>
 
     <div class="bg-white border rounded p-3 mb-4">
-      <label class="form-label">
-        {{ t.invitationCode }}
-        <div class="d-flex flex-column flex-md-row gap-2">
-          <input v-model="inviteCode" class="form-control" type="text" />
-          <button class="btn btn-outline-primary" type="button" @click="lookupInvite">{{ t.checkCode }}</button>
-        </div>
+      <label class="form-label w-100">
+        {{ t.churchSelect }}
+        <select v-model="selectedChurchId" class="form-select">
+          <option value="">{{ t.churchPlaceholder }}</option>
+          <option v-for="church in churches" :key="church.id" :value="church.id">
+            {{ church.name }}
+          </option>
+        </select>
       </label>
-      <p v-if="inviteStatus === 'active'" class="text-success mb-0">
-        {{ t.inviteActive }} {{ inviteChurchName }}
-      </p>
-      <p v-else-if="inviteStatus === 'inactive'" class="text-danger mb-0">{{ t.inviteInactive }}</p>
-      <p v-else-if="inviteStatus === 'not_found'" class="text-danger mb-0">{{ t.inviteNotFound }}</p>
+      <p class="small text-muted mb-0">{{ t.churchHint }}</p>
     </div>
 
     <form v-if="selectedChurchId" class="bg-white border rounded p-4 mb-4" @submit.prevent="createUser">
@@ -251,7 +249,6 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { superAdminApi } from '../../services/superAdminApi'
 import { useAuthStore } from '../../stores/authStore'
-import { publicApi } from '../../services/publicApi'
 import { useUiStore } from '../../stores/uiStore'
 import { storeToRefs } from 'pinia'
 import { translations } from '../../i18n/translations'
@@ -261,9 +258,7 @@ const authStore = useAuthStore()
 const uiStore = useUiStore()
 const { locale } = storeToRefs(uiStore)
 const selectedChurchId = ref('')
-const inviteCode = ref('')
-const inviteStatus = ref('')
-const inviteChurchName = ref('')
+const churches = ref([])
 const departments = ref([])
 const users = ref([])
 const loading = ref(false)
@@ -334,6 +329,15 @@ const loadUsers = async () => {
   }
 }
 
+const loadChurches = async () => {
+  try {
+    const response = await superAdminApi.listChurches()
+    churches.value = response.data || []
+  } catch {
+    churches.value = []
+  }
+}
+
 const loadDepartments = async (churchId) => {
   if (!churchId) {
     departments.value = []
@@ -343,37 +347,6 @@ const loadDepartments = async (churchId) => {
     departments.value = await superAdminApi.listDepartments(churchId)
   } catch {
     departments.value = []
-  }
-}
-
-const lookupInvite = async () => {
-  error.value = ''
-  inviteStatus.value = ''
-  inviteChurchName.value = ''
-  selectedChurchId.value = ''
-  users.value = []
-  departments.value = []
-
-  if (!inviteCode.value) {
-    inviteStatus.value = 'not_found'
-    return
-  }
-
-  try {
-    const response = await publicApi.lookupInvitation(inviteCode.value)
-    inviteStatus.value = response.status
-    selectedChurchId.value = response.church?.id || ''
-    inviteChurchName.value = response.church?.name || ''
-    if (inviteStatus.value === 'active' && selectedChurchId.value) {
-      await loadDepartments(selectedChurchId.value)
-      await loadUsers()
-    }
-  } catch (err) {
-    if (err?.response?.status === 404) {
-      inviteStatus.value = 'not_found'
-    } else {
-      inviteStatus.value = 'inactive'
-    }
   }
 }
 
@@ -491,32 +464,37 @@ const submitPasswordUpdate = async () => {
   }
 }
 
-const normalizeInvite = (value) => {
-  if (Array.isArray(value)) {
-    return value[0] || ''
-  }
-  return value || ''
-}
-
-const applyInviteFromRoute = async (value) => {
-  const code = normalizeInvite(value)
-  if (!code) {
-    return
-  }
-  inviteCode.value = code
-  await lookupInvite()
-}
-
 onMounted(async () => {
-  await applyInviteFromRoute(route.query.invite)
+  await loadChurches()
 })
 
 watch(
-  () => route.query.invite,
-  async (next) => {
-    await applyInviteFromRoute(next)
-  }
+  () => route.query.church,
+  (next) => {
+    if (!next) {
+      return
+    }
+    const resolved = Array.isArray(next) ? next[0] : next
+    if (!resolved) {
+      return
+    }
+    selectedChurchId.value = String(resolved)
+  },
+  { immediate: true }
 )
+
+watch(selectedChurchId, async (next, prev) => {
+  if (next === prev) {
+    return
+  }
+  if (!next) {
+    users.value = []
+    departments.value = []
+    return
+  }
+  await loadDepartments(next)
+  await loadUsers()
+})
 
 onUnmounted(() => {
   document.body.style.overflow = ''

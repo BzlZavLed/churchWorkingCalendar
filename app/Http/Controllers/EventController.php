@@ -69,8 +69,8 @@ class EventController extends Controller
 
         $data = $request->validate([
             'department_id' => ['nullable', 'exists:departments,id'],
-            'objective_id' => ['required', 'exists:objectives,id'],
-            'title' => ['required', 'string', 'max:255'],
+            'objective_id' => ['nullable', 'exists:objectives,id'],
+            'title' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'location' => ['nullable', 'string', 'max:255'],
             'start_at' => ['required', 'date'],
@@ -81,8 +81,10 @@ class EventController extends Controller
         $endAt = Carbon::parse($data['end_at'])->utc();
 
         $departmentId = $this->resolveDepartmentId($request, $data['department_id'] ?? null);
-        $objectiveId = $data['objective_id'];
-        $this->assertObjectiveMatchesDepartment($objectiveId, $departmentId);
+        $objectiveId = $data['objective_id'] ?? null;
+        if ($objectiveId !== null) {
+            $this->assertObjectiveMatchesDepartment($objectiveId, $departmentId);
+        }
 
         $event = DB::transaction(function () use ($request, $data, $startAt, $endAt, $departmentId, $objectiveId) {
             if (Event::hasConflict($startAt, $endAt)) {
@@ -94,7 +96,7 @@ class EventController extends Controller
             $event = Event::create([
                 'department_id' => $departmentId,
                 'objective_id' => $objectiveId,
-                'title' => $data['title'],
+                'title' => $data['title'] ?? 'Hold',
                 'description' => $data['description'] ?? null,
                 'location' => $data['location'] ?? null,
                 'start_at' => $startAt,
@@ -125,6 +127,12 @@ class EventController extends Controller
             if ($event->status !== 'hold' || ($event->expires_at !== null && $event->expires_at->isPast())) {
                 throw ValidationException::withMessages([
                     'status' => ['Hold is no longer valid.'],
+                ]);
+            }
+
+            if (!$event->objective_id) {
+                throw ValidationException::withMessages([
+                    'objective_id' => ['Objective is required to confirm the event.'],
                 ]);
             }
 

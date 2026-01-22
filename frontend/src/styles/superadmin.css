@@ -271,6 +271,43 @@ tbody td {
   display: block;
 }
 
+.event-status-legend {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #f7f8f6;
+  font-size: 0.85em;
+}
+
+.event-status-legend-title {
+  margin: 0 0 6px;
+  font-size: 0.95em;
+}
+
+.event-status-legend-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.event-step {
+  padding: 10px 0;
+  border-top: 1px dashed var(--border);
+}
+
+.event-step:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.event-step-title {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
 .login-remember .form-check-label {
   font-size: 0.8em;
 }
@@ -538,6 +575,11 @@ tbody td {
   font-size: 0.68rem;
 }
 
+.event-pill--expiring {
+  animation: hold-expire-flash 0.7s ease-in-out;
+  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.65);
+}
+
 .event-status-dot {
   display: inline-block;
   width: 6px;
@@ -570,6 +612,21 @@ tbody td {
   background: transparent;
   cursor: pointer;
   font: inherit;
+}
+
+@keyframes hold-expire-flash {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .event-more {
@@ -1154,6 +1211,10 @@ tbody td {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.action-row--top {
+  margin-bottom: 12px;
 }
 
 .event-error {
