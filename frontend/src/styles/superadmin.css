@@ -284,6 +284,11 @@ tbody td {
   min-width: 120px;
 }
 
+.login-form .login-faceid-btn {
+  margin-left: auto;
+  margin-right: auto;
+}
+
 @media (max-width: 576px) {
   .auth-actions {
     flex-direction: column;
