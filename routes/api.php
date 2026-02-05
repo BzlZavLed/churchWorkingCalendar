@@ -10,6 +10,11 @@ use App\Http\Controllers\PublicCatalogController;
 use App\Http\Controllers\PublicEventFeedController;
 use App\Http\Controllers\CalendarExportController;
 use App\Http\Controllers\EventNoteController;
+use App\Http\Controllers\MeetingController;
+use App\Http\Controllers\MeetingPointController;
+use App\Http\Controllers\MeetingPointNoteController;
+use App\Http\Controllers\MeetingNoteController;
+use App\Http\Controllers\MeetingSummaryExportController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\Integrations\ClubCalendarController;
@@ -70,6 +75,25 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('inventory', [InventoryController::class, 'store']);
     Route::put('inventory/{inventory}', [InventoryController::class, 'update']);
     Route::delete('inventory/{inventory}', [InventoryController::class, 'destroy']);
+
+    Route::get('meetings', [MeetingController::class, 'index']);
+    Route::get('meetings/{meeting}', [MeetingController::class, 'show']);
+    Route::post('meetings', [MeetingController::class, 'store']);
+    Route::patch('meetings/{meeting}', [MeetingController::class, 'update']);
+    Route::post('meetings/{meeting}/close-agenda', [MeetingController::class, 'closeAgenda']);
+    Route::post('meetings/{meeting}/start', [MeetingController::class, 'start']);
+    Route::post('meetings/{meeting}/adjourn', [MeetingController::class, 'adjourn']);
+
+    Route::get('meetings/{meeting}/points', [MeetingPointController::class, 'index']);
+    Route::post('meetings/{meeting}/points', [MeetingPointController::class, 'store']);
+    Route::post('meetings/{meeting}/points/reorder', [MeetingPointController::class, 'reorder']);
+    Route::post('meetings/{meeting}/notes', [MeetingNoteController::class, 'store']);
+    Route::get('meetings/{meeting}/summary.pdf', [MeetingSummaryExportController::class, 'export']);
+    Route::patch('meeting-points/{point}', [MeetingPointController::class, 'update']);
+    Route::post('meeting-points/{point}/review', [MeetingPointController::class, 'review']);
+    Route::post('meeting-points/{point}/activate', [MeetingPointController::class, 'activate']);
+    Route::post('meeting-points/{point}/finalize', [MeetingPointController::class, 'finalize']);
+    Route::post('meeting-points/{point}/notes', [MeetingPointNoteController::class, 'store']);
 });
 
 Route::middleware('integration.token')->prefix('integrations/clubs')->group(function () {

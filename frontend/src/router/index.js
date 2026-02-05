@@ -7,12 +7,14 @@ import ObjectivesView from '../components/ObjectivesView.vue'
 import ReportsView from '../components/ReportsView.vue'
 import AdminUsers from '../components/admin/AdminUsers.vue'
 import SecretaryUsers from '../components/secretary/SecretaryUsers.vue'
+import SecretaryMeetings from '../components/secretary/SecretaryMeetings.vue'
 import SuperAdminLogin from '../components/superadmin/SuperAdminLogin.vue'
 import SuperAdminChurches from '../components/superadmin/SuperAdminChurches.vue'
 import SuperAdminDepartments from '../components/superadmin/SuperAdminDepartments.vue'
 import SuperAdminUsers from '../components/superadmin/SuperAdminUsers.vue'
 import SuperAdminCalendarManager from '../components/superadmin/SuperAdminCalendarManager.vue'
 import InventoryView from '../components/InventoryView.vue'
+import MeetingPointsView from '../components/MeetingPointsView.vue'
 
 const routes = [
   { path: '/', redirect: '/calendar' },
@@ -21,8 +23,10 @@ const routes = [
   { path: '/calendar', component: CalendarView, meta: { requiresAuth: true } },
   { path: '/objectives', component: ObjectivesView, meta: { requiresAuth: true } },
   { path: '/reports', component: ReportsView, meta: { requiresAuth: true } },
+  { path: '/meeting-points', component: MeetingPointsView, meta: { requiresAuth: true } },
   { path: '/admin/users', component: AdminUsers, meta: { requiresAuth: true, adminOnly: true } },
   { path: '/secretary/departments', component: SuperAdminDepartments, meta: { requiresAuth: true, secretaryOnly: true } },
+  { path: '/secretary/meetings', component: SecretaryMeetings, meta: { requiresAuth: true, secretaryOnly: true } },
   { path: '/secretary/users', component: SecretaryUsers, meta: { requiresAuth: true, secretaryOnly: true } },
   { path: '/inventory', component: InventoryView, meta: { requiresAuth: true, inventoryOnly: true } },
   { path: '/superadmin', redirect: '/superadmin/churches' },
@@ -30,6 +34,7 @@ const routes = [
   { path: '/superadmin/churches', component: SuperAdminChurches, meta: { requiresAuth: true, superadminOnly: true } },
   { path: '/superadmin/departments', component: SuperAdminDepartments, meta: { requiresAuth: true, superadminOnly: true } },
   { path: '/superadmin/calendars', component: SuperAdminCalendarManager, meta: { requiresAuth: true, superadminOnly: true } },
+  { path: '/superadmin/meetings', component: SecretaryMeetings, meta: { requiresAuth: true, superadminOnly: true } },
   { path: '/superadmin/users', component: SuperAdminUsers, meta: { requiresAuth: true, superadminOnly: true } },
 ]
 
