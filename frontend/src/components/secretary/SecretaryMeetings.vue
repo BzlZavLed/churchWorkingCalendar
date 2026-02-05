@@ -3,9 +3,9 @@
     <div v-if="loading" class="text-muted small mb-2">{{ t.messages.loading }}</div>
     <p v-if="error" class="text-danger small">{{ error }}</p>
 
-    <div v-if="meetings.length === 0 && !loading" class="text-muted">{{ t.messages.empty }}</div>
+    <div v-if="meetings.length === 0 && !loading" class="text-muted mb-3">{{ t.messages.empty }}</div>
 
-    <div v-else>
+    <div>
       <header class="meeting-header bg-white border rounded p-2 p-md-3 mb-3">
         <div class="meeting-header-grid">
           <div>
@@ -57,7 +57,7 @@
         </div>
       </header>
 
-      <div class="d-lg-none mb-3">
+      <div class="d-lg-none mb-3" v-if="selectedMeeting">
         <div class="btn-group w-100" role="tablist">
           <button
             class="btn btn-outline-secondary btn-sm"
@@ -78,7 +78,7 @@
         </div>
       </div>
 
-      <div class="row g-3">
+      <div class="row g-3" v-if="selectedMeeting">
         <div class="col-12 col-lg-8" v-show="activeTab === 'agenda' || isDesktop">
           <div class="section-card bg-white border rounded p-3">
             <div class="d-flex justify-content-between align-items-center mb-2">
