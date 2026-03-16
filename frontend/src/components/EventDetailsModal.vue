@@ -77,17 +77,13 @@
         </div>
       </div>
 
-      <div v-if="historyEntries.length" class="event-details mt-3">
+      <div v-if="reviewHistoryEntries.length" class="event-details mt-3">
         <h3 class="history-title">{{ resolvedLabels.historyTitle }}</h3>
         <div class="event-details-scroll">
           <ul class="history-list">
-            <li v-for="entry in historyEntries" :key="entry.id" class="history-item">
+            <li v-for="entry in reviewHistoryEntries" :key="entry.id" class="history-item">
               <div class="history-meta">{{ formatHistoryMeta(entry) }}</div>
-              <ul v-if="Object.keys(entry.changes || {}).length" class="history-changes">
-                <li v-for="[field, change] in Object.entries(entry.changes || {})" :key="field">
-                  <strong>{{ field }}</strong>: {{ formatHistoryValue(change.from) }} → {{ formatHistoryValue(change.to) }}
-                </li>
-              </ul>
+              <div class="history-note">{{ entry.note }}</div>
             </li>
           </ul>
         </div>
@@ -158,9 +154,11 @@ const resolvedLabels = computed(() => props.labels || fallbackLabels.value)
 
 const visibleNotes = computed(() => props.notes || [])
 
-const historyEntries = computed(() => {
+const reviewHistoryEntries = computed(() => {
   const list = props.histories || []
-  return [...list].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+  return [...list]
+    .filter((entry) => entry?.note)
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 })
 
 const statusLabel = computed(() => {
@@ -249,18 +247,7 @@ const formatDate = (value) => {
 }
 
 const formatHistoryMeta = (entry) => {
-  const userName = entry.user?.name || '—'
   const date = entry.created_at ? formatDate(entry.created_at) : '—'
-  return `${userName} · ${date}`
-}
-
-const formatHistoryValue = (value) => {
-  if (value === null || value === undefined || value === '') {
-    return '—'
-  }
-  if (typeof value === 'string' && !Number.isNaN(Date.parse(value))) {
-    return formatDate(value)
-  }
-  return String(value)
+  return date
 }
 </script>
