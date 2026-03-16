@@ -1128,6 +1128,16 @@ tbody td {
   background: transparent;
   padding: 0;
   text-align: left;
+  color: #0f172a;
+}
+
+.unseen-note-toggle .event-details-title,
+.unseen-note-toggle .history-meta {
+  color: #0f172a;
+}
+
+.unseen-note-toggle .history-meta {
+  opacity: 0.72;
 }
 
 .history-changes {
