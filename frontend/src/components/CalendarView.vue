@@ -672,15 +672,7 @@
                   <ul v-else-if="isHistoryExpanded(event.id)" class="history-list review-scroll">
                     <li v-for="entry in historyForEvent(event)" :key="entry.id" class="history-item">
                       <div class="history-meta">{{ formatHistoryMeta(entry) }}</div>
-                      <div v-if="entry.note" class="history-note">
-                        {{ entry.note }}
-                      </div>
-                      <ul v-if="entry.changes && Object.keys(entry.changes).length" class="history-changes">
-                        <li v-for="(change, field) in entry.changes" :key="field">
-                          <strong>{{ historyFieldLabel(field) }}:</strong>
-                          {{ formatHistoryValue(change.from) }} → {{ formatHistoryValue(change.to) }}
-                        </li>
-                      </ul>
+                      <div class="history-note">{{ entry.note }}</div>
                     </li>
                   </ul>
                 </div>
@@ -1777,28 +1769,14 @@ const setReviewTab = (eventId, tab) => {
 
 const historyForEvent = (event) => {
   const list = event?.histories || []
-  return [...list].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-}
-
-const historyFieldLabel = (field) => {
-  return t.value.historyFields?.[field] || field
-}
-
-const formatHistoryValue = (value) => {
-  if (value === null || value === undefined || value === '') {
-    return '—'
-  }
-  if (typeof value === 'string' && !Number.isNaN(Date.parse(value))) {
-    return new Date(value).toLocaleString(locale.value)
-  }
-  return String(value)
+  return [...list]
+    .filter((entry) => entry?.note)
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 }
 
 const formatHistoryMeta = (entry) => {
-  const actionLabel = t.value.historyActions?.[entry.action] || entry.action
-  const userName = entry.user?.name || '—'
   const date = entry.created_at ? new Date(entry.created_at).toLocaleString(locale.value) : '—'
-  return `${actionLabel} · ${userName} · ${date}`
+  return date
 }
 
 const notesForEvent = (event) => {

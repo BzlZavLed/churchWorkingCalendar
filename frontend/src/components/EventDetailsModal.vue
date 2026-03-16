@@ -88,7 +88,7 @@
           </ul>
         </div>
       </div>
-
+      <br>
       <div class="action-row">
         <button
           v-if="canEditEvent"
