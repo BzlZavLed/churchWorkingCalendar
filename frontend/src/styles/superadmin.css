@@ -60,6 +60,10 @@ body {
   min-height: 100vh;
 }
 
+.app-shell--sidebar-collapsed {
+  grid-template-columns: 92px minmax(0, 1fr);
+}
+
 .app-shell.no-sidebar {
   grid-template-columns: 1fr;
 }
@@ -74,16 +78,27 @@ body {
 }
 
 .app-burger {
-  display: none;
-  background: transparent;
-  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 12px;
   color: #ffffff;
-  font-size: 1.5rem;
+  font-size: 1.1rem;
   margin-bottom: 12px;
   cursor: pointer;
-  width: auto;
+  width: 40px;
+  height: 40px;
   padding: 0;
+  transition: background-color 120ms ease, border-color 120ms ease, transform 120ms ease;
 }
+
+.app-burger:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.34);
+}
+
 .app-sidebar-inner {
   background: transparent;
   border: none;
@@ -123,6 +138,23 @@ body {
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+.nav-link-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.nav-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+.nav-label {
+  min-width: 0;
 }
 
 .app-nav a.router-link-active,
@@ -398,6 +430,51 @@ tbody td {
 .app-sidebar-footer button {
   white-space: normal;
   overflow-wrap: anywhere;
+}
+
+.sidebar-logout-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-shell--sidebar-collapsed .app-sidebar {
+  padding-inline: 12px;
+}
+
+.app-shell--sidebar-collapsed .app-sidebar-inner {
+  padding-inline: 6px;
+}
+
+.app-shell--sidebar-collapsed .login-logo {
+  max-width: 48px;
+  margin-inline: auto;
+}
+
+.app-shell--sidebar-collapsed .sidebar-user-name,
+.app-shell--sidebar-collapsed .sidebar-user-role,
+.app-shell--sidebar-collapsed .sidebar-user-dept,
+.app-shell--sidebar-collapsed .app-sidebar-title,
+.app-shell--sidebar-collapsed .app-sidebar-footer label {
+  display: none;
+}
+
+.app-shell--sidebar-collapsed .sidebar-user {
+  margin-bottom: 12px;
+}
+
+.app-shell--sidebar-collapsed .app-nav a,
+.app-shell--sidebar-collapsed .sidebar-logout-button {
+  padding: 10px;
+}
+
+.app-shell--sidebar-collapsed .app-nav a {
+  display: flex;
+  justify-content: center;
+}
+
+.app-shell--sidebar-collapsed .nav-link-content {
+  justify-content: center;
 }
 
 .calendar-tools .form-select {
@@ -1421,10 +1498,6 @@ tbody td {
     position: static;
     display: none;
     max-width: 100%;
-  }
-
-  .app-burger {
-    display: inline-flex;
   }
 
   body.sidebar-open .app-sidebar-inner {
