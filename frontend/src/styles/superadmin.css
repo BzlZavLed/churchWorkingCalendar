@@ -17,13 +17,7 @@ body {
   margin: 0;
   font-family: "Manrope", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   color: var(--text);
-  background: linear-gradient(
-    90deg,
-    var(--dominant) 0%,
-    var(--dominant) 14.285%,
-    var(--soft) 14.285%,
-    var(--soft) 100%
-  );
+  background: var(--soft);
   min-height: 100vh;
 }
 
@@ -73,7 +67,7 @@ body {
 }
 
 .app-sidebar {
-  background: transparent;
+  background: var(--dominant);
   padding: 24px 16px;
 }
 

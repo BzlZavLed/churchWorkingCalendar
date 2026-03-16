@@ -233,7 +233,7 @@ const updateAutoIconOnly = async () => {
   await nextTick()
 
   const hasOverflow = Object.values(navLinkRefs.value).some(
-    (el) => el && el.scrollWidth > el.clientWidth + 1
+    (el) => el && el.scrollWidth > el.clientWidth - 10
   )
   autoIconOnly.value = hasOverflow
 }
