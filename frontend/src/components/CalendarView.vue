@@ -70,6 +70,31 @@
             <span>{{ t.monthSelected }}: {{ monthLabel }}</span>
           </div>
         </div>
+        <div v-if="calendarFeedUrl" class="col-12">
+          <div class="calendar-feed-card">
+            <label class="form-label small mb-1">{{ t.feedUrlLabel }}</label>
+            <div class="input-group input-group-sm">
+              <input
+                :value="calendarFeedUrl"
+                type="text"
+                class="form-control"
+                readonly
+                @focus="$event.target.select()"
+              />
+              <button type="button" class="btn btn-outline-secondary" @click="copyCalendarFeedUrl">
+                {{ t.feedCopyButton }}
+              </button>
+              <a
+                class="btn btn-outline-secondary"
+                :href="calendarFeedUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {{ t.feedOpenButton }}
+              </a>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="row">
         <div
@@ -877,6 +902,7 @@ const expandedUnseenEventIds = ref(new Set())
 const markingSeenNoteIds = ref(new Set())
 const clubConflictsOpen = ref(false)
 const publishAcceptedOpen = ref(false)
+const churchSlug = ref('')
 
 const form = reactive({
   title: '',
@@ -888,8 +914,43 @@ const form = reactive({
 })
 
 const t = computed(() => translations[locale.value].calendar)
+const effectiveChurchId = computed(() => user.value?.church_id || user.value?.department?.church_id || null)
+const calendarFeedUrl = computed(() => {
+  if (!churchSlug.value) {
+    return ''
+  }
+
+  return `${window.location.origin}/api/public/churches/${churchSlug.value}/events.ics`
+})
 
 const weekDays = computed(() => t.value.days)
+
+const loadChurchFeedUrl = async () => {
+  if (!effectiveChurchId.value) {
+    churchSlug.value = ''
+    return
+  }
+
+  try {
+    const churches = await publicApi.listChurches()
+    churchSlug.value = churches.find((church) => church.id === effectiveChurchId.value)?.slug || ''
+  } catch {
+    churchSlug.value = ''
+  }
+}
+
+const copyCalendarFeedUrl = async () => {
+  if (!calendarFeedUrl.value) {
+    return
+  }
+
+  try {
+    await navigator.clipboard.writeText(calendarFeedUrl.value)
+    uiStore.showToast(t.value.feedCopySuccess, 'success')
+  } catch {
+    uiStore.showToast(t.value.feedCopyFailed, 'error')
+  }
+}
 
 const monthLabel = computed(() =>
   currentMonth.value.toLocaleDateString(locale.value, { month: 'long', year: 'numeric' })
@@ -2170,6 +2231,7 @@ onMounted(async () => {
   handleResize()
   window.addEventListener('resize', handleResize)
   objectives.value = await objectiveApi.list()
+  await loadChurchFeedUrl()
   await loadDepartments(user.value?.church_id)
   monthSelection.value = `${currentMonth.value.getFullYear()}-${String(currentMonth.value.getMonth() + 1).padStart(2, '0')}`
   await loadMonth()
@@ -2181,6 +2243,7 @@ onMounted(async () => {
 })
 
 watch(user, async (next) => {
+  await loadChurchFeedUrl()
   if (next?.church_id) {
     await loadDepartments(next.church_id)
   }

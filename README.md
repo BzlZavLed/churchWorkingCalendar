@@ -1,4 +1,7 @@
 # Church Working Calendar
+php artisan reverb:restart
+php artisan queue:restart
+Reverb restart commands
 
 Church Working Calendar is a scheduling and approval platform for church departments. Teams create events, lock them for review, and secretaries approve, request changes, or deny. Approved events can optionally be published to a public ICS feed for calendar subscriptions.
 
