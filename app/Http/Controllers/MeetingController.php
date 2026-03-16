@@ -26,7 +26,11 @@ class MeetingController extends Controller
             ->orderByDesc('planned_start_at');
 
         if (!$request->user()->isSuperAdmin()) {
-            $query->where('church_id', $request->user()->church_id);
+            $churchId = $this->effectiveChurchId($request->user());
+            if ($churchId === null) {
+                return response()->json([]);
+            }
+            $query->where('church_id', $churchId);
         } elseif ($request->filled('church_id')) {
             $query->where('church_id', $request->integer('church_id'));
         }
@@ -220,6 +224,15 @@ class MeetingController extends Controller
         }
 
         return $user->church_id;
+    }
+
+    private function effectiveChurchId(User $user): ?int
+    {
+        if ($user->church_id !== null) {
+            return $user->church_id;
+        }
+
+        return $user->department?->church_id;
     }
 
     private function cloneCarryoverPoints(Meeting $meeting, int $userId): void

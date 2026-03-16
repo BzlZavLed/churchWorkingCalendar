@@ -288,7 +288,9 @@ class MeetingPointController extends Controller
 
     private function sameChurch(User $user, Meeting $meeting): bool
     {
-        return $user->church_id !== null && $user->church_id === $meeting->church_id;
+        $churchId = $user->church_id ?? $user->department?->church_id;
+
+        return $churchId !== null && $churchId === $meeting->church_id;
     }
 
     private function canResubmitBeforeMeeting(Meeting $meeting): bool

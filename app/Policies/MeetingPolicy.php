@@ -18,7 +18,9 @@ class MeetingPolicy
             return true;
         }
 
-        return $user->church_id !== null && $user->church_id === $meeting->church_id;
+        $churchId = $user->church_id ?? $user->department?->church_id;
+
+        return $churchId !== null && $churchId === $meeting->church_id;
     }
 
     public function create(User $user): bool
@@ -32,6 +34,8 @@ class MeetingPolicy
             return true;
         }
 
-        return $user->isSecretary() && $user->church_id === $meeting->church_id;
+        $churchId = $user->church_id ?? $user->department?->church_id;
+
+        return $user->isSecretary() && $churchId === $meeting->church_id;
     }
 }
