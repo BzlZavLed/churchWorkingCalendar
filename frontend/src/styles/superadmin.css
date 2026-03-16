@@ -1402,7 +1402,7 @@ tbody td {
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 1120px) {
   body {
     background: var(--soft);
   }
@@ -1420,6 +1420,7 @@ tbody td {
   .app-sidebar-inner {
     position: static;
     display: none;
+    max-width: 100%;
   }
 
   .app-burger {
@@ -1430,6 +1431,10 @@ tbody td {
     display: block;
     background: var(--dominant);
     padding: 12px 0;
+  }
+
+  .app-nav a {
+    font-size: 0.88rem;
   }
 
   .app-main {

@@ -18,7 +18,7 @@
 
         <h2 v-if="authStore.isAuthenticated" class="app-sidebar-title">{{ t.navigation }}</h2>
 
-        <nav v-if="authStore.isAuthenticated && authStore.user?.role === 'superadmin'">
+        <nav v-if="authStore.isAuthenticated && authStore.user?.role === 'superadmin'" @click="handleNavClick">
           <ul class="app-nav">
             <li><router-link to="/calendar">{{ t.calendar }}</router-link></li>
             <li><router-link to="/objectives">{{ t.objectives }}</router-link></li>
@@ -31,7 +31,7 @@
           </ul>
         </nav>
 
-        <nav v-else-if="authStore.isAuthenticated">
+        <nav v-else-if="authStore.isAuthenticated" @click="handleNavClick">
           <ul class="app-nav">
             <li><router-link to="/calendar">{{ t.calendar }}</router-link></li>
             <li>
@@ -83,7 +83,8 @@
 <script setup>
 import logoUrl from '../assets/logo.png'
 
-import { useRouter } from 'vue-router'
+import { onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { useUiStore } from '../stores/uiStore'
 import { translations } from '../i18n/translations'
@@ -97,7 +98,9 @@ const uiStore = useUiStore()
 const liveUpdateStore = useLiveUpdateStore()
 const { locale } = storeToRefs(uiStore)
 const router = useRouter()
+const route = useRoute()
 const isSidebarOpen = ref(false)
+const compactSidebarBreakpoint = 1120
 
 const t = computed(() => translations[locale.value].appLayout)
 
@@ -126,13 +129,36 @@ const departmentLabel = computed(() => {
 })
 
 const logout = async () => {
+  closeSidebar()
   await authStore.logout()
   await router.push('/login')
 }
 
+const closeSidebar = () => {
+  isSidebarOpen.value = false
+  document.body.classList.remove('sidebar-open')
+}
+
+const isCompactSidebar = () => window.innerWidth <= compactSidebarBreakpoint
+
 const toggleSidebar = () => {
+  if (!isCompactSidebar()) {
+    return
+  }
   isSidebarOpen.value = !isSidebarOpen.value
   document.body.classList.toggle('sidebar-open', isSidebarOpen.value)
+}
+
+const handleNavClick = () => {
+  if (isCompactSidebar()) {
+    closeSidebar()
+  }
+}
+
+const handleResize = () => {
+  if (isCompactSidebar()) {
+    closeSidebar()
+  }
 }
 
 watch(
@@ -146,4 +172,23 @@ watch(
   },
   { immediate: true }
 )
+
+watch(
+  () => route.fullPath,
+  () => {
+    if (isCompactSidebar()) {
+      closeSidebar()
+    }
+  }
+)
+
+onMounted(() => {
+  window.addEventListener('resize', handleResize)
+  handleResize()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+  closeSidebar()
+})
 </script>
