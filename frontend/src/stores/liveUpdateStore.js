@@ -6,6 +6,8 @@ import { useAuthStore } from './authStore'
 import { useUiStore } from './uiStore'
 import { buildReverbConfig } from '../services/reverbConfig'
 
+const broadcastingEnabled = import.meta.env.VITE_ENABLE_BROADCASTING === 'true'
+
 const roleLabels = {
   es: {
     secretary: 'Secretaria',
@@ -231,6 +233,11 @@ export const useLiveUpdateStore = defineStore('liveUpdates', () => {
   }
 
   const connect = () => {
+    // Realtime broadcasting is temporarily disabled.
+    if (!broadcastingEnabled) {
+      return
+    }
+
     if (echo.value || !authStore.isAuthenticated) {
       return
     }

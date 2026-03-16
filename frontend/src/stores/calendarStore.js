@@ -5,6 +5,8 @@ import Pusher from 'pusher-js'
 import { calendarApi } from '../services/calendarApi'
 import { buildReverbConfig } from '../services/reverbConfig'
 
+const broadcastingEnabled = import.meta.env.VITE_ENABLE_BROADCASTING === 'true'
+
 export const useCalendarStore = defineStore('calendar', () => {
   const events = ref([])
   const echo = ref(null)
@@ -122,6 +124,11 @@ export const useCalendarStore = defineStore('calendar', () => {
   }
 
   const connectRealtime = () => {
+    // Realtime broadcasting is temporarily disabled.
+    if (!broadcastingEnabled) {
+      return
+    }
+
     if (echo.value) {
       return
     }

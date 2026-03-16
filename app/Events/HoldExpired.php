@@ -5,11 +5,11 @@ namespace App\Events;
 use App\Models\Event;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class HoldExpired implements ShouldBroadcastNow
+// Realtime broadcasting is temporarily disabled.
+class HoldExpired
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
