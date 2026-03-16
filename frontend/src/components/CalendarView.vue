@@ -444,7 +444,7 @@
     </div>
 
     <div v-if="unseenNotesOpen" class="modal-backdrop" @click.self="closeUnseenNotesModal">
-      <div class="modal-panel">
+      <div class="modal-panel modal-panel--lg">
         <header class="modal-header">
           <h2>{{ t.unseenNotesTitle }}</h2>
           <button type="button" class="modal-close" @click="closeUnseenNotesModal">×</button>
@@ -452,27 +452,68 @@
         <div class="event-details">
           <p v-if="unseenNotesLoading" class="event-details-text">{{ t.unseenNotesLoading }}</p>
           <p v-else-if="unseenNotes.length === 0" class="event-details-text">{{ t.unseenNotesEmpty }}</p>
-          <ul v-else class="history-list">
-            <li v-for="note in unseenNotes" :key="note.id" class="history-item">
-              <div class="history-meta">
-                {{ note.author?.name || '—' }} · {{ formatHistoryValue(note.created_at) }}
-              </div>
-              <div class="history-note">{{ note.note }}</div>
-              <div class="history-note">
-                <strong>{{ t.unseenNotesEvent }}:</strong> {{ note.event?.title || '—' }}
-              </div>
-              <div class="history-note">
-                <strong>{{ t.unseenNotesDate }}:</strong> {{ formatHistoryValue(note.event?.start_at) }}
-              </div>
+          <div v-else class="history-list">
+            <article
+              v-for="group in unseenNoteGroups"
+              :key="group.eventId"
+              class="history-item unseen-note-group"
+            >
               <button
                 type="button"
-                class="btn btn-outline-secondary btn-sm mt-2"
-                @click="openEventFromNote(note)"
+                class="unseen-note-toggle"
+                @click="toggleUnseenEvent(group.eventId)"
               >
-                {{ t.unseenNotesOpenEvent }}
+                <div>
+                  <div class="event-details-title">{{ group.eventTitle }}</div>
+                  <div class="history-meta">
+                    {{ t.unseenNotesDate }}: {{ formatHistoryValue(group.startAt) }}
+                  </div>
+                  <div class="history-meta">
+                    {{ t.unseenNotesDepartment }}: {{ group.departmentName }}
+                  </div>
+                  <div class="history-meta">
+                    {{ t.unseenNotesLocation }}: {{ group.location }}
+                  </div>
+                </div>
+                <span class="chip">{{ group.notes.length }}</span>
               </button>
-            </li>
-          </ul>
+
+              <div v-if="isUnseenEventExpanded(group.eventId)" class="mt-3">
+                <ul class="history-list">
+                  <li
+                    v-for="note in group.notes"
+                    :key="note.id"
+                    class="history-item note-item"
+                    :class="noteClass(note)"
+                  >
+                    <div class="history-meta">
+                      {{ note.author?.name || '—' }} · {{ formatHistoryValue(note.created_at) }}
+                    </div>
+                    <div class="history-note">{{ note.note }}</div>
+                    <label class="form-check-label small mt-2">
+                      <input
+                        class="form-check-input me-2"
+                        type="checkbox"
+                        :checked="false"
+                        :disabled="markingSeenNoteIds.has(note.id)"
+                        @change="toggleNoteSeen(note, $event.target.checked)"
+                      />
+                      {{ t.unseenNotesMarkRead }}
+                    </label>
+                  </li>
+                </ul>
+                <div class="mt-3">
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    @click="openEventFromNote(group.notes[0])"
+                  >
+                    {{ t.unseenNotesOpenEvent }}
+                  </button>
+                </div>
+              </div>
+            </article>
+          </div>
         </div>
         <div class="action-row">
           <button type="button" @click="closeUnseenNotesModal">{{ t.reviewModalClose }}</button>
@@ -829,6 +870,8 @@ const includeHistoryExport = ref(false)
 const unseenNotes = ref([])
 const unseenNotesOpen = ref(false)
 const unseenNotesLoading = ref(false)
+const expandedUnseenEventIds = ref(new Set())
+const markingSeenNoteIds = ref(new Set())
 const clubConflictsOpen = ref(false)
 const publishAcceptedOpen = ref(false)
 
@@ -1776,6 +1819,38 @@ const isSecretaryNote = (note) => {
 
 const noteClass = (note) => (isSecretaryNote(note) ? 'note-item--incoming' : 'note-item--outgoing')
 
+const getNoteEvent = (note) => {
+  return events.value.find((item) => item.id === note.event_id) || note.event || null
+}
+
+const unseenNoteGroups = computed(() => {
+  const groups = new Map()
+
+  unseenNotes.value.forEach((note) => {
+    const event = getNoteEvent(note)
+    const eventId = note.event_id || event?.id || `note-${note.id}`
+    if (!groups.has(eventId)) {
+      groups.set(eventId, {
+        eventId,
+        eventTitle: event?.title || t.value.untitled,
+        startAt: event?.start_at || null,
+        departmentName: event?.department?.name || t.value.unknownDepartment,
+        location: event?.location || '—',
+        notes: [],
+      })
+    }
+
+    groups.get(eventId).notes.push(note)
+  })
+
+  return [...groups.values()]
+    .map((group) => ({
+      ...group,
+      notes: [...group.notes].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)),
+    }))
+    .sort((a, b) => new Date(b.notes[0]?.created_at || 0) - new Date(a.notes[0]?.created_at || 0))
+})
+
 const fetchUnseenNotes = async () => {
   if (!canViewUnseenNotes.value) {
     return
@@ -1793,9 +1868,8 @@ const fetchUnseenNotes = async () => {
 
 const openUnseenNotesModal = async () => {
   unseenNotesOpen.value = true
-  if (unseenNotes.value.length === 0) {
-    await fetchUnseenNotes()
-  }
+  await fetchUnseenNotes()
+  expandedUnseenEventIds.value = new Set(unseenNoteGroups.value.map((group) => group.eventId))
 }
 
 const closeUnseenNotesModal = () => {
@@ -1827,6 +1901,36 @@ const markNoteSeen = async (note) => {
   }
 }
 
+const toggleUnseenEvent = (eventId) => {
+  const next = new Set(expandedUnseenEventIds.value)
+  if (next.has(eventId)) {
+    next.delete(eventId)
+  } else {
+    next.add(eventId)
+  }
+  expandedUnseenEventIds.value = next
+}
+
+const isUnseenEventExpanded = (eventId) => expandedUnseenEventIds.value.has(eventId)
+
+const toggleNoteSeen = async (note, checked) => {
+  if (!checked) {
+    return
+  }
+
+  const next = new Set(markingSeenNoteIds.value)
+  next.add(note.id)
+  markingSeenNoteIds.value = next
+
+  try {
+    await markNoteSeen(note)
+  } finally {
+    const updated = new Set(markingSeenNoteIds.value)
+    updated.delete(note.id)
+    markingSeenNoteIds.value = updated
+  }
+}
+
 const markNotesSeenForEvent = async (event) => {
   if (!canViewUnseenNotes.value || !event?.notes?.length) {
     return
@@ -1839,7 +1943,6 @@ const markNotesSeenForEvent = async (event) => {
 
 const openEventFromNote = async (note) => {
   const event = events.value.find((item) => item.id === note.event_id) || note.event
-  await markNoteSeen(note)
   if (event) {
     openEventDetails(event)
   }
