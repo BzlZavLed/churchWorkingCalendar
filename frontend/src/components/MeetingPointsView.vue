@@ -671,9 +671,12 @@ onMounted(async () => {
 
 .drawer-panel {
   width: min(480px, 92vw);
-  background: #fff;
-  border-radius: 12px;
-  padding: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  border: 1px solid #dbe4ee;
+  border-radius: 18px;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.18);
+  color: #0f172a;
+  padding: 20px 22px;
   margin-left: auto;
   height: 100%;
   overflow-y: auto;
