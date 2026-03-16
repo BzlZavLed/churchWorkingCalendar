@@ -107,7 +107,7 @@ const { locale } = storeToRefs(uiStore)
 const router = useRouter()
 const route = useRoute()
 const isSidebarOpen = ref(false)
-const manualSidebarCollapsed = ref(false)
+const desktopSidebarMode = ref(null)
 const autoIconOnly = ref(false)
 const isCompactSidebarState = ref(false)
 const sidebarInnerRef = ref(null)
@@ -178,9 +178,18 @@ const navItems = computed(() => {
   return items
 })
 
-const shouldShowIconsOnly = computed(
-  () => !isCompactSidebarState.value && (manualSidebarCollapsed.value || autoIconOnly.value)
-)
+const shouldShowIconsOnly = computed(() => {
+  if (isCompactSidebarState.value) {
+    return false
+  }
+  if (desktopSidebarMode.value === 'expanded') {
+    return false
+  }
+  if (desktopSidebarMode.value === 'collapsed') {
+    return true
+  }
+  return autoIconOnly.value
+})
 const toggleSidebarLabel = computed(() => {
   if (isCompactSidebarState.value) {
     return isSidebarOpen.value ? 'Close navigation' : 'Open navigation'
@@ -247,7 +256,7 @@ const setNavLinkRef = (el, key) => {
 }
 
 const updateAutoIconOnly = async () => {
-  if (isCompactSidebarState.value || manualSidebarCollapsed.value) {
+  if (isCompactSidebarState.value || desktopSidebarMode.value === 'expanded' || desktopSidebarMode.value === 'collapsed') {
     autoIconOnly.value = false
     return
   }
@@ -268,7 +277,7 @@ const toggleSidebar = () => {
     return
   }
 
-  manualSidebarCollapsed.value = !manualSidebarCollapsed.value
+  desktopSidebarMode.value = shouldShowIconsOnly.value ? 'expanded' : 'collapsed'
   closeSidebar()
   updateAutoIconOnly()
 }
