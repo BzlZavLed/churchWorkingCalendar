@@ -113,7 +113,7 @@ class EventController extends Controller
             ]);
 
             event(new HoldCreated($event));
-            DomainUpdate::forEvent('hold_created', $event, $request->user()->id);
+            DomainUpdate::forEvent('hold_created', $event, $request->user());
 
             return $event;
         });
@@ -156,7 +156,7 @@ class EventController extends Controller
 
             event(new EventCreated($event));
             event(new EventLocked($event));
-            DomainUpdate::forEvent('locked', $event, $request->user()->id);
+            DomainUpdate::forEvent('locked', $event, $request->user());
 
             return $event;
         });
@@ -255,7 +255,7 @@ class EventController extends Controller
             }
 
             event(new EventUpdated($event));
-            DomainUpdate::forEvent('updated', $event, $request->user()->id);
+            DomainUpdate::forEvent('updated', $event, $request->user());
 
             return $event;
         });
@@ -274,7 +274,7 @@ class EventController extends Controller
             ]);
 
             event(new EventCancelled($event));
-            DomainUpdate::forEvent('cancelled', $event, $request->user()->id);
+            DomainUpdate::forEvent('cancelled', $event, $request->user());
 
             return $event;
         });
@@ -366,7 +366,7 @@ class EventController extends Controller
             ]);
 
             event(new EventUpdated($event));
-            DomainUpdate::forEvent('reviewed', $event, $request->user()->id);
+            DomainUpdate::forEvent('reviewed', $event, $request->user());
 
             return $event->load(['department', 'objective', 'histories.user', 'notes.author', 'notes.replyAuthor']);
         });
@@ -429,7 +429,7 @@ class EventController extends Controller
                     ],
                 ]);
 
-                DomainUpdate::forEvent('published', $event, $user->id);
+                DomainUpdate::forEvent('published', $event, $user);
                 $updated++;
             }
         });

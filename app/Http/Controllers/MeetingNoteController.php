@@ -30,7 +30,7 @@ class MeetingNoteController extends Controller
             'created_by' => $request->user()->id,
         ]);
 
-        DomainUpdate::forMeetingNote('created', $note, $request->user()->id);
+        DomainUpdate::forMeetingNote('created', $note, $request->user());
 
         return response()->json($note->load('author'), 201);
     }

@@ -87,7 +87,7 @@ class MeetingController extends Controller
             return $meeting;
         });
 
-        DomainUpdate::forMeeting('created', $meeting, $request->user()->id);
+        DomainUpdate::forMeeting('created', $meeting, $request->user());
 
         return response()->json($meeting->load(['points.department']), 201);
     }
@@ -137,7 +137,7 @@ class MeetingController extends Controller
             'updated_by' => $request->user()->id,
         ]);
 
-        DomainUpdate::forMeeting('updated', $meeting, $request->user()->id);
+        DomainUpdate::forMeeting('updated', $meeting, $request->user());
 
         return response()->json($meeting->fresh(['activePoint', 'points.department']));
     }
@@ -155,7 +155,7 @@ class MeetingController extends Controller
             'updated_by' => $request->user()->id,
         ]);
 
-        DomainUpdate::forMeeting('agenda_closed', $meeting, $request->user()->id);
+        DomainUpdate::forMeeting('agenda_closed', $meeting, $request->user());
 
         return response()->json($meeting);
     }
@@ -174,7 +174,7 @@ class MeetingController extends Controller
             'updated_by' => $request->user()->id,
         ]);
 
-        DomainUpdate::forMeeting('started', $meeting, $request->user()->id);
+        DomainUpdate::forMeeting('started', $meeting, $request->user());
 
         return response()->json($meeting);
     }
@@ -208,7 +208,7 @@ class MeetingController extends Controller
             return $meeting;
         });
 
-        DomainUpdate::forMeeting('adjourned', $meeting, $request->user()->id);
+        DomainUpdate::forMeeting('adjourned', $meeting, $request->user());
 
         return response()->json($meeting->fresh(['points.department']));
     }

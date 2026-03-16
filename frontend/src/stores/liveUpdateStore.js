@@ -5,75 +5,154 @@ import Pusher from 'pusher-js'
 import { useAuthStore } from './authStore'
 import { useUiStore } from './uiStore'
 
+const roleLabels = {
+  es: {
+    secretary: 'Secretaria',
+    superadmin: 'Secretaria',
+    admin: 'El departamento',
+  },
+  en: {
+    secretary: 'The secretary',
+    superadmin: 'The secretary',
+    admin: 'The department',
+  },
+}
+
+const isSecretarySide = (role) => ['secretary', 'superadmin'].includes(role)
+
+const formatActorLabel = (locale, role) => roleLabels[locale]?.[role] || roleLabels.en[role] || ''
+
 const messages = {
   es: {
-    event: {
-      hold_created: 'Hay una nueva reserva de evento.',
-      locked: 'Un evento fue confirmado.',
-      updated: 'Un evento fue actualizado.',
-      reviewed: 'La revision de un evento cambio.',
-      cancelled: 'Un evento fue cancelado.',
-      published: 'Un evento aceptado fue publicado.',
+    event(update, userRole) {
+      const actor = formatActorLabel('es', update.actor_role)
+      if (userRole === 'admin') {
+        if (update.action === 'reviewed') return `${actor} cambio el estado de tu evento.`
+        if (update.action === 'published') return `${actor} publico tu evento aceptado.`
+        if (update.action === 'cancelled') return `${actor} cancelo tu evento.`
+      }
+      if (isSecretarySide(userRole)) {
+        if (update.action === 'hold_created') return 'Un departamento creo una reserva de evento.'
+        if (update.action === 'locked') return 'Un departamento confirmo un evento.'
+        if (update.action === 'updated') return 'Un departamento actualizo un evento.'
+        if (update.action === 'cancelled') return 'Un departamento cancelo un evento.'
+      }
+      return ''
     },
-    event_note: {
-      created: 'Hay una nueva nota de evento.',
-      replied: 'Hay una nueva respuesta de evento.',
+    event_note(update, userRole) {
+      if (userRole === 'admin' && update.action === 'created') return 'Secretaria dejo una nota en tu evento.'
+      if (isSecretarySide(userRole) && update.action === 'replied') return 'El departamento respondio a una nota del evento.'
+      if (isSecretarySide(userRole) && update.action === 'seen') return 'El departamento marco una nota del evento como leida.'
+      return ''
     },
-    meeting: {
-      created: 'Hay una nueva reunion.',
-      updated: 'Una reunion fue actualizada.',
-      agenda_closed: 'La agenda de una reunion fue cerrada.',
-      started: 'Una reunion inicio.',
-      adjourned: 'Una reunion fue finalizada.',
-      reordered: 'El orden de una reunion cambio.',
+    meeting(update, userRole) {
+      if (userRole === 'admin' && isSecretarySide(update.actor_role)) {
+        if (update.action === 'created') return 'Secretaria creo una nueva reunion.'
+        if (update.action === 'updated') return 'Secretaria actualizo una reunion.'
+        if (update.action === 'agenda_closed') return 'Secretaria cerro la agenda de una reunion.'
+        if (update.action === 'started') return 'Secretaria inicio una reunion.'
+        if (update.action === 'adjourned') return 'Secretaria finalizo una reunion.'
+      }
+      if (isSecretarySide(userRole) && update.actor_role === 'admin') {
+        if (update.action === 'reordered') return 'Un departamento cambio el orden de una reunion.'
+      }
+      return ''
     },
-    meeting_point: {
-      created: 'Hay un nuevo punto de reunion.',
-      updated: 'Un punto de reunion fue actualizado.',
-      reviewed: 'Un punto de reunion fue revisado.',
-      activated: 'Un punto de reunion fue activado.',
-      finalized: 'Un punto de reunion fue finalizado.',
+    meeting_point(update, userRole) {
+      if (userRole === 'admin' && isSecretarySide(update.actor_role)) {
+        if (update.action === 'reviewed') return 'Secretaria reviso un punto de reunion.'
+        if (update.action === 'activated') return 'Secretaria activo tu punto de reunion.'
+        if (update.action === 'finalized') return 'Secretaria finalizo tu punto de reunion.'
+      }
+      if (isSecretarySide(userRole) && update.actor_role === 'admin') {
+        if (update.action === 'created') return 'Un departamento envio un nuevo punto de reunion.'
+        if (update.action === 'updated') return 'Un departamento actualizo un punto de reunion.'
+      }
+      return ''
     },
-    meeting_point_note: {
-      created: 'Hay una nueva nota en punto de reunion.',
+    meeting_point_note(update, userRole) {
+      if (userRole === 'admin' && isSecretarySide(update.actor_role)) {
+        return 'Secretaria dejo una nota en un punto de reunion.'
+      }
+      if (isSecretarySide(userRole) && update.actor_role === 'admin') {
+        return 'El departamento dejo una nota en un punto de reunion.'
+      }
+      return ''
     },
-    meeting_note: {
-      created: 'Hay una nueva nota general de reunion.',
+    meeting_note(update, userRole) {
+      if (userRole === 'admin' && isSecretarySide(update.actor_role)) {
+        return 'Secretaria agrego una nota general de reunion.'
+      }
+      if (isSecretarySide(userRole) && update.actor_role === 'admin') {
+        return 'El departamento agrego una nota general de reunion.'
+      }
+      return ''
     },
   },
   en: {
-    event: {
-      hold_created: 'A new event hold was created.',
-      locked: 'An event was confirmed.',
-      updated: 'An event was updated.',
-      reviewed: 'An event review changed.',
-      cancelled: 'An event was cancelled.',
-      published: 'An accepted event was published.',
+    event(update, userRole) {
+      const actor = formatActorLabel('en', update.actor_role)
+      if (userRole === 'admin') {
+        if (update.action === 'reviewed') return `${actor} changed your event status.`
+        if (update.action === 'published') return `${actor} published your approved event.`
+        if (update.action === 'cancelled') return `${actor} cancelled your event.`
+      }
+      if (isSecretarySide(userRole)) {
+        if (update.action === 'hold_created') return 'A department created an event hold.'
+        if (update.action === 'locked') return 'A department confirmed an event.'
+        if (update.action === 'updated') return 'A department updated an event.'
+        if (update.action === 'cancelled') return 'A department cancelled an event.'
+      }
+      return ''
     },
-    event_note: {
-      created: 'There is a new event note.',
-      replied: 'There is a new event reply.',
+    event_note(update, userRole) {
+      if (userRole === 'admin' && update.action === 'created') return 'The secretary left a note on your event.'
+      if (isSecretarySide(userRole) && update.action === 'replied') return 'The department replied to an event note.'
+      if (isSecretarySide(userRole) && update.action === 'seen') return 'The department marked an event note as read.'
+      return ''
     },
-    meeting: {
-      created: 'There is a new meeting.',
-      updated: 'A meeting was updated.',
-      agenda_closed: 'A meeting agenda was closed.',
-      started: 'A meeting started.',
-      adjourned: 'A meeting was finished.',
-      reordered: 'A meeting order changed.',
+    meeting(update, userRole) {
+      if (userRole === 'admin' && isSecretarySide(update.actor_role)) {
+        if (update.action === 'created') return 'The secretary created a new meeting.'
+        if (update.action === 'updated') return 'The secretary updated a meeting.'
+        if (update.action === 'agenda_closed') return 'The secretary closed a meeting agenda.'
+        if (update.action === 'started') return 'The secretary started a meeting.'
+        if (update.action === 'adjourned') return 'The secretary finished a meeting.'
+      }
+      if (isSecretarySide(userRole) && update.actor_role === 'admin') {
+        if (update.action === 'reordered') return 'A department changed a meeting order.'
+      }
+      return ''
     },
-    meeting_point: {
-      created: 'There is a new meeting point.',
-      updated: 'A meeting point was updated.',
-      reviewed: 'A meeting point was reviewed.',
-      activated: 'A meeting point was activated.',
-      finalized: 'A meeting point was finalized.',
+    meeting_point(update, userRole) {
+      if (userRole === 'admin' && isSecretarySide(update.actor_role)) {
+        if (update.action === 'reviewed') return 'The secretary reviewed a meeting point.'
+        if (update.action === 'activated') return 'The secretary activated your meeting point.'
+        if (update.action === 'finalized') return 'The secretary finalized your meeting point.'
+      }
+      if (isSecretarySide(userRole) && update.actor_role === 'admin') {
+        if (update.action === 'created') return 'A department submitted a new meeting point.'
+        if (update.action === 'updated') return 'A department updated a meeting point.'
+      }
+      return ''
     },
-    meeting_point_note: {
-      created: 'There is a new meeting point note.',
+    meeting_point_note(update, userRole) {
+      if (userRole === 'admin' && isSecretarySide(update.actor_role)) {
+        return 'The secretary left a note on a meeting point.'
+      }
+      if (isSecretarySide(userRole) && update.actor_role === 'admin') {
+        return 'The department left a note on a meeting point.'
+      }
+      return ''
     },
-    meeting_note: {
-      created: 'There is a new meeting note.',
+    meeting_note(update, userRole) {
+      if (userRole === 'admin' && isSecretarySide(update.actor_role)) {
+        return 'The secretary added a general meeting note.'
+      }
+      if (isSecretarySide(userRole) && update.actor_role === 'admin') {
+        return 'The department added a general meeting note.'
+      }
+      return ''
     },
   },
 }
@@ -90,6 +169,8 @@ export const useLiveUpdateStore = defineStore('liveUpdates', () => {
     authStore.user?.church_id || authStore.user?.department?.church_id || null
   )
 
+  const userRole = computed(() => authStore.user?.role || null)
+
   const isRelevant = (update) => {
     const user = authStore.user
     if (!user) {
@@ -104,20 +185,30 @@ export const useLiveUpdateStore = defineStore('liveUpdates', () => {
     if (update.church_id && update.church_id !== effectiveChurchId.value) {
       return false
     }
+    if (Array.isArray(update.audience_roles) && update.audience_roles.length > 0 && !update.audience_roles.includes(user.role)) {
+      return false
+    }
+
     if (
       user.role === 'admin' &&
       update.department_id &&
       update.department_id !== user.department_id &&
-      ['event_note', 'meeting_point', 'meeting_point_note'].includes(update.entity)
+      ['event', 'event_note', 'meeting_point', 'meeting_point_note'].includes(update.entity)
     ) {
       return false
     }
+
     return true
   }
 
   const formatMessage = (update) => {
     const locale = uiStore.locale in messages ? uiStore.locale : 'en'
-    return messages[locale]?.[update.entity]?.[update.action] || ''
+    const formatter = messages[locale]?.[update.entity]
+    if (typeof formatter !== 'function') {
+      return ''
+    }
+
+    return formatter(update, userRole.value)
   }
 
   const handleUpdate = (payload) => {
@@ -129,10 +220,6 @@ export const useLiveUpdateStore = defineStore('liveUpdates', () => {
     version.value += 1
 
     if (payload.actor_id && payload.actor_id === authStore.user?.id) {
-      return
-    }
-
-    if (payload.entity === 'event_note' && payload.action === 'seen') {
       return
     }
 

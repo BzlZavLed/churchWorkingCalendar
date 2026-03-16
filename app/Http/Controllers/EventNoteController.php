@@ -31,7 +31,7 @@ class EventNoteController extends Controller
             ]);
         });
 
-        DomainUpdate::forEventNote('created', $note, $user->id);
+        DomainUpdate::forEventNote('created', $note, $user);
 
         return response()->json($note->load(['author', 'replyAuthor']), 201);
     }
@@ -52,7 +52,7 @@ class EventNoteController extends Controller
         ]);
 
         $note = $this->createDepartmentReply($request->user(), $event, $data['reply']);
-        DomainUpdate::forEventNote('replied', $note, $request->user()->id);
+        DomainUpdate::forEventNote('replied', $note, $request->user());
 
         return response()->json($note->load(['author', 'replyAuthor']));
     }
@@ -103,7 +103,7 @@ class EventNoteController extends Controller
             'seen_by_user_id' => $user->id,
         ]);
 
-        DomainUpdate::forEventNote('seen', $note, $user->id);
+        DomainUpdate::forEventNote('seen', $note, $user);
 
         return response()->json($note->load(['event.department', 'author', 'replyAuthor']));
     }
