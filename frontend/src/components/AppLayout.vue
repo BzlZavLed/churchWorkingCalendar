@@ -15,10 +15,14 @@
         @click="toggleSidebar"
       >
         <svg viewBox="0 0 24 24" class="nav-icon" aria-hidden="true">
-          <path :d="iconPaths.menu" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9" />
+          <path :d="toggleIconPath" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9" />
         </svg>
       </button>
-      <div ref="sidebarInnerRef" class="app-sidebar-inner">
+      <div
+        v-show="!isCompactSidebarState || isSidebarOpen"
+        ref="sidebarInnerRef"
+        class="app-sidebar-inner"
+      >
         <img :src="logoUrl" alt="Logo" class="login-logo" />
 
         <div v-if="authStore.isAuthenticated && authStore.user" class="sidebar-user">
@@ -182,6 +186,18 @@ const toggleSidebarLabel = computed(() => {
     return isSidebarOpen.value ? 'Close navigation' : 'Open navigation'
   }
   return shouldShowIconsOnly.value ? 'Expand navigation' : 'Collapse navigation'
+})
+const toggleIconPath = computed(() => {
+  if (isCompactSidebarState.value && isSidebarOpen.value) {
+    return 'M6 6l12 12M18 6 6 18'
+  }
+  if (!isCompactSidebarState.value && shouldShowIconsOnly.value) {
+    return 'M7 5v14M11 7l6 5-6 5'
+  }
+  if (!isCompactSidebarState.value) {
+    return 'M17 5v14M13 7l-6 5 6 5'
+  }
+  return iconPaths.menu
 })
 
 const roleLabel = computed(() => {
