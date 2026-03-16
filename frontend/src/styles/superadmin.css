@@ -1108,6 +1108,12 @@ tbody td {
   margin-bottom: 4px;
 }
 
+.history-reply {
+  margin-top: 6px;
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
 .history-changes {
   list-style: none;
   padding: 0;

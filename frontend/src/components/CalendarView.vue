@@ -652,11 +652,20 @@
                     {{ t.historyEmpty }}
                   </p>
                   <ul v-else-if="isHistoryExpanded(event.id)" class="history-list review-scroll">
-                    <li v-for="entry in historyForEvent(event)" :key="entry.id" class="history-item">
+                    <li
+                      v-for="entry in historyForEvent(event)"
+                      :key="entry.id"
+                      class="history-item note-item"
+                      :class="historyEntryClass(entry)"
+                    >
                       <div class="history-meta">{{ formatHistoryMeta(entry) }}</div>
                       <div class="history-note">{{ entry.note }}</div>
-                      <div v-if="entry.reply" class="history-note">
-                        <strong>{{ t.notesReply }}:</strong> {{ entry.reply }}
+                      <div v-if="entry.reply" class="history-reply note-item note-item--outgoing">
+                        <div class="history-meta">{{ t.historyDepartmentReplyLabel }}</div>
+                        <div class="history-note">{{ entry.reply }}</div>
+                      </div>
+                      <div v-else-if="entry.authorName" class="history-meta">
+                        {{ entry.authorName }}
                       </div>
                     </li>
                   </ul>
@@ -1721,6 +1730,8 @@ const historyForEvent = (event) => {
       note: entry.note,
       reply: null,
       created_at: entry.created_at,
+      authorRole: entry.user?.role || 'secretary',
+      authorName: entry.user?.name || '',
     }))
 
   const noteEntries = (event?.notes || []).map((entry) => ({
@@ -1729,17 +1740,33 @@ const historyForEvent = (event) => {
     note: entry.note,
     reply: entry.reply || null,
     created_at: entry.created_at,
+    authorRole: entry.author?.role || '',
+    authorName: entry.author?.name || '',
   }))
 
   return [...historyEntries, ...noteEntries].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 }
 
+const isSecretaryHistoryEntry = (entry) => {
+  if (entry.kind === 'status_change') {
+    return true
+  }
+  return entry.authorRole === 'secretary' || entry.authorRole === 'superadmin'
+}
+
+const historyEntryClass = (entry) => (
+  isSecretaryHistoryEntry(entry) ? 'note-item--incoming' : 'note-item--outgoing'
+)
+
 const formatHistoryMeta = (entry) => {
   const date = entry.created_at ? new Date(entry.created_at).toLocaleString(locale.value) : '—'
+  const sourceLabel = isSecretaryHistoryEntry(entry)
+    ? t.value.historySecretaryLabel
+    : t.value.historyDepartmentLabel
   const typeLabel = entry.kind === 'status_change'
     ? t.value.historyStatusChangeLabel
     : t.value.historySingleNoteLabel
-  return `${typeLabel} · ${date}`
+  return `${typeLabel} · ${sourceLabel} · ${date}`
 }
 
 const isSecretaryNote = (note) => {
