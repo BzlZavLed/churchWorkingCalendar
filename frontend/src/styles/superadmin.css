@@ -1551,37 +1551,22 @@ tbody td {
   }
 
   .app-sidebar {
-    position: sticky;
-    top: 0;
-    z-index: 30;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
     padding: 8px 16px;
     background: var(--dominant);
-    min-height: 56px;
-  }
-
-  .app-burger {
-    margin-bottom: 0;
+    min-height: 48px;
   }
 
   .app-sidebar-inner {
-    position: absolute;
-    top: calc(100% + 8px);
-    left: 16px;
-    right: 16px;
+    position: static;
     display: none;
     max-width: 100%;
-    border-radius: 18px;
-    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
   }
 
   body.sidebar-open .app-sidebar-inner,
   .app-sidebar--open .app-sidebar-inner {
     display: block;
     background: var(--dominant);
-    padding: 14px 16px 16px;
+    padding: 12px 0;
   }
 
   .app-nav a {
