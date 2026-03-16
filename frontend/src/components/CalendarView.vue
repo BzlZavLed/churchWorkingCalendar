@@ -636,25 +636,7 @@
                 <p v-if="reviewErrors[event.id]" class="text-danger mt-1">
                   {{ reviewErrors[event.id] }}
                 </p>
-                <div class="review-tabs">
-                  <button
-                    type="button"
-                    class="review-tab"
-                    :class="{ active: reviewTab(event.id) === 'history' }"
-                    @click="setReviewTab(event.id, 'history')"
-                  >
-                    {{ t.historyTitle }}
-                  </button>
-                  <button
-                    type="button"
-                    class="review-tab"
-                    :class="{ active: reviewTab(event.id) === 'notes' }"
-                    @click="setReviewTab(event.id, 'notes')"
-                  >
-                    {{ t.notesTitle }} ({{ notesForEvent(event).length }})
-                  </button>
-                </div>
-                <div v-if="reviewTab(event.id) === 'history'" class="review-history">
+                <div class="review-history">
                   <div class="history-header">
                     <h4 class="history-title">{{ t.historyTitle }}</h4>
                     <button
@@ -673,37 +655,8 @@
                     <li v-for="entry in historyForEvent(event)" :key="entry.id" class="history-item">
                       <div class="history-meta">{{ formatHistoryMeta(entry) }}</div>
                       <div class="history-note">{{ entry.note }}</div>
-                    </li>
-                  </ul>
-                </div>
-                <div v-else class="review-notes">
-                  <div class="notes-header">
-                    <h4 class="history-title">{{ t.notesTitle }}</h4>
-                    <button
-                      v-if="notesForEvent(event).length"
-                      type="button"
-                      class="history-toggle"
-                      @click="toggleNotes(event.id)"
-                    >
-                      {{ isNotesExpanded(event.id) ? t.notesHide : t.notesShow }}
-                    </button>
-                  </div>
-                  <p v-if="notesForEvent(event).length === 0" class="history-empty">
-                    {{ t.notesEmpty }}
-                  </p>
-                  <ul v-else-if="isNotesExpanded(event.id)" class="history-list review-scroll">
-                    <li
-                      v-for="note in notesForEvent(event)"
-                      :key="note.id"
-                      class="history-item note-item"
-                      :class="noteClass(note)"
-                    >
-                      <div class="history-meta">
-                        {{ note.author?.name || '—' }} · {{ formatHistoryValue(note.created_at) }}
-                      </div>
-                      <div class="history-note">{{ note.note }}</div>
-                      <div v-if="note.reply" class="history-note">
-                        <strong>{{ t.notesReply }}:</strong> {{ note.reply }}
+                      <div v-if="entry.reply" class="history-note">
+                        <strong>{{ t.notesReply }}:</strong> {{ entry.reply }}
                       </div>
                     </li>
                   </ul>
@@ -854,8 +807,6 @@ const monthSelection = ref('')
 const expandedHistoryIds = ref(new Set())
 const reviewModalOpen = ref(false)
 const reviewModalMessage = ref('')
-const activeReviewTab = reactive({})
-const expandedNotesIds = ref(new Set())
 const statusModalOpen = ref(false)
 const notesModalOpen = ref(false)
 const activeReviewEvent = ref(null)
@@ -1761,27 +1712,34 @@ const statusClass = (status) => {
   return 'status-pending'
 }
 
-const reviewTab = (eventId) => activeReviewTab[eventId] || 'history'
-
-const setReviewTab = (eventId, tab) => {
-  activeReviewTab[eventId] = tab
-}
-
 const historyForEvent = (event) => {
-  const list = event?.histories || []
-  return [...list]
+  const historyEntries = (event?.histories || [])
     .filter((entry) => entry?.note)
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .map((entry) => ({
+      id: `history-${entry.id}`,
+      kind: 'status_change',
+      note: entry.note,
+      reply: null,
+      created_at: entry.created_at,
+    }))
+
+  const noteEntries = (event?.notes || []).map((entry) => ({
+    id: `note-${entry.id}`,
+    kind: 'single_note',
+    note: entry.note,
+    reply: entry.reply || null,
+    created_at: entry.created_at,
+  }))
+
+  return [...historyEntries, ...noteEntries].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 }
 
 const formatHistoryMeta = (entry) => {
   const date = entry.created_at ? new Date(entry.created_at).toLocaleString(locale.value) : '—'
-  return date
-}
-
-const notesForEvent = (event) => {
-  const list = event?.notes || []
-  return [...list].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+  const typeLabel = entry.kind === 'status_change'
+    ? t.value.historyStatusChangeLabel
+    : t.value.historySingleNoteLabel
+  return `${typeLabel} · ${date}`
 }
 
 const isSecretaryNote = (note) => {
@@ -1871,18 +1829,6 @@ const handleDetailsReply = async ({ reply }) => {
     // no-op
   }
 }
-
-const toggleNotes = (eventId) => {
-  const next = new Set(expandedNotesIds.value)
-  if (next.has(eventId)) {
-    next.delete(eventId)
-  } else {
-    next.add(eventId)
-  }
-  expandedNotesIds.value = next
-}
-
-const isNotesExpanded = (eventId) => expandedNotesIds.value.has(eventId)
 
 const toggleHistory = (eventId) => {
   const next = new Set(expandedHistoryIds.value)
