@@ -10,7 +10,7 @@
             class="calendar-feed-link"
             @click="copyCalendarFeedUrl"
           >
-            {{ t.feedLinkLabel }}
+            {{ t.feedLinkLabel }} - {{ calendarFeedUrl }}
           </button>
         </div>
       </div>
