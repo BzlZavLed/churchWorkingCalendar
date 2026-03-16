@@ -253,6 +253,25 @@ tbody td {
   gap: 16px;
 }
 
+.calendar-feed-link {
+  display: inline-flex;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #2563eb;
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.2;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.calendar-feed-link:hover,
+.calendar-feed-link:focus-visible {
+  color: #1d4ed8;
+}
+
 .login-logo {
   display: block;
   max-width: 140px;

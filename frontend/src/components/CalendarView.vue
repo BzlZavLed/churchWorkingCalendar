@@ -4,6 +4,14 @@
       <div class="row">
         <div class="col-12 col-lg-4">
           <h1 class="mb-1">{{ t.title }}</h1>
+          <button
+            v-if="calendarFeedUrl"
+            type="button"
+            class="calendar-feed-link"
+            @click="copyCalendarFeedUrl"
+          >
+            {{ t.feedLinkLabel }}
+          </button>
         </div>
       </div>
       <div class="row" id="filters">
@@ -68,31 +76,6 @@
         <div v-if="showMonthDropdown && !isDayView" class="col-12">
           <div class="month-meta">
             <span>{{ t.monthSelected }}: {{ monthLabel }}</span>
-          </div>
-        </div>
-        <div v-if="calendarFeedUrl" class="col-12">
-          <div class="calendar-feed-card">
-            <label class="form-label small mb-1">{{ t.feedUrlLabel }}</label>
-            <div class="input-group input-group-sm">
-              <input
-                :value="calendarFeedUrl"
-                type="text"
-                class="form-control"
-                readonly
-                @focus="$event.target.select()"
-              />
-              <button type="button" class="btn btn-outline-secondary" @click="copyCalendarFeedUrl">
-                {{ t.feedCopyButton }}
-              </button>
-              <a
-                class="btn btn-outline-secondary"
-                :href="calendarFeedUrl"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {{ t.feedOpenButton }}
-              </a>
-            </div>
           </div>
         </div>
       </div>
