@@ -4,6 +4,7 @@ import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
 import { useAuthStore } from './authStore'
 import { useUiStore } from './uiStore'
+import { buildReverbConfig } from '../services/reverbConfig'
 
 const roleLabels = {
   es: {
@@ -241,15 +242,7 @@ export const useLiveUpdateStore = defineStore('liveUpdates', () => {
 
     window.Pusher = Pusher
 
-    echo.value = new Echo({
-      broadcaster: 'reverb',
-      key: appKey,
-      wsHost: import.meta.env.VITE_REVERB_HOST || window.location.hostname,
-      wsPort: Number(import.meta.env.VITE_REVERB_PORT || 6001),
-      wssPort: Number(import.meta.env.VITE_REVERB_PORT || 6001),
-      forceTLS: false,
-      enabledTransports: ['ws', 'wss'],
-    })
+    echo.value = new Echo(buildReverbConfig())
 
     echo.value.channel('app.updates').listen('.domain.updated', handleUpdate)
   }

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
 import { calendarApi } from '../services/calendarApi'
+import { buildReverbConfig } from '../services/reverbConfig'
 
 export const useCalendarStore = defineStore('calendar', () => {
   const events = ref([])
@@ -132,15 +133,7 @@ export const useCalendarStore = defineStore('calendar', () => {
 
     window.Pusher = Pusher
 
-    echo.value = new Echo({
-      broadcaster: 'reverb',
-      key: appKey,
-      wsHost: import.meta.env.VITE_REVERB_HOST || window.location.hostname,
-      wsPort: Number(import.meta.env.VITE_REVERB_PORT || 6001),
-      wssPort: Number(import.meta.env.VITE_REVERB_PORT || 6001),
-      forceTLS: false,
-      enabledTransports: ['ws', 'wss'],
-    })
+    echo.value = new Echo(buildReverbConfig())
 
     echo.value
       .channel('calendar.global')

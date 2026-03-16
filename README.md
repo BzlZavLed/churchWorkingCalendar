@@ -67,6 +67,69 @@ npm install
 npm run dev
 ```
 
+## Production Realtime Setup
+
+The live alerts for event notes, event status changes, meeting point notes, and meeting updates require Laravel Reverb in production.
+
+Recommended production stack:
+- `nginx`
+- `php-fpm`
+- `supervisor`
+- `php artisan queue:work`
+- `php artisan reverb:start`
+
+Environment values for production should look like this:
+
+```env
+APP_URL=https://mychurchadmin.net
+
+BROADCAST_CONNECTION=reverb
+QUEUE_CONNECTION=database
+
+REVERB_APP_ID=your-app-id
+REVERB_APP_KEY=your-app-key
+REVERB_APP_SECRET=your-app-secret
+REVERB_SERVER_HOST=0.0.0.0
+REVERB_SERVER_PORT=8080
+REVERB_HOST=mychurchadmin.net
+REVERB_PORT=443
+REVERB_SCHEME=https
+REVERB_ALLOWED_ORIGINS=https://mychurchadmin.net,https://www.mychurchadmin.net
+
+VITE_REVERB_APP_KEY="${REVERB_APP_KEY}"
+VITE_REVERB_HOST="${REVERB_HOST}"
+VITE_REVERB_PORT="${REVERB_PORT}"
+VITE_REVERB_SCHEME="${REVERB_SCHEME}"
+```
+
+Deployment files included in this repo:
+- Nginx vhost: [deploy/nginx/mychurchadmin.conf](/Users/benjaminzavala/Documents/code_projects/churchWorkingCalendar/deploy/nginx/mychurchadmin.conf)
+- Supervisor queue worker: [deploy/supervisor/church-calendar-queue.conf](/Users/benjaminzavala/Documents/code_projects/churchWorkingCalendar/deploy/supervisor/church-calendar-queue.conf)
+- Supervisor Reverb worker: [deploy/supervisor/church-calendar-reverb.conf](/Users/benjaminzavala/Documents/code_projects/churchWorkingCalendar/deploy/supervisor/church-calendar-reverb.conf)
+
+Suggested production steps:
+```bash
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+npm --prefix frontend ci
+npm --prefix frontend run build
+sudo cp deploy/nginx/mychurchadmin.conf /etc/nginx/sites-available/mychurchadmin.conf
+sudo ln -s /etc/nginx/sites-available/mychurchadmin.conf /etc/nginx/sites-enabled/mychurchadmin.conf
+sudo cp deploy/supervisor/church-calendar-queue.conf /etc/supervisor/conf.d/
+sudo cp deploy/supervisor/church-calendar-reverb.conf /etc/supervisor/conf.d/
+sudo supervisorctl reread
+sudo supervisorctl update
+sudo systemctl reload nginx
+```
+
+Important:
+- `location /app` and `location /apps` must proxy to Reverb, or browser clients will not receive live alerts.
+- Reverb is started on port `8080` internally and exposed through `nginx` over `https://mychurchadmin.net`.
+- After changing `VITE_REVERB_*`, rebuild the frontend so the SPA picks up the new websocket host and scheme.
+
 ## Seeders
 
 - Update Benjamin password:

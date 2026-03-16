@@ -9,6 +9,7 @@
         "php": "^8.2",
         "barryvdh/laravel-dompdf": "^2.2",
         "laravel/framework": "^11.0",
+        "laravel/reverb": "^1.8",
         "laravel/sanctum": "^4.2",
         "laravel/tinker": "^2.10.1",
         "masterminds/html5": "^2.9",
@@ -50,7 +51,7 @@
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"php artisan pail --timeout=0\" \"npm run dev\" --names=server,queue,logs,vite --kill-others"
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74,#34d399\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"php artisan pail --timeout=0\" \"php artisan reverb:start --host=0.0.0.0 --port=${REVERB_SERVER_PORT:-8080}\" \"npm run dev\" --names=server,queue,logs,reverb,vite --kill-others"
         ],
         "test": [
             "@php artisan config:clear --ansi",
