@@ -1764,6 +1764,19 @@ const statusClass = (status) => {
   return 'status-pending'
 }
 
+const formatHistoryValue = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return '—'
+  }
+  if (typeof value === 'string' && !Number.isNaN(Date.parse(value))) {
+    return new Date(value).toLocaleString(locale.value)
+  }
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toLocaleString(locale.value)
+  }
+  return String(value)
+}
+
 const historyForEvent = (event) => {
   const historyEntries = (event?.histories || [])
     .filter((entry) => entry?.note)
