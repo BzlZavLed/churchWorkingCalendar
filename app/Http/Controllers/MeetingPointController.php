@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Meeting;
 use App\Models\MeetingPoint;
 use App\Models\User;
+use App\Support\DomainUpdate;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -91,6 +92,8 @@ class MeetingPointController extends Controller
             'updated_by' => $user->id,
         ]);
 
+        DomainUpdate::forMeetingPoint('created', $point, $user->id);
+
         return response()->json($point->load('department'), 201);
     }
 
@@ -152,6 +155,8 @@ class MeetingPointController extends Controller
 
         $point->update($updates);
 
+        DomainUpdate::forMeetingPoint('updated', $point, $request->user()->id);
+
         return response()->json($point->fresh('department'));
     }
 
@@ -179,6 +184,8 @@ class MeetingPointController extends Controller
             'reviewed_at' => now(),
             'updated_by' => $request->user()->id,
         ]);
+
+        DomainUpdate::forMeetingPoint('reviewed', $point, $request->user()->id);
 
         return response()->json($point->fresh(['department', 'reviewer', 'notes.author']));
     }
@@ -212,6 +219,8 @@ class MeetingPointController extends Controller
             }
         });
 
+        DomainUpdate::forMeeting('reordered', $meeting, $request->user()->id);
+
         return response()->json($meeting->points()->orderBy('agenda_order')->get());
     }
 
@@ -236,6 +245,9 @@ class MeetingPointController extends Controller
             'active_at' => now(),
             'updated_by' => $request->user()->id,
         ]);
+
+        DomainUpdate::forMeetingPoint('activated', $point, $request->user()->id);
+        DomainUpdate::forMeeting('updated', $meeting, $request->user()->id);
 
         return response()->json($meeting->fresh(['activePoint', 'points.department']));
     }
@@ -277,6 +289,9 @@ class MeetingPointController extends Controller
                 'updated_by' => $request->user()->id,
             ]);
         }
+
+        DomainUpdate::forMeetingPoint('finalized', $point, $request->user()->id);
+        DomainUpdate::forMeeting('updated', $meeting, $request->user()->id);
 
         return response()->json($point->fresh(['department', 'finalizer', 'notes.author']));
     }

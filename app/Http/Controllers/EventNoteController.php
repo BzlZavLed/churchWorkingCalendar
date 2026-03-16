@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Event;
 use App\Models\EventNote;
+use App\Support\DomainUpdate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -30,6 +31,8 @@ class EventNoteController extends Controller
             ]);
         });
 
+        DomainUpdate::forEventNote('created', $note, $user->id);
+
         return response()->json($note->load(['author', 'replyAuthor']), 201);
     }
 
@@ -49,6 +52,7 @@ class EventNoteController extends Controller
         ]);
 
         $note = $this->createDepartmentReply($request->user(), $event, $data['reply']);
+        DomainUpdate::forEventNote('replied', $note, $request->user()->id);
 
         return response()->json($note->load(['author', 'replyAuthor']));
     }
@@ -98,6 +102,8 @@ class EventNoteController extends Controller
             'seen_at' => now(),
             'seen_by_user_id' => $user->id,
         ]);
+
+        DomainUpdate::forEventNote('seen', $note, $user->id);
 
         return response()->json($note->load(['event.department', 'author', 'replyAuthor']));
     }

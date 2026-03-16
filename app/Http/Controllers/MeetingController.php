@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Meeting;
 use App\Models\MeetingPoint;
 use App\Models\User;
+use App\Support\DomainUpdate;
 use Carbon\Carbon;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -86,6 +87,8 @@ class MeetingController extends Controller
             return $meeting;
         });
 
+        DomainUpdate::forMeeting('created', $meeting, $request->user()->id);
+
         return response()->json($meeting->load(['points.department']), 201);
     }
 
@@ -134,6 +137,8 @@ class MeetingController extends Controller
             'updated_by' => $request->user()->id,
         ]);
 
+        DomainUpdate::forMeeting('updated', $meeting, $request->user()->id);
+
         return response()->json($meeting->fresh(['activePoint', 'points.department']));
     }
 
@@ -149,6 +154,8 @@ class MeetingController extends Controller
             'agenda_closed_at' => now(),
             'updated_by' => $request->user()->id,
         ]);
+
+        DomainUpdate::forMeeting('agenda_closed', $meeting, $request->user()->id);
 
         return response()->json($meeting);
     }
@@ -166,6 +173,8 @@ class MeetingController extends Controller
             'opened_by' => $request->user()->id,
             'updated_by' => $request->user()->id,
         ]);
+
+        DomainUpdate::forMeeting('started', $meeting, $request->user()->id);
 
         return response()->json($meeting);
     }
@@ -198,6 +207,8 @@ class MeetingController extends Controller
 
             return $meeting;
         });
+
+        DomainUpdate::forMeeting('adjourned', $meeting, $request->user()->id);
 
         return response()->json($meeting->fresh(['points.department']));
     }

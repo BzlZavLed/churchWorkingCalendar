@@ -108,6 +108,7 @@ body {
 
 .app-nav li {
   margin-bottom: 8px;
+  min-width: 0;
 }
 
 .app-nav a {
@@ -117,6 +118,11 @@ body {
   text-decoration: none;
   color: #ffffff;
   background: rgba(255, 255, 255, 0.15);
+  font-size: 0.9rem;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .app-nav a.router-link-active,
@@ -367,16 +373,31 @@ tbody td {
 
 .sidebar-user-name {
   font-weight: 700;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .sidebar-user-role {
   font-size: 0.85rem;
   opacity: 0.85;
+  overflow-wrap: anywhere;
 }
 
 .sidebar-user-dept {
   font-size: 0.8rem;
   opacity: 0.8;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.app-sidebar-footer {
+  min-width: 0;
+}
+
+.app-sidebar-footer .form-label,
+.app-sidebar-footer button {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .calendar-tools .form-select {

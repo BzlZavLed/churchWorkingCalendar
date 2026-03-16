@@ -725,6 +725,7 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '../stores/authStore'
 import { useCalendarStore } from '../stores/calendarStore'
+import { useLiveUpdateStore } from '../stores/liveUpdateStore'
 import { useUiStore } from '../stores/uiStore'
 import { translations } from '../i18n/translations'
 import { objectiveApi } from '../services/objectiveApi'
@@ -735,9 +736,11 @@ import EventDetailsModal from './EventDetailsModal.vue'
 
 const authStore = useAuthStore()
 const calendarStore = useCalendarStore()
+const liveUpdateStore = useLiveUpdateStore()
 const uiStore = useUiStore()
 const { events, holds } = storeToRefs(calendarStore)
 const { locale } = storeToRefs(uiStore)
+const { version: liveUpdateVersion, lastUpdate } = storeToRefs(liveUpdateStore)
 
 const user = computed(() => authStore.user)
 const isSuperAdmin = computed(() => authStore.isSuperAdmin)
@@ -2145,6 +2148,24 @@ watch(statusSelection, (next) => {
   }
 })
 
+watch(liveUpdateVersion, async () => {
+  const update = lastUpdate.value
+  if (!update || !['event', 'event_note'].includes(update.entity)) {
+    return
+  }
+
+  await loadMonth()
+  await fetchUnseenNotes()
+
+  if (selectedEvent.value?.id) {
+    selectedEvent.value = events.value.find((item) => item.id === selectedEvent.value.id) || selectedEvent.value
+  }
+
+  if (activeReviewEvent.value?.id) {
+    activeReviewEvent.value = events.value.find((item) => item.id === activeReviewEvent.value.id) || activeReviewEvent.value
+  }
+})
+
 onMounted(async () => {
   handleResize()
   window.addEventListener('resize', handleResize)
@@ -2154,6 +2175,7 @@ onMounted(async () => {
   await loadMonth()
   await fetchUnseenNotes()
   calendarStore.connectRealtime()
+  liveUpdateStore.connect()
   flashExpiredHolds()
   holdCleanupTimer = window.setInterval(flashExpiredHolds, 15000)
 })

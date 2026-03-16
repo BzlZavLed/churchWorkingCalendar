@@ -87,12 +87,14 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { useUiStore } from '../stores/uiStore'
 import { translations } from '../i18n/translations'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import ToastMessage from './ToastMessage.vue'
+import { useLiveUpdateStore } from '../stores/liveUpdateStore'
 
 const authStore = useAuthStore()
 const uiStore = useUiStore()
+const liveUpdateStore = useLiveUpdateStore()
 const { locale } = storeToRefs(uiStore)
 const router = useRouter()
 const isSidebarOpen = ref(false)
@@ -132,4 +134,16 @@ const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value
   document.body.classList.toggle('sidebar-open', isSidebarOpen.value)
 }
+
+watch(
+  () => authStore.isAuthenticated,
+  (isAuthenticated) => {
+    if (isAuthenticated) {
+      liveUpdateStore.connect()
+      return
+    }
+    liveUpdateStore.disconnect()
+  },
+  { immediate: true }
+)
 </script>

@@ -407,17 +407,20 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '../../stores/authStore'
 import { useUiStore } from '../../stores/uiStore'
 import { storeToRefs } from 'pinia'
 import { meetingApi } from '../../services/meetingApi'
 import { superAdminApi } from '../../services/superAdminApi'
 import { translations } from '../../i18n/translations'
+import { useLiveUpdateStore } from '../../stores/liveUpdateStore'
 
 const authStore = useAuthStore()
 const uiStore = useUiStore()
+const liveUpdateStore = useLiveUpdateStore()
 const { locale } = storeToRefs(uiStore)
+const { version: liveUpdateVersion, lastUpdate } = storeToRefs(liveUpdateStore)
 
 const t = computed(() => translations[locale.value].meetings)
 const common = computed(() => translations[locale.value].common)
@@ -753,9 +756,22 @@ const downloadSummary = async () => {
   window.URL.revokeObjectURL(url)
 }
 
+watch(liveUpdateVersion, async () => {
+  const update = lastUpdate.value
+  if (!update || !['meeting', 'meeting_point', 'meeting_point_note', 'meeting_note'].includes(update.entity)) {
+    return
+  }
+
+  await loadMeetings()
+  if (selectedMeetingId.value) {
+    await loadMeetingData()
+  }
+})
+
 onMounted(async () => {
   await loadChurches()
   await loadMeetings()
+  liveUpdateStore.connect()
   window.addEventListener('resize', () => {
     isDesktop.value = window.innerWidth >= 992
     if (isDesktop.value) {

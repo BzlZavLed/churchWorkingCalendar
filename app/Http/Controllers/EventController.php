@@ -13,6 +13,7 @@ use App\Models\EventHistory;
 use App\Models\EventNote;
 use App\Models\Objective;
 use App\Models\User;
+use App\Support\DomainUpdate;
 use Carbon\Carbon;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -112,6 +113,7 @@ class EventController extends Controller
             ]);
 
             event(new HoldCreated($event));
+            DomainUpdate::forEvent('hold_created', $event, $request->user()->id);
 
             return $event;
         });
@@ -154,6 +156,7 @@ class EventController extends Controller
 
             event(new EventCreated($event));
             event(new EventLocked($event));
+            DomainUpdate::forEvent('locked', $event, $request->user()->id);
 
             return $event;
         });
@@ -252,6 +255,7 @@ class EventController extends Controller
             }
 
             event(new EventUpdated($event));
+            DomainUpdate::forEvent('updated', $event, $request->user()->id);
 
             return $event;
         });
@@ -270,6 +274,7 @@ class EventController extends Controller
             ]);
 
             event(new EventCancelled($event));
+            DomainUpdate::forEvent('cancelled', $event, $request->user()->id);
 
             return $event;
         });
@@ -361,6 +366,7 @@ class EventController extends Controller
             ]);
 
             event(new EventUpdated($event));
+            DomainUpdate::forEvent('reviewed', $event, $request->user()->id);
 
             return $event->load(['department', 'objective', 'histories.user', 'notes.author', 'notes.replyAuthor']);
         });
@@ -423,6 +429,7 @@ class EventController extends Controller
                     ],
                 ]);
 
+                DomainUpdate::forEvent('published', $event, $user->id);
                 $updated++;
             }
         });

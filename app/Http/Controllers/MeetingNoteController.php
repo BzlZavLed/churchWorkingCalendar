@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Meeting;
 use App\Models\MeetingNote;
+use App\Support\DomainUpdate;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 
@@ -28,6 +29,8 @@ class MeetingNoteController extends Controller
             'note' => $data['note'],
             'created_by' => $request->user()->id,
         ]);
+
+        DomainUpdate::forMeetingNote('created', $note, $request->user()->id);
 
         return response()->json($note->load('author'), 201);
     }
