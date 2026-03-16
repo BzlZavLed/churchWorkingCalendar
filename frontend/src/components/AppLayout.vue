@@ -1,6 +1,12 @@
 <template>
   <div class="app-shell" :class="{ 'app-shell--sidebar-collapsed': shouldShowIconsOnly }">
-    <aside class="app-sidebar" :class="{ 'app-sidebar--compact': shouldShowIconsOnly }">
+    <aside
+      class="app-sidebar"
+      :class="{
+        'app-sidebar--compact': shouldShowIconsOnly,
+        'app-sidebar--open': isSidebarOpen,
+      }"
+    >
       <button
         class="app-burger"
         type="button"
@@ -46,9 +52,10 @@
         </nav>
 
         <div v-if="authStore.isAuthenticated" class="app-sidebar-footer">
-          <label class="d-flex align-items-center gap-2 mb-2">
-            <span class="form-label small mb-0 text-white">{{ t.language }}</span>
-            <select v-model="locale" class="form-select form-select-sm w-auto">
+          <label class="sidebar-language">
+            <span v-if="!shouldShowIconsOnly" class="form-label sidebar-language-label">{{ t.language }}</span>
+            <span v-else class="sidebar-language-icon" aria-hidden="true">A</span>
+            <select v-model="locale" class="form-select form-select-sm sidebar-language-select" :title="t.language">
               <option value="es">Espanol</option>
               <option value="en">English</option>
             </select>

@@ -418,12 +418,50 @@ tbody td {
 
 .app-sidebar-footer {
   min-width: 0;
+  display: grid;
+  gap: 10px;
 }
 
 .app-sidebar-footer .form-label,
 .app-sidebar-footer button {
   white-space: normal;
   overflow-wrap: anywhere;
+}
+
+.sidebar-language {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.sidebar-language-label {
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+}
+
+.sidebar-language-select {
+  width: 100%;
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+
+.sidebar-language-select option {
+  color: #1f1f1f;
+}
+
+.sidebar-language-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 .sidebar-logout-button {
@@ -449,8 +487,19 @@ tbody td {
 .app-shell--sidebar-collapsed .sidebar-user-role,
 .app-shell--sidebar-collapsed .sidebar-user-dept,
 .app-shell--sidebar-collapsed .app-sidebar-title,
-.app-shell--sidebar-collapsed .app-sidebar-footer label {
+.app-shell--sidebar-collapsed .sidebar-language-label {
   display: none;
+}
+
+.app-shell--sidebar-collapsed .sidebar-language {
+  display: grid;
+  justify-items: center;
+}
+
+.app-shell--sidebar-collapsed .sidebar-language-select {
+  width: 60px;
+  font-size: 0.74rem;
+  padding-inline: 8px;
 }
 
 .app-shell--sidebar-collapsed .sidebar-user {
@@ -1494,7 +1543,8 @@ tbody td {
     max-width: 100%;
   }
 
-  body.sidebar-open .app-sidebar-inner {
+  body.sidebar-open .app-sidebar-inner,
+  .app-sidebar--open .app-sidebar-inner {
     display: block;
     background: var(--dominant);
     padding: 12px 0;
