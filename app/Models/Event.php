@@ -16,6 +16,7 @@ class Event extends Model
     protected $fillable = [
         'department_id',
         'objective_id',
+        'objective_name_snapshot',
         'title',
         'description',
         'location',

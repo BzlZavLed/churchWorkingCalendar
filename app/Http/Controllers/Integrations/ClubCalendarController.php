@@ -89,7 +89,10 @@ class ClubCalendarController extends Controller
             'events.*.start_at' => ['required', 'date'],
             'events.*.end_at' => ['required', 'date'],
             'events.*.department_id' => ['required', 'integer'],
-            'events.*.objective_id' => ['required', 'integer'],
+            'events.*.objective_id' => ['nullable', 'integer'],
+            'events.*.objective_name' => ['nullable', 'string', 'max:255'],
+            'events.*.objective_description' => ['nullable', 'string'],
+            'events.*.objective_evaluation_metrics' => ['nullable', 'string'],
             'events.*.is_special' => ['nullable', 'boolean'],
             'events.*.club_type' => ['nullable', 'string'],
             'events.*.plan_name' => ['nullable', 'string'],
@@ -148,13 +151,10 @@ class ClubCalendarController extends Controller
                 continue;
             }
 
-            $objective = Objective::query()
-                ->where('id', $payload['objective_id'])
-                ->where('department_id', $department->id)
-                ->first();
+            $objective = $this->resolveObjective($department, $payload);
 
             if (!$objective) {
-                $conflicts[] = $this->buildErrorConflict($payload, 'invalid_objective', 'Objective does not belong to department.');
+                $conflicts[] = $this->buildErrorConflict($payload, 'invalid_objective', 'Objective could not be resolved for department.');
                 $skipped++;
                 continue;
             }
@@ -226,6 +226,7 @@ class ClubCalendarController extends Controller
                 $data = [
                     'department_id' => $department->id,
                     'objective_id' => $objective->id,
+                    'objective_name_snapshot' => $payload['objective_name'] ?? $objective->name,
                     'title' => $payload['title'],
                     'description' => $payload['description'] ?? null,
                     'location' => $payload['location'] ?? null,
@@ -304,6 +305,91 @@ class ClubCalendarController extends Controller
         ]);
 
         return response()->json($responsePayload);
+    }
+
+    private function resolveObjective(Department $department, array $payload): ?Objective
+    {
+        $incomingObjectiveId = isset($payload['objective_id']) ? (int) $payload['objective_id'] : null;
+        $objectiveName = trim((string) ($payload['objective_name'] ?? ''));
+        $objectiveDescription = array_key_exists('objective_description', $payload)
+            ? (string) ($payload['objective_description'] ?? '')
+            : '';
+        $objectiveMetrics = array_key_exists('objective_evaluation_metrics', $payload)
+            ? (string) ($payload['objective_evaluation_metrics'] ?? '')
+            : '';
+
+        if ($incomingObjectiveId) {
+            $objective = Objective::query()
+                ->where('id', $incomingObjectiveId)
+                ->where('department_id', $department->id)
+                ->first();
+
+            if ($objective) {
+                return $objective;
+            }
+
+            $objective = Objective::query()
+                ->where('department_id', $department->id)
+                ->where('external_source', 'clubs')
+                ->where('external_id', (string) $incomingObjectiveId)
+                ->first();
+
+            if ($objective) {
+                return $objective;
+            }
+        }
+
+        if ($objectiveName === '') {
+            return null;
+        }
+
+        $objective = Objective::query()
+            ->where('department_id', $department->id)
+            ->where('name', $objectiveName)
+            ->when(
+                array_key_exists('objective_description', $payload),
+                fn ($query) => $query->where('description', $objectiveDescription)
+            )
+            ->when(
+                array_key_exists('objective_evaluation_metrics', $payload),
+                fn ($query) => $query->where('evaluation_metrics', $objectiveMetrics)
+            )
+            ->first();
+
+        if ($objective) {
+            return $this->syncObjectiveExternalReference($objective, $incomingObjectiveId);
+        }
+
+        $objective = Objective::create([
+            'department_id' => $department->id,
+            'name' => $objectiveName,
+            'description' => $objectiveDescription,
+            'evaluation_metrics' => $objectiveMetrics,
+            'external_source' => $incomingObjectiveId ? 'clubs' : null,
+            'external_id' => $incomingObjectiveId ? (string) $incomingObjectiveId : null,
+        ]);
+
+        return $objective;
+    }
+
+    private function syncObjectiveExternalReference(Objective $objective, ?int $incomingObjectiveId): Objective
+    {
+        if (!$incomingObjectiveId) {
+            return $objective;
+        }
+
+        $externalId = (string) $incomingObjectiveId;
+
+        if ($objective->external_source === 'clubs' && $objective->external_id === $externalId) {
+            return $objective;
+        }
+
+        $objective->update([
+            'external_source' => 'clubs',
+            'external_id' => $externalId,
+        ]);
+
+        return $objective->fresh();
     }
 
     private function resolveImportUser(int $churchId): ?User

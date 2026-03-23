@@ -16,6 +16,8 @@ class Objective extends Model
         'name',
         'description',
         'evaluation_metrics',
+        'external_source',
+        'external_id',
     ];
 
     public function department(): BelongsTo
