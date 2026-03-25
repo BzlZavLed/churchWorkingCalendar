@@ -31,6 +31,7 @@
               <th>{{ t.columns.address }}</th>
               <th>{{ t.columns.smsConsent }}</th>
               <th>{{ t.columns.emailConsent }}</th>
+              <th>{{ t.columns.link }}</th>
               <th>{{ t.columns.member }}</th>
               <th>{{ t.columns.date }}</th>
               <th>{{ t.columns.by }}</th>
@@ -44,6 +45,11 @@
               <td>{{ contact.address || '—' }}</td>
               <td>{{ contact.phone ? (contact.sms_consent ? t.consentYes : t.consentNo) : '—' }}</td>
               <td>{{ contact.email ? (contact.email_consent ? t.consentYes : t.consentNo) : '—' }}</td>
+              <td>
+                <button class="btn btn-sm btn-outline-secondary" type="button" @click="copyConsentLink(contact)">
+                  {{ t.copyPersonalLink }}
+                </button>
+              </td>
               <td>
                 <span class="badge" :class="contact.is_sda ? 'text-bg-success' : 'text-bg-warning'">
                   {{ contact.is_sda ? t.memberYes : t.memberNo }}
@@ -73,6 +79,11 @@
             <p class="mb-1"><strong>{{ t.columns.address }}:</strong> {{ contact.address || '—' }}</p>
             <p class="mb-1"><strong>{{ t.columns.smsConsent }}:</strong> {{ contact.phone ? (contact.sms_consent ? t.consentYes : t.consentNo) : '—' }}</p>
             <p class="mb-1"><strong>{{ t.columns.emailConsent }}:</strong> {{ contact.email ? (contact.email_consent ? t.consentYes : t.consentNo) : '—' }}</p>
+            <div class="mb-2">
+              <button class="btn btn-sm btn-outline-secondary" type="button" @click="copyConsentLink(contact)">
+                {{ t.copyPersonalLink }}
+              </button>
+            </div>
             <p class="mb-0"><strong>{{ t.columns.by }}:</strong> {{ contact.creator?.name || '—' }}</p>
           </div>
         </div>
@@ -113,6 +124,21 @@ const copyPublicPageLink = async () => {
     uiStore.showToast(t.value.copySuccess, 'success')
   } catch {
     uiStore.showToast(t.value.copyError, 'error')
+  }
+}
+
+const consentLinkFor = (contact) => `${window.location.origin}/consent/${contact.consent_token}`
+
+const copyConsentLink = async (contact) => {
+  if (!contact?.consent_token) {
+    uiStore.showToast(t.value.copyPersonalError, 'error')
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(consentLinkFor(contact))
+    uiStore.showToast(t.value.copyPersonalSuccess, 'success')
+  } catch {
+    uiStore.showToast(t.value.copyPersonalError, 'error')
   }
 }
 
