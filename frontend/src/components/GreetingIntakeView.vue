@@ -5,6 +5,7 @@
         <p class="greeting-kicker">{{ t.kicker }}</p>
         <h1 class="greeting-title">{{ t.title }}</h1>
         <p class="greeting-copy">{{ t.subtitle }}</p>
+        <p class="greeting-shortcut">{{ t.shortcutHint }}</p>
       </div>
 
       <form class="greeting-form" @submit.prevent="submit">
@@ -146,6 +147,19 @@ const submit = async () => {
   margin: 0.75rem 0 0;
   font-size: 1.05rem;
   color: #55645a;
+}
+
+.greeting-shortcut {
+  display: inline-flex;
+  align-items: center;
+  margin: 0.85rem 0 0;
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  background: #eef3eb;
+  border: 1px solid rgba(54, 73, 53, 0.12);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #425247;
 }
 
 .greeting-form {

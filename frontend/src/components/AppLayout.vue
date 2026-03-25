@@ -1,13 +1,22 @@
 <template>
-  <div class="app-shell" :class="{ 'app-shell--sidebar-collapsed': shouldShowIconsOnly }">
+  <div
+    class="app-shell"
+    :class="{
+      'app-shell--sidebar-collapsed': shouldShowIconsOnly,
+      'app-shell--greeting-focus': isGreetingFocusMode,
+      'app-shell--greeting-sidebar-visible': isGreetingFocusMode && isSidebarOpen,
+    }"
+  >
     <aside
       class="app-sidebar"
       :class="{
         'app-sidebar--compact': shouldShowIconsOnly,
         'app-sidebar--open': isSidebarOpen,
+        'app-sidebar--greeting-hidden': isGreetingFocusMode && !isSidebarOpen,
       }"
     >
       <button
+        v-if="!isGreetingFocusMode"
         class="app-burger"
         type="button"
         :aria-label="toggleSidebarLabel"
@@ -229,6 +238,8 @@ const roleLabel = computed(() => {
   return t.value.roleLabels?.[role] || role
 })
 
+const isGreetingFocusMode = computed(() => Boolean(authStore.user?.department?.is_greeting))
+
 const userInitials = computed(() => {
   const name = authStore.user?.name || ''
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -254,6 +265,15 @@ const logout = async () => {
 const closeSidebar = () => {
   isSidebarOpen.value = false
   document.body.classList.remove('sidebar-open')
+}
+
+const toggleGreetingSidebar = () => {
+  if (!isGreetingFocusMode.value) {
+    return
+  }
+
+  isSidebarOpen.value = !isSidebarOpen.value
+  document.body.classList.toggle('sidebar-open', isSidebarOpen.value)
 }
 
 const isCompactSidebar = () => window.innerWidth <= compactSidebarBreakpoint
@@ -283,6 +303,11 @@ const updateAutoIconOnly = async () => {
 }
 
 const toggleSidebar = () => {
+  if (isGreetingFocusMode.value) {
+    toggleGreetingSidebar()
+    return
+  }
+
   if (isCompactSidebarState.value) {
     isSidebarOpen.value = !isSidebarOpen.value
     document.body.classList.toggle('sidebar-open', isSidebarOpen.value)
@@ -295,12 +320,18 @@ const toggleSidebar = () => {
 }
 
 const handleNavClick = () => {
-  if (isCompactSidebar()) {
+  if (isGreetingFocusMode.value || isCompactSidebar()) {
     closeSidebar()
   }
 }
 
 const handleResize = () => {
+  if (isGreetingFocusMode.value) {
+    closeSidebar()
+    autoIconOnly.value = false
+    return
+  }
+
   isCompactSidebarState.value = isCompactSidebar()
   if (isCompactSidebarState.value) {
     closeSidebar()
@@ -309,6 +340,21 @@ const handleResize = () => {
   }
   closeSidebar()
   updateAutoIconOnly()
+}
+
+const handleGlobalKeydown = (event) => {
+  const key = String(event.key || '').toLowerCase()
+
+  if (isGreetingFocusMode.value && (event.metaKey || event.ctrlKey) && key === 'k') {
+    event.preventDefault()
+    toggleGreetingSidebar()
+    return
+  }
+
+  if (isGreetingFocusMode.value && key === 'escape' && isSidebarOpen.value) {
+    event.preventDefault()
+    closeSidebar()
+  }
 }
 
 watch(
@@ -326,10 +372,23 @@ watch(
 watch(
   () => route.fullPath,
   () => {
-    if (isCompactSidebar()) {
+    if (isGreetingFocusMode.value || isCompactSidebar()) {
       closeSidebar()
     }
   }
+)
+
+watch(
+  () => isGreetingFocusMode.value,
+  (isGreeting) => {
+    if (isGreeting) {
+      closeSidebar()
+      autoIconOnly.value = false
+      return
+    }
+    handleResize()
+  },
+  { immediate: true }
 )
 
 watch(
@@ -349,6 +408,7 @@ watch(
 
 onMounted(() => {
   window.addEventListener('resize', handleResize)
+  window.addEventListener('keydown', handleGlobalKeydown)
   handleResize()
   if (typeof ResizeObserver !== 'undefined') {
     sidebarResizeObserver = new ResizeObserver(() => {
@@ -362,7 +422,33 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
+  window.removeEventListener('keydown', handleGlobalKeydown)
   sidebarResizeObserver?.disconnect()
   closeSidebar()
 })
 </script>
+
+<style scoped>
+.app-shell--greeting-focus .app-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 1100;
+  width: min(86vw, 320px);
+  max-width: 320px;
+  transform: translateX(-105%);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 180ms ease, opacity 180ms ease;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16);
+}
+
+.app-shell--greeting-sidebar-visible .app-sidebar {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.app-shell--greeting-focus .app-sidebar--greeting-hidden {
+  visibility: hidden;
+}
+</style>

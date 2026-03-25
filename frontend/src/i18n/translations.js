@@ -623,6 +623,7 @@ export const translations = {
         kicker: 'Puerta principal',
         title: 'Registro de visitas',
         subtitle: 'Usa este formulario para registrar a cada visita apenas llegue a la iglesia.',
+        shortcutHint: 'Atajo: Cmd+K o Ctrl+K para mostrar el menu.',
         fields: {
           name: 'Nombre',
           phone: 'Telefono',
@@ -1518,6 +1519,7 @@ export const translations = {
         kicker: 'Front door',
         title: 'Visitor intake',
         subtitle: 'Use this form to register each visitor as they arrive at church.',
+        shortcutHint: 'Shortcut: Cmd+K or Ctrl+K to open the menu.',
         fields: {
           name: 'Name',
           phone: 'Phone',
