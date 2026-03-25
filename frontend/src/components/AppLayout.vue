@@ -7,6 +7,19 @@
       'app-shell--greeting-sidebar-visible': isGreetingFocusMode && isSidebarOpen,
     }"
   >
+    <button
+      v-if="isGreetingFocusMode"
+      class="greeting-menu-button"
+      type="button"
+      :aria-label="toggleSidebarLabel"
+      :title="toggleSidebarLabel"
+      @click="toggleSidebar"
+    >
+      <svg viewBox="0 0 24 24" class="nav-icon" aria-hidden="true">
+        <path :d="iconPaths.menu" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9" />
+      </svg>
+    </button>
+
     <aside
       class="app-sidebar"
       :class="{
@@ -429,6 +442,10 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.app-shell--greeting-focus {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .app-shell--greeting-focus .app-sidebar {
   position: fixed;
   inset: 0 auto 0 0;
@@ -450,5 +467,35 @@ onUnmounted(() => {
 
 .app-shell--greeting-focus .app-sidebar--greeting-hidden {
   visibility: hidden;
+}
+
+.app-shell--greeting-focus .app-main {
+  max-width: 1280px;
+  width: min(100%, 1280px);
+  margin: 0 auto;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.greeting-menu-button {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 1200;
+  width: 48px;
+  height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(31, 111, 92, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1f6f5c;
+  box-shadow: 0 12px 30px rgba(31, 111, 92, 0.14);
+  backdrop-filter: blur(10px);
+}
+
+.greeting-menu-button:hover {
+  background: #ffffff;
 }
 </style>

@@ -5,34 +5,36 @@
         <p class="greeting-kicker">{{ t.kicker }}</p>
         <h1 class="greeting-title">{{ t.title }}</h1>
         <p class="greeting-copy">{{ t.subtitle }}</p>
-        <p class="greeting-shortcut">{{ t.shortcutHint }}</p>
+        <p class="greeting-shortcut">{{ t.menuHint }}</p>
       </div>
 
       <form class="greeting-form" @submit.prevent="submit">
-        <label class="form-label">
-          {{ t.fields.name }}
-          <input v-model="form.name" class="form-control form-control-lg" type="text" required />
-        </label>
+        <div class="greeting-grid">
+          <label class="form-label greeting-grid-span-2">
+            {{ t.fields.name }}
+            <input v-model="form.name" class="form-control form-control-lg" type="text" required />
+          </label>
 
-        <label class="form-label">
-          {{ t.fields.phone }}
-          <input v-model="form.phone" class="form-control form-control-lg" type="tel" />
-        </label>
+          <label class="form-label">
+            {{ t.fields.phone }}
+            <input v-model="form.phone" class="form-control form-control-lg" type="tel" />
+          </label>
 
-        <label class="form-label">
-          {{ t.fields.email }}
-          <input v-model="form.email" class="form-control form-control-lg" type="email" />
-        </label>
+          <label class="form-label">
+            {{ t.fields.email }}
+            <input v-model="form.email" class="form-control form-control-lg" type="email" />
+          </label>
 
-        <label class="form-label">
-          {{ t.fields.address }}
-          <input
-            v-model="form.address"
-            class="form-control form-control-lg"
-            type="text"
-            :placeholder="t.fields.addressHint"
-          />
-        </label>
+          <label class="form-label greeting-grid-span-2">
+            {{ t.fields.address }}
+            <input
+              v-model="form.address"
+              class="form-control form-control-lg"
+              type="text"
+              :placeholder="t.fields.addressHint"
+            />
+          </label>
+        </div>
 
         <div class="greeting-toggle">
           <div>
@@ -116,8 +118,8 @@ const submit = async () => {
 }
 
 .greeting-panel {
-  width: min(100%, 720px);
-  padding: 2rem;
+  width: min(100%, 920px);
+  padding: 2.25rem;
   border-radius: 28px;
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(54, 73, 53, 0.08);
@@ -167,6 +169,16 @@ const submit = async () => {
   gap: 1rem;
 }
 
+.greeting-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.25rem;
+}
+
+.greeting-grid-span-2 {
+  grid-column: 1 / -1;
+}
+
 .greeting-toggle {
   display: flex;
   align-items: center;
@@ -199,6 +211,15 @@ const submit = async () => {
   .greeting-panel {
     padding: 1.25rem;
     border-radius: 22px;
+  }
+
+  .greeting-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .greeting-grid-span-2 {
+    grid-column: auto;
   }
 }
 </style>
