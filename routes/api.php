@@ -9,6 +9,7 @@ use App\Http\Controllers\ObjectiveController;
 use App\Http\Controllers\PublicCatalogController;
 use App\Http\Controllers\PublicEventFeedController;
 use App\Http\Controllers\CalendarExportController;
+use App\Http\Controllers\ChurchContactController;
 use App\Http\Controllers\EventNoteController;
 use App\Http\Controllers\MeetingController;
 use App\Http\Controllers\MeetingPointController;
@@ -94,6 +95,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('meeting-points/{point}/activate', [MeetingPointController::class, 'activate']);
     Route::post('meeting-points/{point}/finalize', [MeetingPointController::class, 'finalize']);
     Route::post('meeting-points/{point}/notes', [MeetingPointNoteController::class, 'store']);
+
+    Route::get('church-contacts', [ChurchContactController::class, 'index']);
+    Route::post('church-contacts', [ChurchContactController::class, 'store']);
 });
 
 Route::middleware('integration.token')->prefix('integrations/clubs')->group(function () {

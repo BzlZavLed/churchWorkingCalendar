@@ -197,7 +197,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/authStore'
+import { getDefaultRouteForUser, useAuthStore } from '../stores/authStore'
 import { authApi } from '../services/authApi'
 import { webauthnApi } from '../services/webauthnApi'
 import { useUiStore } from '../stores/uiStore'
@@ -247,11 +247,7 @@ const submit = async () => {
   faceIdNotice.value = ''
   try {
     await authStore.login(form, rememberMe.value)
-    if (authStore.user?.role === 'superadmin') {
-      await router.push('/superadmin/churches')
-    } else {
-      await router.push('/calendar')
-    }
+    await router.push(getDefaultRouteForUser(authStore.user))
   } catch (err) {
     error.value = t.value.errorLogin
   }
@@ -296,11 +292,7 @@ const startFaceIdLogin = async () => {
     }
     const session = await webauthnApi.authenticateVerify(verifyPayload)
     authStore.setSession(session, rememberMe.value)
-    if (authStore.user?.role === 'superadmin') {
-      await router.push('/superadmin/churches')
-    } else {
-      await router.push('/calendar')
-    }
+    await router.push(getDefaultRouteForUser(authStore.user))
   } catch (err) {
     if (err?.response?.data?.status === 'no_credentials') {
       faceIdNotice.value = t.value.faceIdRegisterPrompt
@@ -356,11 +348,7 @@ const registerFaceId = async () => {
     const session = await webauthnApi.registerVerify(payload)
     authStore.setSession(session, rememberMe.value)
     closeFaceIdSetup()
-    if (authStore.user?.role === 'superadmin') {
-      await router.push('/superadmin/churches')
-    } else {
-      await router.push('/calendar')
-    }
+    await router.push(getDefaultRouteForUser(authStore.user))
   } catch (err) {
     faceIdError.value = t.value.faceIdError
   } finally {

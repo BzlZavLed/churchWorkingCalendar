@@ -49,6 +49,14 @@
             </label>
           </div>
         </div>
+        <div class="col-12">
+          <div class="form-check">
+            <input id="dept-greeting" v-model="createForm.is_greeting" class="form-check-input" type="checkbox" />
+            <label class="form-check-label" for="dept-greeting">
+              {{ t.greetingLabel }}
+            </label>
+          </div>
+        </div>
       </div>
       <button class="btn btn-primary mt-3" type="submit">{{ t.create }}</button>
     </form>
@@ -68,6 +76,7 @@
             <th>{{ t.columns.userName }}</th>
             <th>{{ t.columns.users }}</th>
             <th>{{ t.columns.club }}</th>
+            <th>{{ t.columns.greeting }}</th>
             <th class="text-end">{{ t.columns.actions }}</th>
           </tr>
         </thead>
@@ -85,6 +94,9 @@
             </td>
             <td>
               <input v-model="department.is_club" class="form-check-input" type="checkbox" />
+            </td>
+            <td>
+              <input v-model="department.is_greeting" class="form-check-input" type="checkbox" />
             </td>
             <td class="text-end">
               <div class="d-flex flex-column flex-md-row justify-content-end gap-2">
@@ -143,6 +155,12 @@
               <input :id="`dept-club-${department.id}`" v-model="department.is_club" class="form-check-input" type="checkbox" />
               <label class="form-check-label" :for="`dept-club-${department.id}`">
                 {{ t.clubLabel }}
+              </label>
+            </div>
+            <div class="form-check mb-3">
+              <input :id="`dept-greeting-${department.id}`" v-model="department.is_greeting" class="form-check-input" type="checkbox" />
+              <label class="form-check-label" :for="`dept-greeting-${department.id}`">
+                {{ t.greetingLabel }}
               </label>
             </div>
             <div class="d-flex flex-wrap gap-2">
@@ -225,6 +243,7 @@ const createForm = reactive({
   color: '',
   user_name: '',
   is_club: false,
+  is_greeting: false,
 })
 
 const loadChurches = async () => {
@@ -268,12 +287,14 @@ const createDepartment = async () => {
       color: createForm.color || null,
       user_name: createForm.user_name || null,
       is_club: Boolean(createForm.is_club),
+      is_greeting: Boolean(createForm.is_greeting),
     }
     await superAdminApi.createDepartment(selectedChurchId.value, payload)
     createForm.name = ''
     createForm.color = ''
     createForm.user_name = ''
     createForm.is_club = false
+    createForm.is_greeting = false
     setSuccessMessage()
     await loadDepartments()
   } catch {
@@ -359,6 +380,7 @@ const updateDepartment = async (department) => {
       color: department.color || null,
       user_name: department.user_name || null,
       is_club: Boolean(department.is_club),
+      is_greeting: Boolean(department.is_greeting),
     }
     if (isSecretary.value) {
       await secretaryApi.updateDepartment(department.id, payload)

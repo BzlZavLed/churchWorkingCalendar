@@ -17,10 +17,12 @@ class Department extends Model
         'user_name',
         'color',
         'is_club',
+        'is_greeting',
     ];
 
     protected $casts = [
         'is_club' => 'boolean',
+        'is_greeting' => 'boolean',
     ];
 
     public function church(): BelongsTo
@@ -46,5 +48,10 @@ class Department extends Model
     public function inventoryItems(): HasMany
     {
         return $this->hasMany(InventoryItem::class);
+    }
+
+    public function churchContacts(): HasMany
+    {
+        return $this->hasMany(ChurchContact::class);
     }
 }

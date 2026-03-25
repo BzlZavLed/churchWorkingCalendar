@@ -129,6 +129,8 @@ const iconPaths = {
   reports: 'M5 19V9M12 19V5M19 19v-8',
   meetingPoints: 'M5 5h14v4H5zM5 11h8v8H5zM15 13h4M15 17h4',
   logout: 'M15 16l4-4-4-4M19 12H9M12 19H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6',
+  greeting: 'M12 21c4.97-4.1 8-7.75 8-11.5A4.5 4.5 0 0 0 15.5 5c-1.54 0-2.84.72-3.5 1.84A4.15 4.15 0 0 0 8.5 5 4.5 4.5 0 0 0 4 9.5C4 13.25 7.03 16.9 12 21Z',
+  greetingList: 'M6 7h12M6 12h12M6 17h12M4 7h.01M4 12h.01M4 17h.01',
 }
 
 const navItems = computed(() => {
@@ -137,6 +139,15 @@ const navItems = computed(() => {
   }
 
   const role = authStore.user?.role
+  const isGreetingUser = Boolean(authStore.user?.department?.is_greeting)
+
+  if (isGreetingUser) {
+    return [
+      { to: '/greeting', label: t.value.greeting, icon: iconPaths.greeting },
+      { to: '/greeting/contacts', label: t.value.greetingContacts, icon: iconPaths.greetingList },
+    ]
+  }
+
   if (role === 'superadmin') {
     return [
       { to: '/calendar', label: t.value.calendar, icon: iconPaths.calendar },
@@ -165,6 +176,7 @@ const navItems = computed(() => {
 
   if (['admin', 'secretary'].includes(role || '')) {
     items.push({ to: '/inventory', label: t.value.inventory, icon: iconPaths.inventory })
+    items.push({ to: '/greeting/contacts', label: t.value.greetingContacts, icon: iconPaths.greetingList })
   }
 
   if (role === 'secretary') {

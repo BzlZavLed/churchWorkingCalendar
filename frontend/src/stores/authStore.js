@@ -2,6 +2,19 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { authApi, setAuthToken } from '../services/authApi'
 
+export const getDefaultRouteForUser = (user) => {
+  if (!user) {
+    return '/login'
+  }
+  if (user.role === 'superadmin') {
+    return '/superadmin/churches'
+  }
+  if (user.department?.is_greeting) {
+    return '/greeting'
+  }
+  return '/calendar'
+}
+
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
   const storageKey = 'auth_token'
@@ -13,6 +26,7 @@ export const useAuthStore = defineStore('auth', () => {
   const role = computed(() => user.value?.role || null)
   const isSuperAdmin = computed(() => role.value === 'superadmin')
   const isSecretary = computed(() => role.value === 'secretary')
+  const isGreetingDepartmentUser = computed(() => Boolean(user.value?.department?.is_greeting))
 
   const applyToken = (nextToken, persist = true) => {
     token.value = nextToken
@@ -83,6 +97,7 @@ export const useAuthStore = defineStore('auth', () => {
     role,
     isSuperAdmin,
     isSecretary,
+    isGreetingDepartmentUser,
     initialize,
     login,
     register,

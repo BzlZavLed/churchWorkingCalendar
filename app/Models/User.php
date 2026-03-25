@@ -72,6 +72,11 @@ class User extends Authenticatable
         return $this->role === self::ROLE_SECRETARY;
     }
 
+    public function isGreetingDepartmentUser(): bool
+    {
+        return (bool) $this->department?->is_greeting;
+    }
+
     public function church(): BelongsTo
     {
         return $this->belongsTo(Church::class);
@@ -95,5 +100,10 @@ class User extends Authenticatable
     public function webauthnCredentials(): HasMany
     {
         return $this->hasMany(WebAuthnCredential::class);
+    }
+
+    public function churchContacts(): HasMany
+    {
+        return $this->hasMany(ChurchContact::class, 'created_by');
     }
 }

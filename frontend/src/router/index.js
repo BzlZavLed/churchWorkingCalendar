@@ -15,6 +15,9 @@ import SuperAdminUsers from '../components/superadmin/SuperAdminUsers.vue'
 import SuperAdminCalendarManager from '../components/superadmin/SuperAdminCalendarManager.vue'
 import InventoryView from '../components/InventoryView.vue'
 import MeetingPointsView from '../components/MeetingPointsView.vue'
+import GreetingIntakeView from '../components/GreetingIntakeView.vue'
+import GreetingContactsView from '../components/GreetingContactsView.vue'
+import { getDefaultRouteForUser } from '../stores/authStore'
 
 const routes = [
   { path: '/', redirect: '/calendar' },
@@ -24,6 +27,8 @@ const routes = [
   { path: '/objectives', component: ObjectivesView, meta: { requiresAuth: true } },
   { path: '/reports', component: ReportsView, meta: { requiresAuth: true } },
   { path: '/meeting-points', component: MeetingPointsView, meta: { requiresAuth: true } },
+  { path: '/greeting', component: GreetingIntakeView, meta: { requiresAuth: true, greetingOnly: true } },
+  { path: '/greeting/contacts', component: GreetingContactsView, meta: { requiresAuth: true, contactsAllowed: true } },
   { path: '/admin/users', component: AdminUsers, meta: { requiresAuth: true, adminOnly: true } },
   { path: '/secretary/departments', component: SuperAdminDepartments, meta: { requiresAuth: true, secretaryOnly: true } },
   { path: '/secretary/meetings', component: SecretaryMeetings, meta: { requiresAuth: true, secretaryOnly: true } },
@@ -50,22 +55,22 @@ router.beforeEach(async (to) => {
     await authStore.initialize()
   }
 
+  const isGreetingUser = Boolean(authStore.user?.department?.is_greeting)
+  const isContactsAllowed = ['admin', 'secretary', 'superadmin'].includes(authStore.user?.role || '') || isGreetingUser
+
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     return '/login'
   }
 
   if (to.meta.guestOnly && authStore.isAuthenticated) {
-    if (authStore.user?.role === 'superadmin') {
-      return '/superadmin/churches'
-    }
-    return '/calendar'
+    return getDefaultRouteForUser(authStore.user)
   }
 
   if (to.meta.superadminOnly && authStore.user?.role !== 'superadmin') {
     return '/calendar'
   }
 
-  if (to.meta.adminOnly && authStore.user?.role !== 'superadmin') {
+  if (to.meta.adminOnly && !['admin', 'superadmin'].includes(authStore.user?.role || '')) {
     return '/calendar'
   }
 
@@ -75,6 +80,18 @@ router.beforeEach(async (to) => {
 
   if (to.meta.inventoryOnly && !['admin', 'secretary', 'superadmin'].includes(authStore.user?.role || '')) {
     return '/calendar'
+  }
+
+  if (to.meta.greetingOnly && !isGreetingUser) {
+    return getDefaultRouteForUser(authStore.user)
+  }
+
+  if (to.meta.contactsAllowed && !isContactsAllowed) {
+    return getDefaultRouteForUser(authStore.user)
+  }
+
+  if (authStore.isAuthenticated && isGreetingUser && !['/greeting', '/greeting/contacts'].includes(to.path)) {
+    return '/greeting'
   }
 
   return true
