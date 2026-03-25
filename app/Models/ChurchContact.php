@@ -5,10 +5,20 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 class ChurchContact extends Model
 {
     use HasFactory;
+
+    protected static function booted(): void
+    {
+        static::creating(function (ChurchContact $contact) {
+            if (empty($contact->consent_token)) {
+                $contact->consent_token = Str::random(64);
+            }
+        });
+    }
 
     protected $fillable = [
         'church_id',
@@ -19,10 +29,19 @@ class ChurchContact extends Model
         'email',
         'address',
         'is_sda',
+        'sms_consent',
+        'sms_consented_at',
+        'email_consent',
+        'email_consented_at',
+        'consent_token',
     ];
 
     protected $casts = [
         'is_sda' => 'boolean',
+        'sms_consent' => 'boolean',
+        'sms_consented_at' => 'datetime',
+        'email_consent' => 'boolean',
+        'email_consented_at' => 'datetime',
     ];
 
     public function church(): BelongsTo

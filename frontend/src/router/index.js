@@ -17,6 +17,7 @@ import InventoryView from '../components/InventoryView.vue'
 import MeetingPointsView from '../components/MeetingPointsView.vue'
 import GreetingIntakeView from '../components/GreetingIntakeView.vue'
 import GreetingContactsView from '../components/GreetingContactsView.vue'
+import PublicConsentView from '../components/PublicConsentView.vue'
 import { getDefaultRouteForUser } from '../stores/authStore'
 
 const routes = [
@@ -29,6 +30,7 @@ const routes = [
   { path: '/meeting-points', component: MeetingPointsView, meta: { requiresAuth: true } },
   { path: '/greeting', component: GreetingIntakeView, meta: { requiresAuth: true, greetingOnly: true } },
   { path: '/greeting/contacts', component: GreetingContactsView, meta: { requiresAuth: true, contactsAllowed: true } },
+  { path: '/consent/:token?', component: PublicConsentView, meta: { guestOnly: false, noLayout: true } },
   { path: '/admin/users', component: AdminUsers, meta: { requiresAuth: true, adminOnly: true } },
   { path: '/secretary/departments', component: SuperAdminDepartments, meta: { requiresAuth: true, secretaryOnly: true } },
   { path: '/secretary/meetings', component: SecretaryMeetings, meta: { requiresAuth: true, secretaryOnly: true } },
@@ -90,7 +92,7 @@ router.beforeEach(async (to) => {
     return getDefaultRouteForUser(authStore.user)
   }
 
-  if (authStore.isAuthenticated && isGreetingUser && !['/greeting', '/greeting/contacts'].includes(to.path)) {
+  if (authStore.isAuthenticated && isGreetingUser && !to.meta.noLayout && !['/greeting', '/greeting/contacts'].includes(to.path)) {
     return '/greeting'
   }
 

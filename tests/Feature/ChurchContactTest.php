@@ -37,11 +37,15 @@ class ChurchContactTest extends TestCase
             'email' => 'john@example.com',
             'address' => 'Houston, TX',
             'is_sda' => false,
+            'sms_consent' => true,
+            'email_consent' => true,
         ]);
 
         $response->assertCreated()
             ->assertJsonPath('name', 'John Visitor')
-            ->assertJsonPath('is_sda', false);
+            ->assertJsonPath('is_sda', false)
+            ->assertJsonPath('sms_consent', true)
+            ->assertJsonPath('email_consent', true);
 
         $this->assertDatabaseHas('church_contacts', [
             'church_id' => $church->id,
@@ -50,6 +54,8 @@ class ChurchContactTest extends TestCase
             'name' => 'John Visitor',
             'email' => 'john@example.com',
             'address' => 'Houston, TX',
+            'sms_consent' => true,
+            'email_consent' => true,
         ]);
     }
 
@@ -73,6 +79,8 @@ class ChurchContactTest extends TestCase
         $response = $this->postJson('/api/church-contacts', [
             'name' => 'John Visitor',
             'is_sda' => false,
+            'sms_consent' => false,
+            'email_consent' => false,
         ]);
 
         $response->assertForbidden();
@@ -103,12 +111,16 @@ class ChurchContactTest extends TestCase
             'name' => 'John Visitor',
             'address' => 'San Antonio, TX',
             'is_sda' => false,
+            'sms_consent' => false,
+            'email_consent' => false,
         ]);
 
         ChurchContact::create([
             'church_id' => $otherChurch->id,
             'name' => 'Outside Person',
             'is_sda' => false,
+            'sms_consent' => false,
+            'email_consent' => false,
         ]);
 
         Sanctum::actingAs($user->fresh()->load('department'));
@@ -118,5 +130,65 @@ class ChurchContactTest extends TestCase
         $response->assertOk();
         $this->assertCount(1, $response->json());
         $this->assertSame('John Visitor', $response->json()[0]['name']);
+        $this->assertFalse($response->json()[0]['sms_consent']);
+        $this->assertFalse($response->json()[0]['email_consent']);
+    }
+
+    public function test_contact_cannot_opt_into_sms_without_phone(): void
+    {
+        $church = Church::create(['name' => 'Main Church']);
+        $department = Department::create([
+            'church_id' => $church->id,
+            'name' => 'Greeting Department',
+            'is_greeting' => true,
+        ]);
+
+        $user = User::factory()->create([
+            'church_id' => $church->id,
+            'department_id' => $department->id,
+            'role' => User::ROLE_MEMBER,
+        ]);
+
+        Sanctum::actingAs($user->fresh()->load('department'));
+
+        $response = $this->postJson('/api/church-contacts', [
+            'name' => 'John Visitor',
+            'email' => 'john@example.com',
+            'is_sda' => false,
+            'sms_consent' => true,
+            'email_consent' => false,
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['sms_consent']);
+    }
+
+    public function test_contact_cannot_opt_into_email_without_email(): void
+    {
+        $church = Church::create(['name' => 'Main Church']);
+        $department = Department::create([
+            'church_id' => $church->id,
+            'name' => 'Greeting Department',
+            'is_greeting' => true,
+        ]);
+
+        $user = User::factory()->create([
+            'church_id' => $church->id,
+            'department_id' => $department->id,
+            'role' => User::ROLE_MEMBER,
+        ]);
+
+        Sanctum::actingAs($user->fresh()->load('department'));
+
+        $response = $this->postJson('/api/church-contacts', [
+            'name' => 'John Visitor',
+            'phone' => '555-1010',
+            'is_sda' => false,
+            'sms_consent' => false,
+            'email_consent' => true,
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['email_consent']);
     }
 }

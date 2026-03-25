@@ -13,4 +13,16 @@ export const publicApi = {
     const { data } = await apiClient.get(`/public/invitations/${code}`)
     return data
   },
+  async searchConsent(payload) {
+    const { data } = await apiClient.get('/public/consent/search', { params: payload })
+    return data
+  },
+  async getConsent(token) {
+    const { data } = await apiClient.get(`/public/consent/${token}`)
+    return data
+  },
+  async revokeConsent(token, payload) {
+    const { data } = await apiClient.post(`/public/consent/${token}/revoke`, payload)
+    return data
+  },
 }

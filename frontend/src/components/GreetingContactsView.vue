@@ -5,9 +5,14 @@
         <p class="text-uppercase small text-muted mb-1">{{ t.kicker }}</p>
         <h1 class="h3 m-0">{{ t.title }}</h1>
       </div>
-      <button class="btn btn-outline-secondary" type="button" @click="loadContacts">
-        {{ t.refresh }}
-      </button>
+      <div class="d-flex flex-wrap gap-2">
+        <button class="btn btn-outline-secondary" type="button" @click="loadContacts">
+          {{ t.refresh }}
+        </button>
+        <button class="btn btn-outline-secondary" type="button" @click="copyPublicPageLink">
+          {{ t.copyLink }}
+        </button>
+      </div>
     </div>
 
     <p class="text-muted">{{ t.subtitle }}</p>
@@ -24,6 +29,8 @@
               <th>{{ t.columns.phone }}</th>
               <th>{{ t.columns.email }}</th>
               <th>{{ t.columns.address }}</th>
+              <th>{{ t.columns.smsConsent }}</th>
+              <th>{{ t.columns.emailConsent }}</th>
               <th>{{ t.columns.member }}</th>
               <th>{{ t.columns.date }}</th>
               <th>{{ t.columns.by }}</th>
@@ -35,6 +42,8 @@
               <td>{{ contact.phone || '—' }}</td>
               <td>{{ contact.email || '—' }}</td>
               <td>{{ contact.address || '—' }}</td>
+              <td>{{ contact.phone ? (contact.sms_consent ? t.consentYes : t.consentNo) : '—' }}</td>
+              <td>{{ contact.email ? (contact.email_consent ? t.consentYes : t.consentNo) : '—' }}</td>
               <td>
                 <span class="badge" :class="contact.is_sda ? 'text-bg-success' : 'text-bg-warning'">
                   {{ contact.is_sda ? t.memberYes : t.memberNo }}
@@ -62,6 +71,8 @@
             <p class="mb-1"><strong>{{ t.columns.phone }}:</strong> {{ contact.phone || '—' }}</p>
             <p class="mb-1"><strong>{{ t.columns.email }}:</strong> {{ contact.email || '—' }}</p>
             <p class="mb-1"><strong>{{ t.columns.address }}:</strong> {{ contact.address || '—' }}</p>
+            <p class="mb-1"><strong>{{ t.columns.smsConsent }}:</strong> {{ contact.phone ? (contact.sms_consent ? t.consentYes : t.consentNo) : '—' }}</p>
+            <p class="mb-1"><strong>{{ t.columns.emailConsent }}:</strong> {{ contact.email ? (contact.email_consent ? t.consentYes : t.consentNo) : '—' }}</p>
             <p class="mb-0"><strong>{{ t.columns.by }}:</strong> {{ contact.creator?.name || '—' }}</p>
           </div>
         </div>
@@ -93,6 +104,15 @@ const loadContacts = async () => {
     error.value = t.value.loadError
   } finally {
     loading.value = false
+  }
+}
+
+const copyPublicPageLink = async () => {
+  try {
+    await navigator.clipboard.writeText(`${window.location.origin}/consent`)
+    uiStore.showToast(t.value.copySuccess, 'success')
+  } catch {
+    uiStore.showToast(t.value.copyError, 'error')
   }
 }
 

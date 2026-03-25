@@ -7,6 +7,7 @@ use App\Http\Controllers\EventController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\ObjectiveController;
 use App\Http\Controllers\PublicCatalogController;
+use App\Http\Controllers\PublicChurchContactConsentController;
 use App\Http\Controllers\PublicEventFeedController;
 use App\Http\Controllers\CalendarExportController;
 use App\Http\Controllers\ChurchContactController;
@@ -39,6 +40,9 @@ Route::prefix('auth')->group(function () {
 Route::prefix('public')->group(function () {
     Route::get('churches', [PublicCatalogController::class, 'churches']);
     Route::get('churches/{church}/departments', [PublicCatalogController::class, 'departments']);
+    Route::get('consent/search', [PublicChurchContactConsentController::class, 'search']);
+    Route::get('consent/{token}', [PublicChurchContactConsentController::class, 'show']);
+    Route::post('consent/{token}/revoke', [PublicChurchContactConsentController::class, 'revoke']);
     Route::get('churches/{church:slug}/events', [PublicEventFeedController::class, 'index']);
     Route::get('churches/{church:slug}/events.ics', [PublicEventFeedController::class, 'ics']);
     Route::get('invitations/{code}', [PublicCatalogController::class, 'invitation']);

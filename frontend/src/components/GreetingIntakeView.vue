@@ -6,6 +6,10 @@
         <h1 class="greeting-title">{{ t.title }}</h1>
         <p class="greeting-copy">{{ t.subtitle }}</p>
         <p class="greeting-shortcut">{{ t.menuHint }}</p>
+        <div class="greeting-disclaimer">
+          <strong>{{ t.disclaimerTitle }}</strong>
+          <span>{{ t.disclaimerBody }}</span>
+        </div>
       </div>
 
       <form class="greeting-form" @submit.prevent="submit">
@@ -46,6 +50,22 @@
           </label>
         </div>
 
+        <div v-if="form.phone" class="greeting-consent">
+          <label class="form-check m-0">
+            <input v-model="form.sms_consent" class="form-check-input" type="checkbox" />
+            <span class="form-check-label">{{ t.fields.smsConsent }}</span>
+          </label>
+          <div class="greeting-consent-hint">{{ t.fields.smsConsentHint }}</div>
+        </div>
+
+        <div v-if="form.email" class="greeting-consent">
+          <label class="form-check m-0">
+            <input v-model="form.email_consent" class="form-check-input" type="checkbox" />
+            <span class="form-check-label">{{ t.fields.emailConsent }}</span>
+          </label>
+          <div class="greeting-consent-hint">{{ t.fields.emailConsentHint }}</div>
+        </div>
+
         <button class="btn btn-primary btn-lg greeting-submit" type="submit" :disabled="saving">
           {{ saving ? t.saving : t.submit }}
         </button>
@@ -75,6 +95,8 @@ const form = reactive({
   email: '',
   address: '',
   is_sda: false,
+  sms_consent: false,
+  email_consent: false,
 })
 
 const resetForm = () => {
@@ -83,6 +105,8 @@ const resetForm = () => {
   form.email = ''
   form.address = ''
   form.is_sda = false
+  form.sms_consent = false
+  form.email_consent = false
 }
 
 const submit = async () => {
@@ -95,6 +119,8 @@ const submit = async () => {
       email: form.email || null,
       address: form.address || null,
       is_sda: Boolean(form.is_sda),
+      sms_consent: Boolean(form.phone && form.sms_consent),
+      email_consent: Boolean(form.email && form.email_consent),
     })
     resetForm()
     uiStore.showToast(t.value.success, 'success')
@@ -112,9 +138,7 @@ const submit = async () => {
   display: grid;
   place-items: center;
   padding: 2rem;
-  background:
-    radial-gradient(circle at top left, rgba(216, 159, 88, 0.18), transparent 28%),
-    linear-gradient(145deg, #f7f1e4 0%, #fffdf7 45%, #eef3eb 100%);
+  
 }
 
 .greeting-panel {
@@ -164,6 +188,18 @@ const submit = async () => {
   color: #425247;
 }
 
+.greeting-disclaimer {
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 0.85rem;
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  background: rgba(255, 249, 235, 0.92);
+  border: 1px solid rgba(153, 122, 58, 0.16);
+  color: #5d543d;
+  font-size: 0.95rem;
+}
+
 .greeting-form {
   display: grid;
   gap: 1rem;
@@ -196,6 +232,20 @@ const submit = async () => {
 
 .greeting-toggle-hint {
   font-size: 0.92rem;
+  color: #66746a;
+}
+
+.greeting-consent {
+  display: grid;
+  gap: 0.45rem;
+  padding: 1rem 1.1rem;
+  border-radius: 18px;
+  background: #f8faf7;
+  border: 1px solid rgba(84, 102, 90, 0.12);
+}
+
+.greeting-consent-hint {
+  font-size: 0.88rem;
   color: #66746a;
 }
 

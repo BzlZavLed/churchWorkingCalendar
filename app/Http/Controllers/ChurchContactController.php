@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ChurchContact;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class ChurchContactController extends Controller
 {
@@ -41,7 +42,21 @@ class ChurchContactController extends Controller
             'email' => ['nullable', 'email', 'max:255'],
             'address' => ['nullable', 'string', 'max:255'],
             'is_sda' => ['required', 'boolean'],
+            'sms_consent' => ['required', 'boolean'],
+            'email_consent' => ['required', 'boolean'],
         ]);
+
+        if (($data['sms_consent'] ?? false) && empty($data['phone'])) {
+            throw ValidationException::withMessages([
+                'sms_consent' => ['Phone number is required for SMS consent.'],
+            ]);
+        }
+
+        if (($data['email_consent'] ?? false) && empty($data['email'])) {
+            throw ValidationException::withMessages([
+                'email_consent' => ['Email is required for email consent.'],
+            ]);
+        }
 
         $contact = ChurchContact::create([
             'church_id' => $churchId,
@@ -52,6 +67,10 @@ class ChurchContactController extends Controller
             'email' => $data['email'] ?? null,
             'address' => $data['address'] ?? null,
             'is_sda' => $data['is_sda'],
+            'sms_consent' => $data['sms_consent'],
+            'sms_consented_at' => $data['sms_consent'] ? now() : null,
+            'email_consent' => $data['email_consent'],
+            'email_consented_at' => $data['email_consent'] ? now() : null,
         ]);
 
         return response()->json(
