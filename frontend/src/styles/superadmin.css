@@ -1566,6 +1566,8 @@ tbody td {
 
   .app-shell {
     grid-template-columns: 1fr;
+    /* Keep the navigation row content-sized even when the page is short. */
+    grid-template-rows: auto minmax(0, 1fr);
   }
 
   .app-sidebar {
@@ -1630,7 +1632,8 @@ form, .review-panel { border-radius: 8px; }
 /* The mobile navigation owns its scroll area, independent of the page. */
 body.sidebar-open { overflow: hidden; }
 @media (max-width: 1120px) {
-  .app-sidebar { position: sticky; top: 0; z-index: 1050; }
+  .app-sidebar { position: sticky; top: 0; z-index: 1050; align-self: start; }
+  .app-sidebar:not(.app-sidebar--open) .app-burger { margin-bottom: 0; }
   .app-sidebar--open {
     position: fixed;
     inset: 0;
