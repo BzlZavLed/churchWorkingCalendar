@@ -13,6 +13,8 @@
       type="button"
       :aria-label="toggleSidebarLabel"
       :title="toggleSidebarLabel"
+      :aria-expanded="isSidebarOpen || (!isCompactSidebarState && !isGreetingFocusMode && !shouldShowIconsOnly)"
+      aria-controls="app-navigation"
       @click="toggleSidebar"
     >
       <svg viewBox="0 0 24 24" class="nav-icon" aria-hidden="true">
@@ -34,6 +36,8 @@
         type="button"
         :aria-label="toggleSidebarLabel"
         :title="toggleSidebarLabel"
+      :aria-expanded="isSidebarOpen || (!isCompactSidebarState && !isGreetingFocusMode && !shouldShowIconsOnly)"
+      aria-controls="app-navigation"
         @click="toggleSidebar"
       >
         <svg viewBox="0 0 24 24" class="nav-icon" aria-hidden="true">
@@ -43,6 +47,7 @@
       <div
         v-show="!isCompactSidebarState || isSidebarOpen"
         ref="sidebarInnerRef"
+        id="app-navigation"
         class="app-sidebar-inner"
       >
         <img :src="logoUrl" alt="Logo" class="login-logo" />
@@ -165,11 +170,12 @@ const navItems = computed(() => {
   }
 
   const role = authStore.user?.role
-  const isGreetingUser = !authStore.isPlatformAdmin && Boolean(authStore.user?.department?.is_greeting)
+  const isGreetingUser = !authStore.isPlatformAdmin && authStore.user?.role !== 'secretary' && Boolean(authStore.user?.department?.is_greeting)
 
   if (isGreetingUser) {
     return [
       { to: '/greeting', label: t.value.greeting, icon: iconPaths.greeting },
+      { to: '/meeting-points', label: t.value.meetingPoints, icon: iconPaths.meetingPoints },
       { to: '/budget', label: locale.value === 'es' ? 'Presupuesto' : 'Budget', icon: iconPaths.budget },
       { to: '/greeting/contacts', label: t.value.greetingContacts, icon: iconPaths.greetingList },
     ]
@@ -195,7 +201,7 @@ const navItems = computed(() => {
 
   items.push({ to: '/budget', label: locale.value === 'es' ? 'Presupuesto' : 'Budget', icon: iconPaths.budget })
 
-  if (role === 'admin') {
+  if (['admin', 'member'].includes(role)) {
     items.push({ to: '/meeting-points', label: t.value.meetingPoints, icon: iconPaths.meetingPoints })
   }
 
@@ -257,7 +263,7 @@ const roleLabel = computed(() => {
   return t.value.roleLabels?.[role] || role
 })
 
-const isGreetingFocusMode = computed(() => !authStore.isPlatformAdmin && Boolean(authStore.user?.department?.is_greeting))
+const isGreetingFocusMode = computed(() => !authStore.isPlatformAdmin && authStore.user?.role !== 'secretary' && Boolean(authStore.user?.department?.is_greeting))
 
 const userInitials = computed(() => {
   const name = authStore.user?.name || ''
@@ -338,26 +344,24 @@ const toggleSidebar = () => {
   updateAutoIconOnly()
 }
 
-const handleNavClick = () => {
+const handleNavClick = (event) => {
+  if (!event.target.closest('a')) return
   if (isGreetingFocusMode.value || isCompactSidebar()) {
     closeSidebar()
   }
 }
 
 const handleResize = () => {
-  if (isGreetingFocusMode.value) {
-    closeSidebar()
+  const compact = isCompactSidebar()
+  const breakpointChanged = compact !== isCompactSidebarState.value
+  isCompactSidebarState.value = compact
+  // Mobile browser chrome and keyboards resize the height while scrolling.
+  // Preserve the menu unless we actually cross the responsive breakpoint.
+  if (breakpointChanged) closeSidebar()
+  if (isGreetingFocusMode.value || compact) {
     autoIconOnly.value = false
     return
   }
-
-  isCompactSidebarState.value = isCompactSidebar()
-  if (isCompactSidebarState.value) {
-    closeSidebar()
-    autoIconOnly.value = false
-    return
-  }
-  closeSidebar()
   updateAutoIconOnly()
 }
 
@@ -370,7 +374,7 @@ const handleGlobalKeydown = (event) => {
     return
   }
 
-  if (isGreetingFocusMode.value && key === 'escape' && isSidebarOpen.value) {
+  if (key === 'escape' && isSidebarOpen.value) {
     event.preventDefault()
     closeSidebar()
   }
@@ -456,6 +460,11 @@ onUnmounted(() => {
   position: fixed;
   inset: 0 auto 0 0;
   z-index: 1100;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   width: min(86vw, 320px);
   max-width: 320px;
   transform: translateX(-105%);
@@ -463,6 +472,16 @@ onUnmounted(() => {
   pointer-events: none;
   transition: transform 180ms ease, opacity 180ms ease;
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16);
+}
+
+.app-shell--greeting-focus .app-sidebar-inner {
+  position: static;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-top: 60px;
 }
 
 .app-shell--greeting-sidebar-visible .app-sidebar {

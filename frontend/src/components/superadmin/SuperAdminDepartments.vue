@@ -1,10 +1,15 @@
 <template>
-  <section class="container py-4">
-    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3">
-      <h1 class="h3 m-0">{{ t.title }}</h1>
-    </div>
+  <section class="container py-4 management-page">
+    <header class="management-heading">
+      <p class="management-eyebrow">{{ authStore.user?.church?.name || (locale === 'es' ? 'Administración' : 'Administration') }}</p>
+      <h1>{{ t.title }}</h1>
+      <p>{{ locale === 'es' ? 'Organiza los departamentos, sus responsables y sus funciones.' : 'Organize departments, their administrators and responsibilities.' }}</p>
+    </header>
+    <div class="management-summary"><article><span>{{ t.title }}</span><strong>{{ loading ? '—' : departments.length }}</strong></article>
+      <article><span>{{ locale === 'es' ? 'Con responsable' : 'With an administrator' }}</span><strong>{{ loading ? '—' : departments.filter(department => department.users?.some(user => user.role === 'admin')).length }}</strong></article>
+      <article><span>{{ locale === 'es' ? 'Usuarios vinculados' : 'Linked users' }}</span><strong>{{ loading ? '—' : departments.reduce((total, department) => total + (department.users?.length || 0), 0) }}</strong></article></div>
 
-    <div v-if="showChurchSelector" class="bg-white border rounded p-3 mb-4">
+    <div v-if="showChurchSelector" class="management-surface management-create">
       <label class="form-label">
         {{ t.church }}
         <select v-model="selectedChurchId" class="form-select" @change="loadDepartments">
@@ -18,7 +23,7 @@
 
     <form
       v-if="canCreate && selectedChurchId"
-      class="bg-white border rounded p-4 mb-4"
+      class="management-surface management-create"
       @submit.prevent="createDepartment"
     >
       <h2 class="h5 mb-3">{{ t.createTitle }}</h2>
@@ -62,20 +67,26 @@
       <button class="btn btn-primary mt-3" type="submit">{{ t.create }}</button>
     </form>
 
-    <div v-if="loading">{{ t.loading }}</div>
-    <p v-if="error" class="text-danger">{{ error }}</p>
+    <div v-if="loading" class="management-state" role="status">{{ t.loading }}</div>
+    <p v-if="error" class="management-error" role="alert">{{ error }}</p>
 
-    <div v-if="departments.length === 0 && !loading && selectedChurchId">{{ t.empty }}</div>
-    <div v-else-if="selectedChurchId" class="bg-white border rounded">
+    <div v-if="departments.length === 0 && !loading && selectedChurchId" class="management-state">{{ t.empty }}</div>
+    <div v-else-if="selectedChurchId && !loading" class="management-surface">
+      <div class="management-toolbar"><h2>{{ locale === 'es' ? 'Directorio de departamentos' : 'Department directory' }}</h2><p>{{ locale === 'es' ? 'Revisa los responsables y guarda los cambios de cada departamento.' : 'Review administrators and save changes for each department.' }}</p></div>
       <div class="table-responsive d-none d-md-block">
         <table class="table mb-0" data-dt="off">
         <thead>
           <tr>
-            <th>{{ t.columns.id }}</th>
+
             <th>{{ t.columns.name }}</th>
             <th>{{ t.columns.color }}</th>
             <th>{{ t.columns.userName }}</th>
-            <th>{{ t.columns.users }}</th>
+            <th>
+              {{ t.columns.users }}
+              <span class="column-help" tabindex="0" :aria-label="locale === 'es' ? 'Información sobre usuarios del departamento' : 'About department users'" aria-describedby="department-users-help">i
+                <span id="department-users-help" class="column-help-tooltip" role="tooltip">{{ locale === 'es' ? 'Personas asignadas al departamento que no son administradores. El responsable aparece en la columna Administrador.' : 'People assigned to this department who are not administrators. The responsible administrator appears in the Administrator column.' }}</span>
+              </span>
+            </th>
             <th>{{ t.columns.club }}</th>
             <th>{{ t.columns.greeting }}</th>
             <th>{{ locale === 'es' ? 'Tesorería' : 'Treasury' }}</th>
@@ -84,9 +95,9 @@
         </thead>
         <tbody>
           <tr v-for="department in departments" :key="department.id">
-            <td>{{ department.id }}</td>
-            <td><input v-model="department.name" class="form-control" type="text" /></td>
-            <td><input v-model="department.color" class="form-control form-control-color" type="color" /></td>
+
+            <td><input :aria-label="t.name" v-model="department.name" class="form-control" type="text" /></td>
+            <td><input :aria-label="t.color" v-model="department.color" class="form-control form-control-color" type="color" /></td>
             <td>{{ adminNameForDepartment(department) }}</td>
             <td>
               <span v-if="memberNamesForDepartment(department)">
@@ -95,10 +106,10 @@
               <span v-else>—</span>
             </td>
             <td>
-              <input v-model="department.is_club" class="form-check-input" type="checkbox" />
+              <input :aria-label="t.clubLabel" v-model="department.is_club" class="form-check-input" type="checkbox" />
             </td>
             <td>
-              <input v-model="department.is_greeting" class="form-check-input" type="checkbox" />
+              <input :aria-label="t.greetingLabel" v-model="department.is_greeting" class="form-check-input" type="checkbox" />
             </td>
             <td><input v-model="department.is_treasury" :aria-label="locale === 'es' ? 'Tesorería' : 'Treasury'" class="form-check-input" type="checkbox" /></td>
             <td class="text-end">
@@ -135,11 +146,11 @@
                 <h5 class="card-title mb-1">{{ department.name }}</h5>
                 <p class="card-subtitle text-muted mb-0">#{{ department.id }}</p>
               </div>
-              <input v-model="department.color" class="form-control form-control-color" type="color" />
+              <input :aria-label="t.color" v-model="department.color" class="form-control form-control-color" type="color" />
             </div>
             <div class="mb-2">
               <label class="form-label small mb-1">{{ t.name }}</label>
-              <input v-model="department.name" class="form-control" type="text" />
+              <input :aria-label="t.name" v-model="department.name" class="form-control" type="text" />
             </div>
             <div class="mb-2">
               <label class="form-label small mb-1">{{ t.userName }}</label>
@@ -209,6 +220,7 @@
 </template>
 
 <script setup>
+import '../../styles/clerk-management.css'
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { superAdminApi } from '../../services/superAdminApi'
 import { secretaryApi } from '../../services/secretaryApi'
@@ -431,3 +443,10 @@ watch(confirmOpen, (next) => {
   document.body.style.overflow = next ? 'hidden' : ''
 })
 </script>
+
+<style scoped>
+.column-help { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin-left: 4px; border: 1px solid #91a299; border-radius: 50%; color: #526d60; font-size: 11px; cursor: help; white-space: normal; }
+.column-help:focus-visible { outline: 2px solid #1f6f5c; outline-offset: 3px; }
+.column-help-tooltip { display: none; position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); z-index: 10; width: 240px; padding: 10px 12px; border-radius: 7px; background: #254b3d; color: #fff; font-size: 12px; font-weight: 400; line-height: 1.5; box-shadow: 0 4px 14px #0002; }
+.column-help:hover .column-help-tooltip, .column-help:focus .column-help-tooltip { display: block; }
+</style>

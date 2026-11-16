@@ -1626,3 +1626,29 @@ form, .review-panel { border-radius: 8px; }
   .app-main { padding: 24px 16px; }
   .form-control, .form-select, input:not([type="checkbox"]):not([type="radio"]), textarea, select { font-size: 1rem; }
 }
+
+/* The mobile navigation owns its scroll area, independent of the page. */
+body.sidebar-open { overflow: hidden; }
+@media (max-width: 1120px) {
+  .app-sidebar { position: sticky; top: 0; z-index: 1050; }
+  .app-sidebar--open {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding-top: max(8px, env(safe-area-inset-top));
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  .app-sidebar--open .app-burger { flex-shrink: 0; margin-bottom: 8px; }
+  .app-sidebar--open .app-sidebar-inner {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}

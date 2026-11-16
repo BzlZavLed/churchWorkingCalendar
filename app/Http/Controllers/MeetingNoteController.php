@@ -16,7 +16,7 @@ class MeetingNoteController extends Controller
     {
         $this->authorize('update', $meeting);
 
-        if (!$meeting->start_at) {
+        if (!$meeting->start_at || $meeting->end_at) {
             abort(422, 'Meeting has not started.');
         }
 

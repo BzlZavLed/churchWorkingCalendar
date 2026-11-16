@@ -91,6 +91,7 @@ Route::middleware(['auth:sanctum', 'superadmin.context'])->group(function () {
     Route::put('inventory/{inventory}', [InventoryController::class, 'update']);
     Route::delete('inventory/{inventory}', [InventoryController::class, 'destroy']);
 
+    Route::get('meeting-points/report', [MeetingPointController::class, 'report']);
     Route::get('meetings', [MeetingController::class, 'index']);
     Route::get('meetings/{meeting}', [MeetingController::class, 'show']);
     Route::post('meetings', [MeetingController::class, 'store']);

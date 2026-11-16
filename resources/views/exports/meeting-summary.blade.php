@@ -36,14 +36,20 @@
     </div>
 
     <div class="section">
+      <h2>{{ $locale === 'en' ? 'Attendance' : 'Asistencia' }}</h2>
+      @foreach(($meeting->attendance ?? []) as $person)
+        <div>{{ $person['name'] }} — {{ ($locale === 'en' ? ['present' => 'Present', 'absent' => 'Absent', 'online' => 'Online'] : ['present' => 'Presente', 'absent' => 'Ausente', 'online' => 'En línea'])[$person['status']] ?? $person['status'] }}</div>
+      @endforeach
+    </div>
+    <div class="section">
       <h2>{{ $locale === 'en' ? 'Meeting Points' : 'Puntos de junta' }}</h2>
 
       @foreach($meeting->points->sortBy('agenda_order') as $point)
         <div class="point">
           <h3>{{ $point->title }}</h3>
-          <div class="muted">{{ $point->department?->name ?? '—' }}</div>
+          <div class="muted">{{ $point->department?->name ?? ($locale === 'en' ? 'Clerk' : 'Secretaría') }}</div>
           <div class="note">{{ $point->description }}</div>
-          <div class="note"><span class="label">{{ $locale === 'en' ? 'Status' : 'Estado' }}:</span> {{ $point->final_status ?? $point->status }}</div>
+          <div class="note"><span class="label">{{ $locale === 'en' ? 'Status' : 'Estado' }}:</span> {{ ($locale === 'en' ? ['approved' => 'Accepted', 'denied' => 'Rejected', 'postponed' => 'Deferred to next meeting', 'needs_update' => 'Updates requested', 'informative' => 'Informative'] : ['approved' => 'Aceptado', 'denied' => 'Rechazado', 'postponed' => 'Próxima junta', 'needs_update' => 'Actualización solicitada', 'informative' => 'Informativo'])[$point->final_status] ?? $point->final_status }}</div>
           @if($point->review_note)
             <div class="note"><span class="label">{{ $locale === 'en' ? 'Review note' : 'Nota de revision' }}:</span> {{ $point->review_note }}</div>
           @endif
@@ -62,7 +68,7 @@
 
     <div class="section">
       <h2>{{ $locale === 'en' ? 'General Summary' : 'Resumen general' }}</h2>
-      <div class="note">{{ $meeting->summary_text ?? '' }}</div>
+      <div class="note">{!! nl2br(e($meeting->summary_text ?: $meeting->summary_generated)) !!}</div>
     </div>
 
     <div class="section">

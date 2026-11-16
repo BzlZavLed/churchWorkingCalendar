@@ -14,6 +14,22 @@ class ChurchContactTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_clerk_can_register_visitors_only_for_own_church(): void
+    {
+        $church = Church::create(['name' => 'Main']);
+        $other = Church::create(['name' => 'Other']);
+        $clerk = User::factory()->create(['role' => User::ROLE_SECRETARY, 'church_id' => $church->id, 'department_id' => null]);
+        Sanctum::actingAs($clerk);
+        $this->postJson('/api/church-contacts', [
+            'name' => 'Visitor', 'church_id' => $other->id,
+            'is_sda' => false, 'sms_consent' => false, 'email_consent' => false,
+        ])->assertCreated()->assertJsonPath('church_id', $church->id)->assertJsonPath('created_by', $clerk->id);
+        $this->assertDatabaseMissing('church_contacts', ['church_id' => $other->id]);
+        $this->postJson('/api/church-contacts', [
+            'name' => 'Visitor', 'is_sda' => false, 'sms_consent' => true, 'email_consent' => false,
+        ])->assertUnprocessable();
+    }
+
     public function test_greeting_department_user_can_create_contact(): void
     {
         $church = Church::create(['name' => 'Main Church']);

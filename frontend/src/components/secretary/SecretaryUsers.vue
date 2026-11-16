@@ -1,15 +1,20 @@
 <template>
-  <section class="container py-4">
-    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3">
-      <h1 class="h3 m-0">{{ t.title }}</h1>
-    </div>
+  <section class="container py-4 management-page">
+    <header class="management-heading">
+      <p class="management-eyebrow">{{ authStore.user?.church?.name || (locale === 'es' ? 'Administración' : 'Administration') }}</p>
+      <h1>{{ t.title }}</h1>
+      <p>{{ locale === 'es' ? 'Administra los usuarios, sus roles y su departamento.' : 'Manage users, their roles and department.' }}</p>
+    </header>
+    <div class="management-summary"><article><span>{{ t.title }}</span><strong>{{ loading ? '—' : users.length }}</strong></article>
+      <article><span>{{ locale === 'es' ? 'Con departamento' : 'Assigned to a department' }}</span><strong>{{ loading ? '—' : users.filter(user => user.department_id).length }}</strong></article>
+      <article><span>{{ locale === 'es' ? 'Administradores' : 'Administrators' }}</span><strong>{{ loading ? '—' : users.filter(user => user.role === 'admin').length }}</strong></article></div>
 
-    <div v-if="loading">{{ t.loading }}</div>
-    <p v-if="error" class="text-danger">{{ error }}</p>
+    <div v-if="loading" class="management-state" role="status">{{ t.loading }}</div>
+    <p v-if="error" class="management-error" role="alert">{{ error }}</p>
 
-    <div v-if="users.length === 0 && !loading">{{ t.empty }}</div>
-    <div v-else class="bg-white border rounded p-3">
-      <div class="row g-2 align-items-center mb-3">
+    <div v-if="users.length === 0 && !loading" class="management-state">{{ t.empty }}</div>
+    <div v-else-if="!loading" class="management-surface">
+      <div class="row g-2 align-items-center m-0 management-toolbar">
         <div class="col-12 col-md-6">
           <label class="form-label mb-0 w-100">
             <span class="d-block small mb-1">{{ t.search }}</span>
@@ -22,7 +27,7 @@
         <table class="table table-sm align-middle mb-0" data-dt="off">
           <thead>
             <tr>
-              <th>{{ t.columns.id }}</th>
+
               <th>{{ t.columns.name }}</th>
               <th>{{ t.columns.email }}</th>
               <th>{{ t.columns.role }}</th>
@@ -33,23 +38,23 @@
           </thead>
           <tbody>
             <tr v-for="user in filteredUsers" :key="user.id">
-              <td>{{ user.id }}</td>
+
               <td>
                 <div class="d-flex align-items-center gap-2">
-                  <input v-model="user.name" class="form-control" type="text" />
+                  <input v-model="user.name" :aria-label="t.name" class="form-control" type="text" />
                   <span v-if="user.id === currentUserId" class="badge bg-info text-dark">{{ common.loggedIn }}</span>
                 </div>
               </td>
-              <td><input v-model="user.email" class="form-control" type="email" /></td>
+              <td><input v-model="user.email" :aria-label="t.email" class="form-control" type="email" /></td>
               <td>
-                <select v-model="user.role" class="form-select">
+                <select :aria-label="t.role" v-model="user.role" class="form-select">
                   <option value="admin">{{ roleLabels.admin }}</option>
                   <option value="member">{{ roleLabels.member }}</option>
                   <option value="secretary">{{ roleLabels.secretary }}</option>
                 </select>
               </td>
               <td>
-                <select v-model="user.department_id" class="form-select">
+                <select :aria-label="t.department" v-model="user.department_id" class="form-select">
                   <option value="">{{ common.select }}</option>
                   <option v-for="department in departments" :key="department.id" :value="department.id">
                     {{ department.name }}
@@ -69,7 +74,7 @@
         </table>
       </div>
 
-      <div class="d-md-none">
+      <div class="d-md-none p-3">
         <div v-for="user in filteredUsers" :key="user.id" class="card mb-3">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-start mb-2">
@@ -84,15 +89,15 @@
             </div>
             <div class="mb-2">
               <label class="form-label small mb-1">{{ t.email }}</label>
-              <input v-model="user.email" class="form-control" type="email" />
+              <input v-model="user.email" :aria-label="t.email" class="form-control" type="email" />
             </div>
             <div class="mb-2">
               <label class="form-label small mb-1">{{ t.name }}</label>
-              <input v-model="user.name" class="form-control" type="text" />
+              <input v-model="user.name" :aria-label="t.name" class="form-control" type="text" />
             </div>
             <div class="mb-2">
               <label class="form-label small mb-1">{{ t.role }}</label>
-              <select v-model="user.role" class="form-select">
+              <select :aria-label="t.role" v-model="user.role" class="form-select">
                 <option value="admin">{{ roleLabels.admin }}</option>
                 <option value="member">{{ roleLabels.member }}</option>
                 <option value="secretary">{{ roleLabels.secretary }}</option>
@@ -100,7 +105,7 @@
             </div>
             <div class="mb-3">
               <label class="form-label small mb-1">{{ t.department }}</label>
-              <select v-model="user.department_id" class="form-select">
+              <select :aria-label="t.department" v-model="user.department_id" class="form-select">
                 <option value="">{{ common.select }}</option>
                 <option v-for="department in departments" :key="department.id" :value="department.id">
                   {{ department.name }}
@@ -120,6 +125,7 @@
       </div>
     </div>
 
+    <p v-if="!loading && users.length && !filteredUsers.length" class="management-state">{{ locale === 'es' ? 'No hay usuarios que coincidan con la búsqueda.' : 'No users match your search.' }}</p>
     <div v-if="passwordModalOpen && activeUser" class="modal-backdrop" @click.self="closePasswordModal">
       <div class="modal-panel">
         <header class="modal-header">
@@ -167,6 +173,7 @@
 </template>
 
 <script setup>
+import '../../styles/clerk-management.css'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { secretaryApi } from '../../services/secretaryApi'
 import { useAuthStore } from '../../stores/authStore'

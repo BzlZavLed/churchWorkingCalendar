@@ -61,7 +61,7 @@ router.beforeEach(async (to) => {
 
   if (to.path.startsWith('/superadmin/') && !to.meta.noLayout && authStore.isPlatformAdmin) authStore.exitContext()
 
-  const isGreetingUser = !authStore.isPlatformAdmin && Boolean(authStore.user?.department?.is_greeting)
+  const isGreetingUser = !authStore.isPlatformAdmin && authStore.user?.role !== 'secretary' && Boolean(authStore.user?.department?.is_greeting)
   const isContactsAllowed = ['admin', 'secretary', 'superadmin'].includes(authStore.user?.role || '') || isGreetingUser
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
@@ -88,7 +88,7 @@ router.beforeEach(async (to) => {
     return '/calendar'
   }
 
-  if (to.meta.greetingOnly && !isGreetingUser) {
+  if (to.meta.greetingOnly && !isGreetingUser && authStore.user?.role !== 'secretary') {
     return getDefaultRouteForUser(authStore.user)
   }
 
@@ -96,7 +96,7 @@ router.beforeEach(async (to) => {
     return getDefaultRouteForUser(authStore.user)
   }
 
-  if (authStore.isAuthenticated && isGreetingUser && !to.meta.noLayout && !['/greeting', '/greeting/contacts', '/budget'].includes(to.path)) {
+  if (authStore.isAuthenticated && isGreetingUser && !to.meta.noLayout && !['/greeting', '/greeting/contacts', '/budget', '/meeting-points'].includes(to.path)) {
     return '/greeting'
   }
 

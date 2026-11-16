@@ -14,12 +14,12 @@ class MeetingPointPolicy
 
     public function create(User $user): bool
     {
-        return $user->isAdmin() && $user->department_id !== null;
+        return $user->isSecretary() || $user->isSuperAdmin() || ($user->isAdmin() && $user->department_id !== null);
     }
 
     public function update(User $user, MeetingPoint $point): bool
     {
-        return $user->isAdmin() && $user->department_id === $point->department_id;
+        return ($point->department_id === null && $this->review($user, $point)) || ($user->isAdmin() && $user->department_id === $point->department_id && $user->church_id === $point->meeting?->church_id);
     }
 
     public function review(User $user, MeetingPoint $point): bool

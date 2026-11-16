@@ -23,6 +23,8 @@ class MeetingPoint extends Model
     public const FINAL_NEEDS_UPDATE = 'needs_update';
 
     protected $fillable = [
+        'revision',
+        'history',
         'meeting_id',
         'department_id',
         'related_meeting_point_id',
@@ -44,11 +46,25 @@ class MeetingPoint extends Model
     ];
 
     protected $casts = [
+        'revision' => 'array',
+        'history' => 'array',
         'reviewed_at' => 'datetime',
         'finalized_at' => 'datetime',
         'active_at' => 'datetime',
         'resubmitted_at' => 'datetime',
     ];
+
+    public function continuations(): HasMany
+    {
+        return $this->hasMany(self::class, 'related_meeting_point_id');
+    }
+
+    public function recordHistory(string $action, User $actor, ?string $note = null): void
+    {
+        $history = $this->history ?? [];
+        $history[] = ['action' => $action, 'actor_id' => $actor->id, 'actor_name' => $actor->name, 'at' => now()->toIso8601String(), 'note' => $note];
+        $this->update(['history' => $history]);
+    }
 
     public function meeting(): BelongsTo
     {

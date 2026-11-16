@@ -1,11 +1,15 @@
 <template>
   <section class="greeting-shell">
     <div class="greeting-panel">
+      <nav class="visits-tabs" :aria-label="locale === 'es' ? 'Vistas de visitas' : 'Visitor views'">
+        <RouterLink to="/greeting/contacts">{{ locale === 'es' ? 'Visitas' : 'Visitors' }}</RouterLink>
+        <RouterLink to="/greeting" aria-current="page">{{ locale === 'es' ? 'Bienvenida · Registrar visita' : 'Welcome · Register visitor' }}</RouterLink>
+      </nav>
       <div class="greeting-header">
         <p class="greeting-kicker">{{ t.kicker }}</p>
         <h1 class="greeting-title">{{ t.title }}</h1>
         <p class="greeting-copy">{{ t.subtitle }}</p>
-        <p class="greeting-shortcut">{{ t.menuHint }}</p>
+        <p v-if="!auth.isPlatformAdmin && auth.user?.department?.is_greeting" class="greeting-shortcut">{{ t.menuHint }}</p>
         <div class="greeting-disclaimer">
           <strong>{{ t.disclaimerTitle }}</strong>
           <span>{{ t.disclaimerBody }}</span>
@@ -16,24 +20,24 @@
         <div class="greeting-grid">
           <label class="form-label greeting-grid-span-2">
             {{ t.fields.name }}
-            <input v-model="form.name" class="form-control form-control-lg" type="text" required />
+            <input v-model="form.name" class="form-control" type="text" required />
           </label>
 
           <label class="form-label">
             {{ t.fields.phone }}
-            <input v-model="form.phone" class="form-control form-control-lg" type="tel" />
+            <input v-model="form.phone" class="form-control" type="tel" />
           </label>
 
           <label class="form-label">
             {{ t.fields.email }}
-            <input v-model="form.email" class="form-control form-control-lg" type="email" />
+            <input v-model="form.email" class="form-control" type="email" />
           </label>
 
           <label class="form-label greeting-grid-span-2">
             {{ t.fields.address }}
             <input
               v-model="form.address"
-              class="form-control form-control-lg"
+              class="form-control"
               type="text"
               :placeholder="t.fields.addressHint"
             />
@@ -46,7 +50,7 @@
             <div class="greeting-toggle-hint">{{ t.fields.isSdaHint }}</div>
           </div>
           <label class="form-check form-switch m-0">
-            <input v-model="form.is_sda" class="form-check-input" type="checkbox" />
+            <input v-model="form.is_sda" :aria-label="t.fields.isSda" class="form-check-input" type="checkbox" />
           </label>
         </div>
 
@@ -66,7 +70,7 @@
           <div class="greeting-consent-hint">{{ t.fields.emailConsentHint }}</div>
         </div>
 
-        <button class="btn btn-primary btn-lg greeting-submit" type="submit" :disabled="saving">
+        <button class="btn btn-primary greeting-submit" type="submit" :disabled="saving">
           {{ saving ? t.saving : t.submit }}
         </button>
       </form>
@@ -77,12 +81,15 @@
 </template>
 
 <script setup>
+import '../styles/visits.css'
+import { useAuthStore } from '../stores/authStore'
 import { computed, reactive, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { churchContactsApi } from '../services/churchContactsApi'
 import { useUiStore } from '../stores/uiStore'
 import { translations } from '../i18n/translations'
 
+const auth = useAuthStore()
 const uiStore = useUiStore()
 const { locale } = storeToRefs(uiStore)
 const t = computed(() => translations[locale.value].greeting.intake)
@@ -110,6 +117,7 @@ const resetForm = () => {
 }
 
 const submit = async () => {
+  if (saving.value) return
   error.value = ''
   saving.value = true
   try {
@@ -143,20 +151,21 @@ const submit = async () => {
 
 .greeting-panel {
   width: min(100%, 920px);
-  padding: 2.25rem;
-  border-radius: 28px;
+  padding: 24px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(54, 73, 53, 0.08);
-  box-shadow: 0 30px 70px rgba(73, 59, 34, 0.12);
+  box-shadow: none;
 }
 
 .greeting-header {
+  margin-top: 22px;
   margin-bottom: 1.5rem;
 }
 
 .greeting-kicker {
   margin: 0 0 0.5rem;
-  font-size: 0.85rem;
+  font-size: 12px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: #7b6441;
@@ -164,14 +173,15 @@ const submit = async () => {
 
 .greeting-title {
   margin: 0;
-  font-size: clamp(2rem, 4vw, 3rem);
+  font-size: 22px;
+  font-weight: 500;
   line-height: 1;
   color: #243126;
 }
 
 .greeting-copy {
   margin: 0.75rem 0 0;
-  font-size: 1.05rem;
+  font-size: 13px;
   color: #55645a;
 }
 
@@ -183,8 +193,8 @@ const submit = async () => {
   border-radius: 999px;
   background: #eef3eb;
   border: 1px solid rgba(54, 73, 53, 0.12);
-  font-size: 0.88rem;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
   color: #425247;
 }
 
@@ -193,14 +203,15 @@ const submit = async () => {
   gap: 0.25rem;
   margin-top: 0.85rem;
   padding: 0.9rem 1rem;
-  border-radius: 18px;
+  border-radius: 8px;
   background: rgba(255, 249, 235, 0.92);
   border: 1px solid rgba(153, 122, 58, 0.16);
   color: #5d543d;
-  font-size: 0.95rem;
+  font-size: 12px;
 }
 
 .greeting-form {
+  font-size: 13px;
   display: grid;
   gap: 1rem;
 }
@@ -221,17 +232,17 @@ const submit = async () => {
   justify-content: space-between;
   gap: 1rem;
   padding: 1rem 1.1rem;
-  border-radius: 18px;
+  border-radius: 8px;
   background: #f6f4ee;
 }
 
 .greeting-toggle-label {
-  font-weight: 600;
+  font-weight: 500;
   color: #243126;
 }
 
 .greeting-toggle-hint {
-  font-size: 0.92rem;
+  font-size: 12px;
   color: #66746a;
 }
 
@@ -239,17 +250,19 @@ const submit = async () => {
   display: grid;
   gap: 0.45rem;
   padding: 1rem 1.1rem;
-  border-radius: 18px;
+  border-radius: 8px;
   background: #f8faf7;
   border: 1px solid rgba(84, 102, 90, 0.12);
 }
 
 .greeting-consent-hint {
-  font-size: 0.88rem;
+  font-size: 12px;
   color: #66746a;
 }
 
 .greeting-submit {
+  background: #1f6f5c;
+  border-color: #1f6f5c;
   margin-top: 0.5rem;
 }
 
@@ -260,7 +273,7 @@ const submit = async () => {
 
   .greeting-panel {
     padding: 1.25rem;
-    border-radius: 22px;
+    border-radius: 10px;
   }
 
   .greeting-grid {

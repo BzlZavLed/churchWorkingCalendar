@@ -85,7 +85,7 @@ class ChurchContactController extends Controller
             return false;
         }
 
-        return (bool) $user->department?->is_greeting;
+        return $user->isSecretary() || (bool) $user->department?->is_greeting;
     }
 
     private function canManageContacts(?User $user): bool

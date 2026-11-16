@@ -18,11 +18,11 @@ class MeetingSummaryExportController extends Controller
         $user = $request->user();
         $canManage = $user->isSuperAdmin() || $user->isSecretary();
 
-        if (!$canManage && !$meeting->summary_public) {
+        if (!$meeting->end_at || (!$canManage && !$meeting->summary_public)) {
             abort(403, 'Summary is not public.');
         }
 
-        $meeting->load(['church', 'points.department', 'points.notes.author', 'opener', 'meetingNotes.author']);
+        $meeting->load(['church', 'points' => fn ($q) => $q->where('status', 'accepted')->with('department'), 'points.notes.author', 'opener', 'meetingNotes.author']);
 
         $pdf = Pdf::loadView('exports.meeting-summary', [
             'meeting' => $meeting,

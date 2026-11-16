@@ -13,6 +13,7 @@ class Meeting extends Model
     use HasFactory;
 
     protected $fillable = [
+        'attendance',
         'church_id',
         'meeting_date',
         'planned_start_at',
@@ -32,6 +33,7 @@ class Meeting extends Model
     ];
 
     protected $casts = [
+        'attendance' => 'array',
         'meeting_date' => 'date',
         'planned_start_at' => 'datetime',
         'start_at' => 'datetime',

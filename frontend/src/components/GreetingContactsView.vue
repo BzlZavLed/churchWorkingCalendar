@@ -1,9 +1,9 @@
 <template>
-  <section class="container py-4">
-    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3">
+  <section class="container py-4 management-page visits-page">
+    <div class="management-heading d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
       <div>
-        <p class="text-uppercase small text-muted mb-1">{{ t.kicker }}</p>
-        <h1 class="h3 m-0">{{ t.title }}</h1>
+        <p class="management-eyebrow">{{ t.kicker }}</p>
+        <h1 >{{ t.title }}</h1>
       </div>
       <div class="d-flex flex-wrap gap-2">
         <button class="btn btn-outline-secondary" type="button" @click="loadContacts">
@@ -15,12 +15,22 @@
       </div>
     </div>
 
-    <p class="text-muted">{{ t.subtitle }}</p>
-    <div v-if="loading">{{ t.loading }}</div>
-    <p v-if="error" class="text-danger">{{ error }}</p>
-    <div v-if="!loading && contacts.length === 0" class="text-muted">{{ t.empty }}</div>
+    <p class="text-muted mb-0">{{ t.subtitle }}</p>
+    <nav v-if="canGreet" class="visits-tabs" :aria-label="locale === 'es' ? 'Vistas de visitas' : 'Visitor views'">
+      <RouterLink to="/greeting/contacts" aria-current="page">{{ locale === 'es' ? 'Visitas' : 'Visitors' }}</RouterLink>
+      <RouterLink to="/greeting">{{ locale === 'es' ? 'Bienvenida · Registrar visita' : 'Welcome · Register visitor' }}</RouterLink>
+    </nav>
+    <div class="management-summary">
+      <article><span>{{ locale === 'es' ? 'Registros' : 'Records' }}</span><strong>{{ loading ? '—' : contacts.length }}</strong></article>
+      <article><span>{{ locale === 'es' ? 'Autorizan SMS' : 'SMS consent' }}</span><strong>{{ loading ? '—' : contacts.filter(c => c.phone && c.sms_consent).length }}</strong></article>
+      <article><span>{{ locale === 'es' ? 'Autorizan correo' : 'Email consent' }}</span><strong>{{ loading ? '—' : contacts.filter(c => c.email && c.email_consent).length }}</strong></article>
+    </div>
+    <div class="management-toolbar visits-search"><label class="form-label mb-0">{{ locale === 'es' ? 'Buscar visitas' : 'Search visitors' }}<input v-model="search" type="search" class="form-control mt-2" :placeholder="locale === 'es' ? 'Nombre, teléfono o correo' : 'Name, phone or email'" /></label></div>
+    <div v-if="loading" class="management-state" role="status">{{ t.loading }}</div>
+    <p v-if="error" class="management-error" role="alert">{{ error }}</p>
+    <div v-else-if="filteredContacts.length === 0" class="management-state">{{ t.empty }}</div>
 
-    <div v-else class="bg-white border rounded p-3">
+    <div v-else class="management-surface">
       <div class="table-responsive d-none d-md-block">
         <table class="table table-sm align-middle mb-0" data-dt="off">
           <thead>
@@ -38,7 +48,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="contact in contacts" :key="contact.id">
+            <tr v-for="contact in filteredContacts" :key="contact.id">
               <td>{{ contact.name }}</td>
               <td>{{ contact.phone || '—' }}</td>
               <td>{{ contact.email || '—' }}</td>
@@ -62,8 +72,8 @@
         </table>
       </div>
 
-      <div class="d-md-none">
-        <div v-for="contact in contacts" :key="contact.id" class="card mb-3">
+      <div class="d-md-none p-3">
+        <div v-for="contact in filteredContacts" :key="contact.id" class="card mb-3">
           <div class="card-body">
             <div class="d-flex justify-content-between gap-3 mb-2">
               <div>
@@ -93,6 +103,9 @@
 </template>
 
 <script setup>
+import '../styles/clerk-management.css'
+import '../styles/visits.css'
+import { useAuthStore } from '../stores/authStore'
 import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { churchContactsApi } from '../services/churchContactsApi'
@@ -102,7 +115,11 @@ import { translations } from '../i18n/translations'
 const uiStore = useUiStore()
 const { locale } = storeToRefs(uiStore)
 const t = computed(() => translations[locale.value].greeting.contacts)
+const auth = useAuthStore()
+const canGreet = computed(() => auth.user?.role === 'secretary' || (!auth.isPlatformAdmin && !!auth.user?.department?.is_greeting))
+const search = ref('')
 const contacts = ref([])
+const filteredContacts = computed(() => contacts.value.filter(c => [c.name, c.phone, c.email].join(' ').toLowerCase().includes(search.value.trim().toLowerCase())))
 const loading = ref(false)
 const error = ref('')
 

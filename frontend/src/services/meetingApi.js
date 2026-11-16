@@ -1,6 +1,7 @@
 import { apiClient } from './authApi'
 
 export const meetingApi = {
+  async report() { return (await apiClient.get('/meeting-points/report')).data },
   async listMeetings(params = {}) {
     const { data } = await apiClient.get('/meetings', { params })
     return data
@@ -25,8 +26,8 @@ export const meetingApi = {
     const { data } = await apiClient.post(`/meetings/${id}/start`)
     return data
   },
-  async adjournMeeting(id) {
-    const { data } = await apiClient.post(`/meetings/${id}/adjourn`)
+  async adjournMeeting(id, locale = 'es') {
+    const { data } = await apiClient.post(`/meetings/${id}/adjourn`, { locale })
     return data
   },
   async listMeetingPoints(meetingId, params = {}) {
