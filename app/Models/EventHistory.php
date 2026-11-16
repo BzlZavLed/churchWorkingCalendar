@@ -10,6 +10,18 @@ class EventHistory extends Model
 {
     use HasFactory;
 
+    protected $with = ['eventNote'];
+
+    public function eventNote(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(EventNote::class, 'event_history_id');
+    }
+
+    public function getNoteAttribute($legacy): ?string
+    {
+        return $this->eventNote?->note ?? $legacy;
+    }
+
     protected $fillable = [
         'event_id',
         'user_id',

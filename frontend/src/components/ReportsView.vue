@@ -1,17 +1,23 @@
 <template>
-  <section class="container py-4">
-    <div class="row g-2 align-items-center mb-3">
-      <div class="col-12 col-md-6">
-        <h1 class="h3 m-0">{{ t.title }}</h1>
+  <section class="reports-page">
+    <header class="reports-header">
+      <div>
+        <p class="reports-eyebrow">{{ authStore.user?.church?.name || (locale === 'es' ? 'Administración de iglesia' : 'Church administration') }}</p>
+        <h1>{{ t.title }}</h1>
+        <p class="reports-intro">{{ locale === 'es' ? 'Consulta el avance de los eventos, sus objetivos y las conversaciones de tu equipo.' : 'Review event progress, objectives, and your team’s conversations.' }}</p>
       </div>
-      <div class="col-12 col-md-6"></div>
-    </div>
+      <div class="reports-scope">
+        <span>{{ locale === 'es' ? 'Eventos del año' : 'Event year' }}</span>
+        <strong>{{ reportYear }}</strong>
+        <span>{{ canChooseDepartment ? (locale === 'es' ? 'Todos los departamentos disponibles' : 'All available departments') : authStore.user?.department?.name }}</span>
+      </div>
+    </header>
 
-    <div class="review-tabs d-flex flex-wrap gap-2 mb-3">
+    <div class="reports-tabs" :aria-label="locale === 'es' ? 'Tipo de reporte' : 'Report type'">
       <button
         v-if="!showNotesTab"
         type="button"
-        class="review-tab"
+        class="report-tab" :aria-pressed="activeTab === 'objectives'"
         :class="{ active: activeTab === 'objectives' }"
         @click="activeTab = 'objectives'"
       >
@@ -20,7 +26,7 @@
       <button
         v-if="showNotesTab"
         type="button"
-        class="review-tab"
+        class="report-tab" :aria-pressed="activeTab === 'notes'"
         :class="{ active: activeTab === 'notes' }"
         @click="activeTab = 'notes'"
       >
@@ -28,7 +34,7 @@
       </button>
       <button
         type="button"
-        class="review-tab"
+        class="report-tab" :aria-pressed="activeTab === 'events'"
         :class="{ active: activeTab === 'events' }"
         @click="activeTab = 'events'"
       >
@@ -36,8 +42,14 @@
       </button>
     </div>
 
-    <div v-if="activeTab === 'objectives' && !showNotesTab" class="bg-white border rounded p-4">
-      <div class="row g-3 mb-3">
+    <div class="report-summary" aria-live="polite">
+      <div v-for="stat in reportStats" :key="stat.label" class="report-stat">
+        <span>{{ stat.label }}</span><strong>{{ reportLoading ? '…' : reportReady ? stat.value : '—' }}</strong>
+      </div>
+    </div>
+
+    <div v-if="activeTab === 'objectives' && !showNotesTab" class="report-surface">
+      <div class="report-filters row g-3">
         <div class="col-12 col-md-6">
           <label v-if="canChooseDepartment" class="form-label">
             {{ t.labels.department }}
@@ -67,8 +79,8 @@
             <span>{{ t.labels.includeEvents }}</span>
           </label>
         </div>
-        <div class="col-12 d-flex flex-wrap gap-2">
-          <button type="button" class="btn btn-outline-secondary w-auto" @click="searchObjectives">
+        <div class="report-toolbar col-12 d-flex flex-wrap gap-2">
+          <button type="button" class="btn btn-primary w-auto" :disabled="objectivesLoading" @click="searchObjectives">
             {{ t.labels.search }}
           </button>
           <button
@@ -90,11 +102,11 @@
         </div>
       </div>
 
-      <div v-if="objectivesLoading">{{ t.messages.loadingObjectives }}</div>
-      <p v-if="objectivesError" class="text-danger">{{ objectivesError }}</p>
+      <div v-if="objectivesLoading" class="report-empty" role="status">{{ t.messages.loadingObjectives }}</div>
+      <p v-if="objectivesError" class="report-error" role="alert">{{ objectivesError }}</p>
 
-      <div v-if="!objectivesLoaded && !objectivesLoading">{{ t.messages.searchToLoad }}</div>
-      <div v-else-if="filteredObjectives.length === 0 && !objectivesLoading">{{ t.messages.noObjectives }}</div>
+      <div v-if="!objectivesLoaded && !objectivesLoading" class="report-empty">{{ t.messages.searchToLoad }}</div>
+      <div v-else-if="filteredObjectives.length === 0 && !objectivesLoading" class="report-empty">{{ t.messages.noObjectives }}</div>
       <div v-else class="table-responsive">
         <table class="table mb-0 main-table" data-dt="off">
           <thead>
@@ -166,7 +178,7 @@
                         <td>{{ formatDate(event.start_at) }}</td>
                         <td>{{ formatTime(event) }}</td>
                         <td>{{ event.location || '—' }}</td>
-                        <td>{{ event.title }}</td>
+                        <td><button type="button" class="report-event-link" @click="openNoteEvent(event)">{{ event.title }}</button></td>
                         <td>{{ statusLabel(event.review_status) }}</td>
                         <td>{{ formatDate(event.accepted_at) }}</td>
                       </tr>
@@ -183,73 +195,46 @@
       </div>
     </div>
 
-    <div v-else-if="activeTab === 'notes' && showNotesTab" class="bg-white border rounded p-4">
-      <div v-if="notesLoading">{{ t.messages.loadingNotes }}</div>
-      <p v-if="notesError" class="text-danger">{{ notesError }}</p>
-
-      <div v-if="notesLoaded && notesByEvent.length === 0" class="text-muted">
-        {{ t.messages.noNotes }}
+    <div v-else-if="activeTab === 'notes' && showNotesTab" class="report-surface">
+      <div class="notes-report-heading">
+        <div><h2>{{ t.tabs.notes }}</h2><p>{{ locale === 'es' ? 'Una conversación por evento. Abre el historial para consultar notas anteriores.' : 'One conversation per event. Expand the history to read earlier notes.' }}</p></div>
+        <div class="d-flex flex-wrap gap-2">
+          <button type="button" class="btn btn-outline-secondary w-auto" :disabled="notesLoading" @click="fetchNotes">{{ locale === 'es' ? 'Actualizar' : 'Refresh' }}</button>
+          <button type="button" class="btn btn-outline-secondary w-auto" :disabled="notesLoading || !!notesError || !notesByEvent.length" @click="exportNotes">{{ t.labels.exportCsv }}</button>
+          <button type="button" class="btn btn-outline-secondary w-auto" :disabled="notesLoading || !!notesError || !notesByEvent.length" @click="exportNotesPdf">{{ t.labels.exportPdf }}</button>
+        </div>
       </div>
-
-      <div v-else-if="notesByEvent.length" class="table-responsive">
-        <table class="table mb-0 main-table" data-dt="off">
-          <thead>
-            <tr>
-              <th>{{ t.columns.event }}</th>
-              <th>{{ t.columns.finalStatus }}</th>
-              <th>{{ t.columns.date }}</th>
-              <th>{{ t.columns.time }}</th>
-              <th>{{ t.columns.note }}</th>
-              <th>{{ t.columns.author }}</th>
-              <th>{{ t.columns.actions }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <template v-for="group in notesByEvent" :key="group.event.id">
-              <tr>
-                <td>{{ group.event.title || '—' }}</td>
-                <td>{{ finalOutcomeLabel(group.event) }}</td>
-                <td>{{ formatDate(group.event.start_at) }}</td>
-                <td>{{ formatTime(group.event) }}</td>
-                <td>—</td>
-                <td>—</td>
-                <td class="notes-actions">
-                  <button
-                    type="button"
-                    class="btn btn-outline-secondary btn-sm"
-                    @click="toggleNotesForEvent(group.event.id)"
-                  >
-                    {{ isNotesExpanded(group.event.id) ? t.labels.hideNotes : t.labels.viewNotes }}
-                  </button>
-                  <button type="button" class="btn btn-outline-secondary btn-sm" @click="openNoteEvent(group.event)">
-                    {{ t.labels.viewDetails }}
-                  </button>
-                </td>
-              </tr>
-              <template v-if="isNotesExpanded(group.event.id)">
-                <tr
-                  v-for="note in group.notes"
-                  :key="note.id"
-                  class="child-row note-row"
-                  :class="noteRowClass(note)"
-                >
-                  <td>—</td>
-                  <td>—</td>
-                  <td>{{ formatDate(note.created_at) }}</td>
-                  <td>{{ formatNoteTime(note.created_at) }}</td>
-                  <td>{{ note.note }}</td>
-                  <td>{{ note.author?.name || '—' }}</td>
-                  <td></td>
-                </tr>
-              </template>
-            </template>
-          </tbody>
-        </table>
+      <div v-if="notesLoading" class="report-empty" role="status">{{ t.messages.loadingNotes }}</div>
+      <p v-if="notesError" class="report-error" role="alert">{{ notesError }}</p>
+      <div v-if="notesLoaded && !notesLoading && notesByEvent.length === 0" class="report-empty">{{ t.messages.noNotes }}</div>
+      <div v-else-if="!notesLoading" class="notes-report-list">
+        <article v-for="group in notesByEvent" :key="group.event.id" class="note-report-card">
+          <div class="note-report-top">
+            <div><h3>{{ group.event.title || '—' }}</h3><p>{{ formatDate(group.event.start_at) }} · {{ formatTime(group.event) }}</p></div>
+            <span class="report-status" :class="statusClass(group.event.review_status)">{{ statusLabel(group.event.review_status) }}</span>
+          </div>
+          <div class="note-preview">
+            <span>{{ locale === 'es' ? 'Última nota' : 'Latest note' }} · {{ group.notes[group.notes.length - 1].author?.name || '—' }} · {{ formatDate(group.notes[group.notes.length - 1].created_at) }}</span>
+            <p>{{ group.notes[group.notes.length - 1].note }}</p>
+          </div>
+          <div class="note-report-actions">
+            <button type="button" class="btn btn-outline-secondary w-auto" :aria-expanded="isNotesExpanded(group.event.id)" @click="toggleNotesForEvent(group.event.id)">
+              {{ isNotesExpanded(group.event.id) ? t.labels.hideNotes : t.labels.viewNotes }} <span class="note-total">{{ group.notes.length }}</span>
+            </button>
+            <button type="button" class="report-detail-link" @click="openNoteEvent(group.event)">{{ t.labels.viewDetails }} →</button>
+          </div>
+          <ol v-if="isNotesExpanded(group.event.id)" class="report-conversation">
+            <li v-for="note in group.notes" :key="note.id">
+              <div><strong>{{ note.author?.name || '—' }}</strong><time :datetime="note.created_at">{{ formatDate(note.created_at) }} · {{ formatNoteTime(note.created_at) }}</time></div>
+              <p>{{ note.note }}</p>
+            </li>
+          </ol>
+        </article>
       </div>
     </div>
 
-    <div v-else class="bg-white border rounded p-4">
-      <div class="row g-3 mb-3">
+    <div v-else class="report-surface">
+      <div class="report-filters row g-3">
         <div class="col-12 col-md-6">
           <label v-if="canChooseDepartment" class="form-label">
             {{ t.labels.department }}
@@ -270,14 +255,15 @@
             <select v-model="eventStatusFilter" class="form-select">
               <option value="all">{{ t.labels.all }}</option>
               <option value="pending">{{ t.status.pending }}</option>
+              <option value="resubmitted">{{ locale === 'es' ? 'Reenviado' : 'Resubmitted' }}</option>
               <option value="approved">{{ t.status.approved }}</option>
               <option value="denied">{{ t.status.denied }}</option>
               <option value="changes_requested">{{ t.status.changes }}</option>
             </select>
           </label>
         </div>
-        <div class="col-12 d-flex flex-wrap gap-2">
-          <button type="button" class="btn btn-outline-secondary w-auto" @click="searchEvents">
+        <div class="report-toolbar col-12 d-flex flex-wrap gap-2">
+          <button type="button" class="btn btn-primary w-auto" :disabled="eventsLoading" @click="searchEvents">
             {{ t.labels.search }}
           </button>
           <button
@@ -299,10 +285,11 @@
         </div>
       </div>
 
-      <div v-if="eventsLoading">{{ t.messages.loadingEvents }}</div>
-      <p v-if="eventsError" class="text-danger">{{ eventsError }}</p>
+      <div v-if="eventsLoading" class="report-empty" role="status">{{ t.messages.loadingEvents }}</div>
+      <p v-if="eventsError" class="report-error" role="alert">{{ eventsError }}</p>
 
-      <div v-if="events.length === 0 && !eventsLoading">{{ t.messages.noEvents }}</div>
+      <div v-if="!eventsLoaded && !eventsLoading" class="report-empty">{{ t.messages.searchToLoad }}</div>
+      <div v-else-if="events.length === 0 && !eventsLoading" class="report-empty">{{ t.messages.noEvents }}</div>
       <div v-else class="table-responsive">
         <table class="table mb-0 main-table" data-dt="off">
           <thead>
@@ -359,11 +346,10 @@
                 ></span>
                 {{ event.department?.name || '—' }}
               </td>
-              <td>{{ event.title }}</td>
+              <td><button type="button" class="report-event-link" @click="openNoteEvent(event)">{{ event.title }}</button></td>
               <td>{{ event.objective?.name || '—' }}</td>
               <td class="status-cell">
-                <span class="status-dot" :class="statusClass(event.review_status)"></span>
-                {{ statusLabel(event.review_status) }}
+                <span class="report-status" :class="statusClass(event.review_status)">{{ statusLabel(event.review_status) }}</span>
               </td>
               <td>{{ formatDate(event.accepted_at) }}</td>
             </tr>
@@ -378,7 +364,8 @@
       :notes="selectedEvent?.notes || []"
       :histories="selectedEvent?.histories || []"
       :can-reply-notes="canReplyEventNotes"
-      :show-status-details="false"
+      :saving="replySaving"
+      :error="replyError"
       :labels="t.eventDetails"
       @close="closeEventDetails"
       @reply-note="handleDetailsReply"
@@ -404,6 +391,9 @@ const authStore = useAuthStore()
 const uiStore = useUiStore()
 const { locale } = storeToRefs(uiStore)
 const t = computed(() => translations[locale.value].reports)
+const reportYear = new Date().getFullYear()
+const replySaving = ref(false)
+const replyError = ref('')
 
 
 const isMember = computed(() => authStore.user?.role === 'member')
@@ -444,7 +434,7 @@ const isEventDetailsOpen = ref(false)
 const expandedNoteEventIds = ref(new Set())
 
 const canReplyEventNotes = computed(() =>
-  authStore.user?.role === 'member' && Boolean(authStore.user?.department_id)
+  ['member', 'admin'].includes(authStore.user?.role) && Boolean(authStore.user?.department_id) && selectedEvent.value?.status === 'locked'
 )
 
 const objectiveOptions = computed(() => {
@@ -511,18 +501,25 @@ const notesByEvent = computed(() => {
   return groups.sort((a, b) => new Date(b.event.start_at) - new Date(a.event.start_at))
 })
 
-const finalOutcomeLabel = (event) => {
-  const value = event?.final_validation
-  if (!value) {
-    return t.value.eventDetails.reviewPending
-  }
-  const map = {
-    accepted: t.value.eventDetails.finalOutcomeAccepted,
-    rejected: t.value.eventDetails.finalOutcomeRejected,
-    update_requested: t.value.eventDetails.finalOutcomeUpdateRequested,
-  }
-  return map[value] || value
-}
+const reportLoading = computed(() => activeTab.value === 'notes' ? notesLoading.value : activeTab.value === 'events' ? eventsLoading.value : objectivesLoading.value)
+const reportReady = computed(() => activeTab.value === 'notes' ? notesLoaded.value : activeTab.value === 'events' ? eventsLoaded.value : objectivesLoaded.value)
+const reportStats = computed(() => {
+  const es = locale.value === 'es'
+  if (activeTab.value === 'notes') return [
+    { label: es ? 'Eventos con notas' : 'Events with notes', value: notesByEvent.value.length },
+    { label: es ? 'Notas en total' : 'Total notes', value: notesByEvent.value.reduce((sum, group) => sum + group.notes.length, 0) },
+    { label: es ? 'Con cambios solicitados' : 'Changes requested', value: notesByEvent.value.filter(group => group.event.review_status === 'changes_requested').length },
+  ]
+  if (activeTab.value === 'objectives') return [
+    { label: es ? 'Objetivos en el reporte' : 'Objectives in report', value: sortedObjectives.value.length },
+    { label: es ? 'Departamentos' : 'Departments', value: new Set(sortedObjectives.value.map(item => item.department_id)).size },
+  ]
+  return [
+    { label: es ? 'Eventos en el reporte' : 'Events in report', value: sortedEvents.value.length },
+    { label: es ? 'Aprobados' : 'Accepted', value: sortedEvents.value.filter(item => item.review_status === 'approved').length },
+    { label: es ? 'Pendientes de decisión' : 'Awaiting decision', value: sortedEvents.value.filter(item => ['pending', 'resubmitted'].includes(item.review_status)).length },
+  ]
+})
 
 const toggleNotesForEvent = (eventId) => {
   const next = new Set(expandedNoteEventIds.value)
@@ -535,11 +532,6 @@ const toggleNotesForEvent = (eventId) => {
 }
 
 const isNotesExpanded = (eventId) => expandedNoteEventIds.value.has(eventId)
-
-const noteRowClass = (note) => {
-  const role = note?.author?.role
-  return role === 'secretary' || role === 'superadmin' ? 'note-row--incoming' : 'note-row--outgoing'
-}
 
 const loadDepartments = async () => {
   if (!authStore.user?.church_id) {
@@ -672,6 +664,8 @@ const formatNoteTime = (value) => {
 
 const statusLabel = (status) => {
   const value = status || 'pending'
+  if (value === 'changes_requested') return t.value.status.changes
+  if (value === 'resubmitted') return locale.value === 'es' ? 'Reenviado' : 'Resubmitted'
   return t.value.status[value] || value
 }
 
@@ -721,6 +715,37 @@ const exportPdf = (filename, title, headers, rows) => {
     headStyles: { fillColor: [31, 111, 92] },
   })
   doc.save(filename)
+}
+
+const notesExportData = () => ({
+  headers: [
+    t.value.columns.event,
+    t.value.columns.date,
+    t.value.columns.department,
+    t.value.columns.status,
+    locale.value === 'es' ? 'Autor' : 'Author',
+    locale.value === 'es' ? 'Fecha de nota' : 'Note date',
+    locale.value === 'es' ? 'Nota' : 'Note',
+  ],
+  rows: notesByEvent.value.flatMap(({ event, notes }) => notes.map((note) => [
+    event.title || '',
+    formatDate(event.start_at),
+    event.department?.name || '',
+    statusLabel(event.review_status),
+    note.author?.name || '—',
+    `${formatDate(note.created_at)} ${formatNoteTime(note.created_at)}`,
+    note.note || '',
+  ])),
+})
+
+const exportNotes = () => {
+  const { headers, rows } = notesExportData()
+  downloadCsv('reports-notes.csv', [headers, ...rows])
+}
+
+const exportNotesPdf = () => {
+  const { headers, rows } = notesExportData()
+  exportPdf('reports-notes.pdf', t.value.tabs.notes, headers, rows)
 }
 
 const exportObjectives = async () => {
@@ -905,6 +930,7 @@ const searchEvents = async () => {
 const openNoteEvent = (item) => {
   const event = item?.event || item || null
   selectedEvent.value = event
+  replyError.value = ''
   isEventDetailsOpen.value = true
 }
 
@@ -918,11 +944,15 @@ const handleDetailsReply = async ({ reply }) => {
     return
   }
   try {
-    const response = await calendarApi.replyNote(selectedEvent.value.id, { reply })
+    replySaving.value = true
+    replyError.value = ''
+    const response = await calendarApi.addNote(selectedEvent.value.id, { note: reply })
     selectedEvent.value.notes = [...(selectedEvent.value.notes || []), response]
     await fetchNotes()
   } catch {
-    // no-op
+    replyError.value = t.value.messages.loadFailed
+  } finally {
+    replySaving.value = false
   }
 }
 
@@ -1012,3 +1042,70 @@ const compareEvents = (a, b, key, dir) => {
   return getValue(a).localeCompare(getValue(b)) * factor
 }
 </script>
+
+<style scoped>
+.reports-page { display: grid; gap: 20px; font-size: var(--font-body); }
+.reports-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; }
+.reports-eyebrow { margin: 0 0 6px; color: var(--dominant); font-size: 12px; font-weight: 500; }
+.reports-header h1 { font-size: var(--font-page-title); margin-bottom: 8px; }
+.reports-intro { max-width: 560px; margin: 0; line-height: 1.6; }
+.reports-scope { display: grid; gap: 3px; flex-shrink: 0; padding-left: 18px; border-left: 2px solid #c8d9d0; color: var(--muted); font-size: 12px; }
+.reports-scope strong { color: #264d3e; font-size: 18px; font-weight: 500; }
+.reports-tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--border); }
+.report-tab { width: auto; border-radius: 6px 6px 0 0; padding: 10px 18px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #617069; font-weight: 500; }
+.report-tab.active { color: #205b48; border-bottom-color: var(--dominant); background: #e6eee8; }
+.report-tab:hover { background: #eaf0ec; }
+.report-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.report-stat { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 18px; background: #fff; border: 1px solid var(--border); border-radius: 9px; }
+.report-stat span { color: #65736b; font-size: 12px; }
+.report-stat strong { font-size: 22px; font-weight: 500; color: #254b3d; }
+.report-surface { background: #fff; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.report-filters { margin: 0; padding: 6px 12px 18px; background: #f8faf9; border-bottom: 1px solid var(--border); }
+.report-filters label { margin: 0; width: 100%; }
+.report-filters select { margin-top: 6px; }
+.report-filters .export-toggle { display: inline-flex; align-items: center; justify-content: flex-start; gap: 8px; width: auto; margin-top: 10px; }
+.report-filters .export-toggle input { width: auto; margin: 0; flex: 0 0 auto; }
+.report-toolbar { align-items: center; }
+.reports-page .btn-primary { background: var(--dominant); border-color: var(--dominant); }
+.report-empty { padding: 42px 24px; text-align: center; color: #6b7971; font-size: 13px; }
+.report-error { margin: 16px; padding: 12px; border-radius: 6px; background: #fff1ef; color: #8a3931; }
+.reports-page .table { font-size: 12px; border: 0; }
+.reports-page .table th { padding: 12px; background: #f6f8f7; color: #596b61; font-weight: 500; white-space: nowrap; border-bottom: 1px solid var(--border); }
+.reports-page .table td { padding: 12px; vertical-align: middle; border-color: #edf0ed; background: white; }
+.reports-page .table tbody tr:hover > td { background: #f9fbfa; }
+.reports-page .table-sort { font-size: inherit; font-weight: 500; }
+.report-status { display: inline-flex; align-items: center; border-radius: 20px; padding: 4px 9px; font-size: 11px; white-space: nowrap; font-weight: 500; }
+.report-status.status-approved { color: #246046; background: #e6f1e9; }
+.report-status.status-denied { color: #8a443e; background: #f8e9e6; }
+.report-status.status-pending { color: #78612c; background: #fbf2db; }
+.report-event-link, .report-detail-link { width: auto; background: none; padding: 0; border: 0; text-align: left; color: #28634d; font-size: inherit; font-weight: 500; }
+.report-event-link:hover, .report-detail-link:hover { text-decoration: underline; }
+.notes-report-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px; border-bottom: 1px solid var(--border); }
+.notes-report-heading h2 { font-size: 15px; margin: 0 0 5px; }
+.notes-report-heading p { margin: 0; font-size: 12px; }
+.notes-report-list { display: grid; gap: 14px; padding: 20px; background: #fafbf9; }
+.note-report-card { border: 1px solid #dce5de; border-radius: 8px; padding: 18px; background: #fff; }
+.note-report-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.note-report-top h3 { font-size: 14px; font-weight: 500; margin: 0 0 5px; }
+.note-report-top p { font-size: 12px; margin: 0; }
+.note-preview { margin: 16px 0; padding: 12px 14px; background: #f4f7f5; border-left: 2px solid #bdd0c4; border-radius: 0 5px 5px 0; }
+.note-preview > span { font-size: 11px; color: #6b7a70; }
+.note-preview p { margin: 6px 0 0; color: #354b3d; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.note-report-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.note-total { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 10px; background: #e9eeeb; color: #365642; }
+.report-conversation { list-style: none; margin: 18px 0 0; padding: 0; border-top: 1px solid var(--border); }
+.report-conversation li { padding: 14px 0; border-bottom: 1px solid #edf0ed; }
+.report-conversation li:last-child { border: 0; padding-bottom: 0; }
+.report-conversation li > div { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 11px; }
+.report-conversation time { color: #6b7a70; }
+.report-conversation p { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .reports-header { flex-direction: column; gap: 14px; }
+  .reports-scope { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; border: 0; padding: 0; }
+  .report-summary { gap: 8px; grid-template-columns: 1fr; }
+  .report-stat { padding: 10px 14px; }
+  .notes-report-list, .notes-report-heading { padding: 14px; }
+  .note-report-card { padding: 14px; }
+  .note-report-top { flex-wrap: wrap; }
+}
+</style>

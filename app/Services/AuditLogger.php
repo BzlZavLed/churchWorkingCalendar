@@ -17,9 +17,10 @@ class AuditLogger
 
     public function log(Request $request, string $action, ?string $entityType = null, ?string $entityId = null, array $metadata = []): void
     {
-        $payload = $this->sanitizePayload($request->all());
+        $payload = $this->sanitizePayload($request->input());
         $metadata = array_merge([
             'payload' => $payload,
+            'viewing_context' => $request->attributes->get('viewing_context'),
         ], $metadata);
 
         AuditLog::create([

@@ -8,8 +8,8 @@ use App\Events\EventLocked;
 use App\Events\EventUpdated;
 use App\Events\HoldCreated;
 use App\Models\Department;
+use App\Models\Church;
 use App\Models\Event;
-use App\Models\EventHistory;
 use App\Models\EventNote;
 use App\Models\Objective;
 use App\Models\User;
@@ -88,7 +88,9 @@ class EventController extends Controller
         }
 
         $event = DB::transaction(function () use ($request, $data, $startAt, $endAt, $departmentId, $objectiveId) {
-            if (Event::hasConflict($startAt, $endAt)) {
+            $churchId = Department::findOrFail($departmentId)->church_id;
+            Church::whereKey($churchId)->lockForUpdate()->firstOrFail();
+            if (Event::hasConflict($startAt, $endAt, null, $churchId)) {
                 throw ValidationException::withMessages([
                     'start_at' => ['The selected time is already blocked.'],
                 ]);
@@ -104,6 +106,10 @@ class EventController extends Controller
                 'end_at' => $endAt,
                 'status' => 'hold',
                 'expires_at' => now()->addMinutes(5),
+                'final_validation' => null,
+                'accepted_at' => null,
+                'publish_to_feed' => false,
+                'published_at' => null,
                 'review_status' => 'pending',
                 'review_note' => null,
                 'reviewed_by' => null,
@@ -126,6 +132,8 @@ class EventController extends Controller
         $this->authorize('update', $event);
 
         $locked = DB::transaction(function () use ($request, $event) {
+            Church::whereKey($event->department->church_id)->lockForUpdate()->firstOrFail();
+            $event = Event::whereKey($event->id)->lockForUpdate()->firstOrFail();
             if ($event->status !== 'hold' || ($event->expires_at !== null && $event->expires_at->isPast())) {
                 throw ValidationException::withMessages([
                     'status' => ['Hold is no longer valid.'],
@@ -138,7 +146,7 @@ class EventController extends Controller
                 ]);
             }
 
-            if (Event::hasConflict($event->start_at, $event->end_at, $event->id)) {
+            if (Event::hasConflict($event->start_at, $event->end_at, $event->id, $event->department->church_id)) {
                 throw ValidationException::withMessages([
                     'start_at' => ['The selected time is already blocked.'],
                 ]);
@@ -147,12 +155,10 @@ class EventController extends Controller
             $event->update([
                 'status' => 'locked',
                 'expires_at' => null,
-                'review_status' => 'pending',
-                'review_note' => null,
-                'reviewed_by' => null,
-                'reviewed_at' => null,
                 'updated_by' => $request->user()->id,
             ]);
+
+            $event->transitionReview('pending', $request->user(), 'submitted');
 
             event(new EventCreated($event));
             event(new EventLocked($event));
@@ -161,7 +167,7 @@ class EventController extends Controller
             return $event;
         });
 
-        return response()->json($locked);
+        return response()->json($locked->load(['department', 'objective', 'histories.user', 'notes.author', 'notes.replyAuthor']));
     }
 
     public function update(Request $request, Event $event)
@@ -178,6 +184,9 @@ class EventController extends Controller
         ]);
 
         $updatedEvent = DB::transaction(function () use ($request, $event, $data) {
+            Church::whereKey($event->department->church_id)->lockForUpdate()->firstOrFail();
+            $event = Event::whereKey($event->id)->lockForUpdate()->firstOrFail();
+            $this->authorize('update', $event);
             $original = [
                 'title' => $event->title,
                 'description' => $event->description,
@@ -201,7 +210,7 @@ class EventController extends Controller
                 ]);
             }
 
-            if (Event::hasConflict($startAt, $endAt, $event->id)) {
+            if (Event::hasConflict($startAt, $endAt, $event->id, $event->department->church_id)) {
                 throw ValidationException::withMessages([
                     'start_at' => ['The selected time is already blocked.'],
                 ]);
@@ -218,10 +227,6 @@ class EventController extends Controller
                 'start_at' => $startAt,
                 'end_at' => $endAt,
                 'objective_id' => $data['objective_id'] ?? $event->objective_id,
-                'review_status' => 'pending',
-                'review_note' => null,
-                'reviewed_by' => null,
-                'reviewed_at' => null,
                 'updated_by' => $request->user()->id,
             ]);
 
@@ -244,14 +249,8 @@ class EventController extends Controller
                 }
             }
 
-            if (!empty($changes)) {
-                EventHistory::create([
-                    'event_id' => $event->id,
-                    'user_id' => $request->user()->id,
-                    'action' => 'update',
-                    'note' => null,
-                    'changes' => $changes,
-                ]);
+            if ($event->status === 'locked') {
+                $event->transitionReview('resubmitted', $request->user(), 'resubmitted', null, $changes);
             }
 
             event(new EventUpdated($event));
@@ -260,7 +259,7 @@ class EventController extends Controller
             return $event;
         });
 
-        return response()->json($updatedEvent);
+        return response()->json($updatedEvent->load(['department', 'objective', 'histories.user', 'notes.author', 'notes.replyAuthor']));
     }
 
     public function destroy(Request $request, Event $event)
@@ -268,6 +267,11 @@ class EventController extends Controller
         $this->authorize('delete', $event);
 
         $cancelled = DB::transaction(function () use ($request, $event) {
+            Church::whereKey($event->department->church_id)->lockForUpdate()->firstOrFail();
+            $event = Event::whereKey($event->id)->lockForUpdate()->firstOrFail();
+            $this->authorize('delete', $event);
+            $event->recordAction($request->user(), 'cancelled');
+
             $event->update([
                 'status' => 'cancelled',
                 'updated_by' => $request->user()->id,
@@ -289,8 +293,6 @@ class EventController extends Controller
         $data = $request->validate([
             'review_status' => ['required', 'in:approved,denied,changes_requested'],
             'review_note' => ['nullable', 'string'],
-            'publish_to_feed' => ['nullable', 'boolean'],
-            'accepted_at' => ['nullable', 'date'],
         ]);
 
         if ($event->status !== 'locked') {
@@ -306,64 +308,26 @@ class EventController extends Controller
         }
 
         $reviewed = DB::transaction(function () use ($request, $event, $data) {
-            $finalValidation = match ($data['review_status']) {
+            Church::whereKey($event->department->church_id)->lockForUpdate()->firstOrFail();
+            $event = Event::whereKey($event->id)->lockForUpdate()->firstOrFail();
+            if ($event->status !== 'locked') {
+                throw ValidationException::withMessages(['status' => ['Only locked events can be reviewed.']]);
+            }
+            if ($data['review_status'] !== 'denied' && Event::hasConflict($event->start_at, $event->end_at, $event->id, $event->department->church_id)) {
+                throw ValidationException::withMessages(['start_at' => ['The selected time is already blocked.']]);
+            }
+            $state = $data['review_status'];
+            if (!in_array($event->review_status, ['pending', 'resubmitted'], true)
+                && !($event->review_status === 'approved' && $state === 'changes_requested')) {
+                throw ValidationException::withMessages(['review_status' => ['Only submitted events can be reviewed; accepted events must be reopened first.']]);
+            }
+            $action = $event->review_status === 'approved' ? 'reopened' : match ($state) {
                 'approved' => 'accepted',
                 'denied' => 'rejected',
-                'changes_requested' => 'update_requested',
-                default => null,
+                'changes_requested' => 'changes_requested',
             };
-
-            $previousReviewStatus = $event->review_status;
-            $previousFinalValidation = $event->final_validation;
-            $previousPublishToFeed = $event->publish_to_feed;
-            $previousAcceptedAt = $event->accepted_at;
-
-            $shouldPublish = $data['review_status'] === 'approved'
-                && ($data['publish_to_feed'] ?? false) === true;
-
-            $acceptedAt = null;
-            if ($finalValidation === 'accepted') {
-                $acceptedAt = !empty($data['accepted_at'])
-                    ? Carbon::parse($data['accepted_at'])
-                    : now();
-            }
-
-            $event->update([
-                'review_status' => $data['review_status'],
-                'review_note' => $data['review_note'] ?? null,
-                'reviewed_by' => $request->user()->id,
-                'reviewed_at' => now(),
-                'final_validation' => $finalValidation,
-                'accepted_at' => $acceptedAt,
-                'publish_to_feed' => $shouldPublish,
-                'published_at' => $shouldPublish ? now() : null,
-                'requires_club_review' => false,
-            ]);
-
-            EventHistory::create([
-                'event_id' => $event->id,
-                'user_id' => $request->user()->id,
-                'action' => 'review',
-                'note' => $data['review_note'] ?? null,
-                'changes' => [
-                    'review_status' => [
-                        'from' => $previousReviewStatus,
-                        'to' => $data['review_status'],
-                    ],
-                    'final_validation' => [
-                        'from' => $previousFinalValidation,
-                        'to' => $finalValidation,
-                    ],
-                    'accepted_at' => [
-                        'from' => $previousAcceptedAt,
-                        'to' => $acceptedAt,
-                    ],
-                    'publish_to_feed' => [
-                        'from' => $previousPublishToFeed,
-                        'to' => $shouldPublish,
-                    ],
-                ],
-            ]);
+            $event->transitionReview($state, $request->user(), $action, $data['review_note'] ?? null);
+            $event->update(['requires_club_review' => false]);
 
             event(new EventUpdated($event));
             DomainUpdate::forEvent('reviewed', $event, $request->user());
@@ -374,69 +338,42 @@ class EventController extends Controller
         return response()->json($reviewed);
     }
 
-    public function publishAccepted(Request $request)
+    public function requestOpen(Request $request, Event $event)
     {
-        $user = $request->user();
-        if (!$user->isSuperAdmin() && !$user->isSecretary()) {
-            abort(403);
-        }
-
-        $data = $request->validate([
-            'start' => ['required', 'date'],
-            'end' => ['required', 'date', 'after:start'],
-        ]);
-
-        $start = Carbon::parse($data['start'])->utc();
-        $end = Carbon::parse($data['end'])->utc();
-
-        $events = Event::query()
-            ->whereHas('department', function ($query) use ($user) {
-                $query->where('church_id', $user->church_id);
-            })
-            ->where('final_validation', 'accepted')
-            ->whereBetween('start_at', [$start, $end])
-            ->orderBy('start_at')
-            ->get();
-
-        $updated = 0;
-
-        DB::transaction(function () use ($events, $user, &$updated) {
-            foreach ($events as $event) {
-                if ($event->publish_to_feed) {
-                    continue;
-                }
-
-                $event->update([
-                    'publish_to_feed' => true,
-                    'published_at' => now(),
-                    'updated_by' => $user->id,
-                ]);
-
-                EventHistory::create([
-                    'event_id' => $event->id,
-                    'user_id' => $user->id,
-                    'action' => 'publish_batch',
-                    'note' => 'Publicacion masiva de eventos aceptados.',
-                    'changes' => [
-                        'publish_to_feed' => [
-                            'from' => false,
-                            'to' => true,
-                        ],
-                        'published_at' => [
-                            'from' => null,
-                            'to' => $event->published_at?->toAtomString(),
-                        ],
-                    ],
-                ]);
-
-                DomainUpdate::forEvent('published', $event, $user);
-                $updated++;
+        $event = DB::transaction(function () use ($request, $event) {
+            $event = Event::whereKey($event->id)->lockForUpdate()->firstOrFail();
+            abort_unless($request->user()->department_id === $event->department_id
+                && !$request->user()->isSecretary() && !$request->user()->isSuperAdmin(), 403);
+            if ($event->status !== 'locked' || $event->review_status !== 'approved') {
+                throw ValidationException::withMessages(['status' => ['Only accepted events can request reopening.']]);
             }
+            if (!$event->open_requested_at) {
+                $event->update(['open_requested_at' => now()]);
+                $event->recordAction($request->user(), 'opening_requested');
+                event(new EventUpdated($event));
+                DomainUpdate::forEvent('opening_requested', $event, $request->user());
+            }
+            return $event;
         });
+        return response()->json($event->load(['department', 'objective', 'histories.user', 'notes.author', 'notes.replyAuthor']));
+    }
 
-        return response()->json([
-            'updated' => $updated,
-        ]);
+    public function extendHold(Request $request, Event $event)
+    {
+        $this->authorize('update', $event);
+        $event = DB::transaction(function () use ($request, $event) {
+            Church::whereKey($event->department->church_id)->lockForUpdate()->firstOrFail();
+            $event = Event::whereKey($event->id)->lockForUpdate()->firstOrFail();
+            $this->authorize('update', $event);
+            if ($event->status !== 'hold' || !$event->expires_at || $event->expires_at->lte(now())) {
+                throw ValidationException::withMessages(['status' => ['Hold is no longer valid.']]);
+            }
+            $event->update(['expires_at' => now()->addMinutes(5), 'updated_by' => $request->user()->id]);
+            event(new EventUpdated($event));
+            DomainUpdate::forEvent('hold_extended', $event, $request->user());
+            return $event;
+        });
+        return response()->json($event);
     }
 
     private function resolveDepartmentId(Request $request, ?int $departmentId): int

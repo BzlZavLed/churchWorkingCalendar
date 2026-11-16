@@ -111,6 +111,9 @@
                     <td>{{ church.latest_invitation?.code || '—' }}</td>
                     <td class="text-end">
                       <div class="d-flex flex-column flex-md-row justify-content-end gap-2">
+                        <router-link class="btn btn-sm btn-outline-primary" :to="{ path: '/superadmin/users', query: { church: church.id, role: 'secretary' } }">
+                          {{ locale === 'es' ? 'Cuentas de secretaría' : 'Clerk accounts' }}
+                        </router-link>
                         <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateChurch(church)">
                           {{ t.save }}
                         </button>
@@ -200,7 +203,10 @@
                 </div>
 
                 <div class="d-flex flex-wrap gap-2 mt-3">
-                  <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateChurch(church)">
+                  <router-link class="btn btn-sm btn-outline-primary" :to="{ path: '/superadmin/users', query: { church: church.id, role: 'secretary' } }">
+                          {{ locale === 'es' ? 'Cuentas de secretaría' : 'Clerk accounts' }}
+                        </router-link>
+                        <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateChurch(church)">
                     {{ t.save }}
                   </button>
                   <button class="btn btn-sm btn-outline-danger" type="button" @click="confirmDeleteChurchEvents(church)">
@@ -272,7 +278,7 @@ const createForm = reactive({
   pastor_name: '',
   address: '',
   ethnicity: '',
-  invite_role: 'admin',
+  invite_role: 'secretary',
   invite_email: '',
   invite_max_uses: 1,
   invite_expires_at: '',
@@ -339,7 +345,7 @@ const generateInvite = async (church) => {
   error.value = ''
   inviteCode.value = ''
   try {
-    const response = await superAdminApi.generateInvite(church.id, { invite_role: 'admin' })
+    const response = await superAdminApi.generateInvite(church.id, { invite_role: 'secretary' })
     inviteCode.value = response.code
     await loadChurches()
     showSuccessToast()

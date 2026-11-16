@@ -16,11 +16,13 @@ class Department extends Model
         'name',
         'user_name',
         'color',
+        'is_treasury',
         'is_club',
         'is_greeting',
     ];
 
     protected $casts = [
+        'is_treasury' => 'boolean',
         'is_club' => 'boolean',
         'is_greeting' => 'boolean',
     ];

@@ -144,6 +144,7 @@ class SuperAdminController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'color' => ['nullable', 'string', 'max:255'],
             'user_name' => ['nullable', 'string', 'max:255'],
+            'is_treasury' => ['nullable', 'boolean'],
             'is_club' => ['nullable', 'boolean'],
             'is_greeting' => ['nullable', 'boolean'],
         ]);
@@ -153,6 +154,7 @@ class SuperAdminController extends Controller
             'name' => $data['name'],
             'color' => $data['color'] ?? null,
             'user_name' => $data['user_name'] ?? null,
+            'is_treasury' => $data['is_treasury'] ?? false,
             'is_club' => $data['is_club'] ?? false,
             'is_greeting' => $data['is_greeting'] ?? false,
         ]);
@@ -170,6 +172,7 @@ class SuperAdminController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'color' => ['nullable', 'string', 'max:255'],
             'user_name' => ['nullable', 'string', 'max:255'],
+            'is_treasury' => ['nullable', 'boolean'],
             'is_club' => ['nullable', 'boolean'],
             'is_greeting' => ['nullable', 'boolean'],
         ]);
@@ -178,6 +181,7 @@ class SuperAdminController extends Controller
             'name' => $data['name'],
             'color' => $data['color'] ?? null,
             'user_name' => $data['user_name'] ?? null,
+            'is_treasury' => $data['is_treasury'] ?? $department->is_treasury,
             'is_club' => $data['is_club'] ?? $department->is_club,
             'is_greeting' => $data['is_greeting'] ?? $department->is_greeting,
         ]);

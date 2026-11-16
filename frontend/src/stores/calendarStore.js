@@ -60,11 +60,6 @@ export const useCalendarStore = defineStore('calendar', () => {
     return response
   }
 
-  const publishAccepted = async (payload) => {
-    const response = await calendarApi.publishAccepted(payload)
-    return response
-  }
-
   const addNote = async (eventId, payload) => {
     const response = await calendarApi.addNote(eventId, payload)
     const event = events.value.find((item) => item.id === eventId)
@@ -106,7 +101,7 @@ export const useCalendarStore = defineStore('calendar', () => {
     const now = Date.now()
 
     return events.value.some((item) => {
-      if (item.status === 'cancelled') {
+      if (item.status === 'cancelled' || item.review_status === 'denied') {
         return false
       }
 
@@ -161,7 +156,6 @@ export const useCalendarStore = defineStore('calendar', () => {
     lockEvent,
     updateEvent,
     reviewEvent,
-    publishAccepted,
     addNote,
     replyNote,
     markNoteSeen,

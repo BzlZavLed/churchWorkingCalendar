@@ -27,6 +27,11 @@ class EventPolicy
 
     public function update(User $user, Event $event): bool
     {
+        if (($event->status === 'locked' && $event->review_status !== 'changes_requested')
+            || $event->status === 'cancelled'
+            || ($event->status === 'hold' && (!$event->expires_at || $event->expires_at->lte(now())))) {
+            return false;
+        }
         if ($user->isSuperAdmin()) {
             return true;
         }
@@ -45,6 +50,9 @@ class EventPolicy
 
     public function delete(User $user, Event $event): bool
     {
+        if ($event->review_status === 'approved') {
+            return false;
+        }
         if ($user->isSuperAdmin()) {
             return true;
         }
@@ -73,5 +81,13 @@ class EventPolicy
         }
 
         return false;
+    }
+
+    public function comment(User $user, Event $event): bool
+    {
+        if ($event->status !== 'locked') return false;
+        if ($user->isSuperAdmin()) return true;
+        if ($user->isSecretary()) return $this->review($user, $event);
+        return $user->department_id !== null && $user->department_id === $event->department_id;
     }
 }

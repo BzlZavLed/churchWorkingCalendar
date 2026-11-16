@@ -2,7 +2,7 @@
   <div v-if="open" class="modal-backdrop" @click.self="$emit('close')">
     <div class="modal-panel">
       <header class="modal-header">
-        <h2>{{ resolvedLabels.createEvent }}</h2>
+        <h2>{{ isEditing ? resolvedLabels.editEvent : resolvedLabels.createEvent }}</h2>
         <button type="button" class="modal-close" @click="$emit('close')">×</button>
       </header>
       <p class="event-date">{{ formattedDate }}</p>

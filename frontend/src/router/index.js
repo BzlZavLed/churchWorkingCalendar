@@ -13,6 +13,7 @@ import SuperAdminChurches from '../components/superadmin/SuperAdminChurches.vue'
 import SuperAdminDepartments from '../components/superadmin/SuperAdminDepartments.vue'
 import SuperAdminUsers from '../components/superadmin/SuperAdminUsers.vue'
 import SuperAdminCalendarManager from '../components/superadmin/SuperAdminCalendarManager.vue'
+import BudgetView from '../components/BudgetView.vue'
 import InventoryView from '../components/InventoryView.vue'
 import MeetingPointsView from '../components/MeetingPointsView.vue'
 import GreetingIntakeView from '../components/GreetingIntakeView.vue'
@@ -35,6 +36,7 @@ const routes = [
   { path: '/secretary/departments', component: SuperAdminDepartments, meta: { requiresAuth: true, secretaryOnly: true } },
   { path: '/secretary/meetings', component: SecretaryMeetings, meta: { requiresAuth: true, secretaryOnly: true } },
   { path: '/secretary/users', component: SecretaryUsers, meta: { requiresAuth: true, secretaryOnly: true } },
+  { path: '/budget', component: BudgetView, meta: { requiresAuth: true } },
   { path: '/inventory', component: InventoryView, meta: { requiresAuth: true, inventoryOnly: true } },
   { path: '/superadmin', redirect: '/superadmin/churches' },
   { path: '/superadmin/login', component: SuperAdminLogin, meta: { guestOnly: true, noLayout: true } },
@@ -57,7 +59,9 @@ router.beforeEach(async (to) => {
     await authStore.initialize()
   }
 
-  const isGreetingUser = Boolean(authStore.user?.department?.is_greeting)
+  if (to.path.startsWith('/superadmin/') && !to.meta.noLayout && authStore.isPlatformAdmin) authStore.exitContext()
+
+  const isGreetingUser = !authStore.isPlatformAdmin && Boolean(authStore.user?.department?.is_greeting)
   const isContactsAllowed = ['admin', 'secretary', 'superadmin'].includes(authStore.user?.role || '') || isGreetingUser
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
@@ -68,7 +72,7 @@ router.beforeEach(async (to) => {
     return getDefaultRouteForUser(authStore.user)
   }
 
-  if (to.meta.superadminOnly && authStore.user?.role !== 'superadmin') {
+  if (to.meta.superadminOnly && !authStore.isPlatformAdmin) {
     return '/calendar'
   }
 
@@ -92,7 +96,7 @@ router.beforeEach(async (to) => {
     return getDefaultRouteForUser(authStore.user)
   }
 
-  if (authStore.isAuthenticated && isGreetingUser && !to.meta.noLayout && !['/greeting', '/greeting/contacts'].includes(to.path)) {
+  if (authStore.isAuthenticated && isGreetingUser && !to.meta.noLayout && !['/greeting', '/greeting/contacts', '/budget'].includes(to.path)) {
     return '/greeting'
   }
 

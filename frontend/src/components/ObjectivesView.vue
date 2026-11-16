@@ -1,504 +1,93 @@
 <template>
-  <section class="container py-4">
-    <div class="row g-2 align-items-center mb-3">
-      <div class="col-12 col-md-6">
-        <h1 class="h3 m-0">{{ t.title }}</h1>
-      </div>
-      <div class="col-12 col-md-6"></div>
+  <section class="container py-4 objectives-page">
+    <header class="objectives-heading">
+      <div><p class="eyebrow">{{ auth.user?.church?.name }}<span v-if="auth.user?.department"> · {{ auth.user.department.name }}</span></p><h1>{{ t.title }}</h1><p>{{ tr('Define lo que quieres lograr y conecta cada objetivo con sus eventos.', 'Define what you want to achieve and connect each objective to its events.') }}</p></div>
+      <button v-if="canManage" class="btn btn-primary" @click="openEditor()">+ {{ tr('Nuevo objetivo', 'New objective') }}</button>
+      <span v-else class="readonly-badge">{{ tr('Solo consulta', 'Read only') }}</span>
+    </header>
+    <p v-if="error" class="notice error" role="alert">{{ error }}</p>
+    <div class="summary">
+      <article><span>{{ tr('Objetivos', 'Objectives') }}</span><strong>{{ loading ? '—' : filtered.length }}</strong></article>
+      <article><span>{{ tr('Eventos vinculados', 'Linked events') }}</span><strong>{{ loading ? '—' : eventCount }}</strong></article>
+      <article><span>{{ tr('Objetivos sin eventos', 'Objectives without events') }}</span><strong>{{ loading ? '—' : filtered.filter(o => !o.events_count).length }}</strong></article>
     </div>
-
-    <form class="bg-white border rounded p-4 mb-4" @submit.prevent="createObjective">
-      <div class="row g-3 align-items-end">
-        <div v-if="isSuperAdmin" class="col-12 col-lg-4">
-          <label class="form-label">
-            {{ t.fields.church }}
-            <select v-model="selectedChurchId" class="form-select" required>
-              <option value="">{{ common.select }}</option>
-              <option v-for="church in churches" :key="church.id" :value="String(church.id)">
-                {{ church.name }}
-              </option>
-            </select>
-          </label>
-        </div>
-        <div class="col-12 col-lg-4">
-          <label class="form-label">
-            {{ t.fields.department }}
-            <select
-              v-if="canChooseDepartment"
-              v-model="createForm.department_id"
-              class="form-select"
-              :disabled="isSuperAdmin && !selectedChurchId"
-              required
-            >
-              <option value="" disabled>{{ t.labels.selectDepartment }}</option>
-              <option v-for="dept in departments" :key="dept.id" :value="String(dept.id)">
-                {{ dept.name }}
-              </option>
-            </select>
-            <input
-              v-else
-              class="form-control"
-              type="text"
-              :value="authStore.user?.department?.name || '—'"
-              disabled
-            />
-          </label>
-        </div>
-        <div class="col-12 col-lg-4">
-          <label class="form-label">
-            {{ t.fields.name }}
-            <input v-model="createForm.name" class="form-control" type="text" required />
-          </label>
-        </div>
-        <div class="col-12 col-lg-4">
-          <label class="form-label">
-            {{ t.fields.metrics }}
-            <input v-model="createForm.evaluation_metrics" class="form-control" type="text" required />
-          </label>
-        </div>
-        <div class="col-12">
-          <label class="form-label">
-            {{ t.fields.description }}
-            <textarea v-model="createForm.description" class="form-control" rows="3" required></textarea>
-          </label>
-        </div>
-        <div class="col-12">
-          <button class="btn btn-primary" type="submit">{{ t.labels.create }}</button>
-        </div>
-      </div>
-    </form>
-
-    <div v-if="loading">{{ t.messages.loading }}</div>
-    <p v-if="error" class="text-danger">{{ error }}</p>
-
-    <div v-if="filteredObjectives.length === 0 && !loading">{{ t.messages.empty }}</div>
-    <div v-else class="objectives-list bg-white border rounded p-3">
-      <div class="row g-2 align-items-center mb-3">
-        <div class="col-12 col-md-6">
-          <label class="form-label mb-0 w-100">
-            <span class="d-block small mb-1">{{ t.labels.filter }}</span>
-            <input v-model="filterText" class="form-control" type="search" :placeholder="t.labels.filterPlaceholder" />
-          </label>
-        </div>
-      </div>
-
-      <div class="table-responsive d-none d-md-block">
-        <table class="table table-sm align-middle mb-0 objectives-table" data-dt="off">
-          <thead>
-            <tr>
-              <th>{{ t.labels.id }}</th>
-              <th v-if="showDepartmentColumn">
-                <button class="table-sort" type="button" @click="toggleSort('department')">
-                  {{ t.fields.department }}
-                  <span v-if="sortKey === 'department'">{{ sortDir === 'asc' ? '▲' : '▼' }}</span>
-                </button>
-              </th>
-              <th>{{ t.fields.name }}</th>
-              <th>{{ t.fields.description }}</th>
-              <th>{{ t.fields.metrics }}</th>
-              <th class="text-end">{{ t.labels.actions }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="objective in paginatedObjectives" :key="objective.id">
-              <td>{{ objective.id }}</td>
-              <td v-if="showDepartmentColumn">
-                <span
-                  class="dept-pill"
-                  :style="{
-                    backgroundColor: objective.department?.color || '#cfd4da',
-                    color: textColorForBg(objective.department?.color),
-                  }"
-                >
-                  {{ objective.department?.name || '—' }}
-                </span>
-              </td>
-              <td><input v-model="objective.name" class="form-control" type="text" /></td>
-              <td><textarea v-model="objective.description" class="form-control" rows="2"></textarea></td>
-              <td><textarea v-model="objective.evaluation_metrics" class="form-control" rows="2"></textarea></td>
-              <td class="text-end">
-                <div class="d-flex flex-wrap justify-content-end gap-2">
-                  <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateObjective(objective)">
-                    {{ t.labels.save }}
-                  </button>
-                  <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteObjective(objective)">
-                    {{ t.labels.delete }}
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="d-md-none">
-        <div v-for="objective in paginatedObjectives" :key="objective.id" class="card mb-3">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-              <div>
-                <h5 class="card-title mb-1">{{ objective.name }}</h5>
-                <p class="card-subtitle text-muted mb-0">#{{ objective.id }}</p>
-              </div>
-              <span
-                v-if="showDepartmentColumn"
-                class="dept-badge"
-                :style="{
-                  backgroundColor: objective.department?.color || '#cfd4da',
-                  color: textColorForBg(objective.department?.color),
-                }"
-              >
-                {{ objective.department?.name || '—' }}
-              </span>
-            </div>
-            <div class="mb-2">
-              <label class="form-label small mb-1">{{ t.fields.description }}</label>
-              <textarea v-model="objective.description" class="form-control" rows="2"></textarea>
-            </div>
-            <div class="mb-2">
-              <label class="form-label small mb-1">{{ t.fields.metrics }}</label>
-              <textarea v-model="objective.evaluation_metrics" class="form-control" rows="2"></textarea>
-            </div>
-            <div class="mb-3">
-              <label class="form-label small mb-1">{{ t.fields.name }}</label>
-              <input v-model="objective.name" class="form-control" type="text" />
-            </div>
-            <div class="d-flex flex-wrap gap-2">
-              <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateObjective(objective)">
-                {{ t.labels.save }}
-              </button>
-              <button class="btn btn-sm btn-outline-danger" type="button" @click="deleteObjective(objective)">
-                {{ t.labels.delete }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="d-flex flex-column flex-md-row align-items-center justify-content-between gap-2 mt-3">
-        <div class="text-muted small">
-          {{ t.labels.page }} {{ currentPage }} / {{ totalPages }}
-        </div>
-        <div class="btn-group">
-          <button class="btn btn-outline-secondary btn-sm" type="button" :disabled="currentPage === 1" @click="goPrev">
-            {{ t.labels.prev }}
-          </button>
-          <button
-            v-for="page in totalPages"
-            :key="page"
-            class="btn btn-outline-secondary btn-sm"
-            :class="{ active: currentPage === page }"
-            type="button"
-            @click="goToPage(page)"
-          >
-            {{ page }}
-          </button>
-          <button
-            class="btn btn-outline-secondary btn-sm"
-            type="button"
-            :disabled="currentPage === totalPages"
-            @click="goNext"
-          >
-            {{ t.labels.next }}
-          </button>
-        </div>
-      </div>
+    <div class="surface filters">
+      <label class="search">{{ tr('Buscar', 'Search') }}<input v-model="search" class="form-control" type="search" :placeholder="tr('Nombre, descripción o indicador de evaluación', 'Name, description or evaluation metric')" /></label>
+      <label v-if="isSuperAdmin">{{ t.fields.church }}<select v-model="churchFilter" class="form-select"><option value="">{{ tr('Todas las iglesias', 'All churches') }}</option><option v-for="church in churches" :key="church.id" :value="String(church.id)">{{ church.name }}</option></select></label>
+      <label v-if="canViewAll">{{ t.fields.department }}<select v-model="departmentFilter" class="form-select"><option value="">{{ tr('Todos los departamentos', 'All departments') }}</option><option v-for="department in filterDepartments" :key="department.id" :value="String(department.id)">{{ department.name }}</option></select></label>
+      <label>{{ tr('Ordenar', 'Sort') }}<select v-model="sort" class="form-select"><option value="name">{{ tr('Nombre', 'Name') }}</option><option value="department">{{ t.fields.department }}</option><option value="events">{{ tr('Más eventos', 'Most events') }}</option></select></label>
     </div>
+    <div v-if="loading" class="surface empty" role="status">{{ t.messages.loading }}</div>
+    <div v-else-if="!filtered.length" class="surface empty">{{ search || departmentFilter ? tr('No hay objetivos con estos filtros.', 'No objectives match these filters.') : t.messages.empty }}</div>
+    <div v-else class="objective-list">
+      <article v-for="objective in paginated" :key="objective.id" class="surface objective-card">
+        <div class="card-heading"><div><span class="department-pill" :style="{ '--department-color': objective.department?.color || '#8b9990' }"><i></i>{{ objective.department?.name || '—' }}</span><h2>{{ objective.name }}</h2></div><span class="event-count">{{ objective.events_count || 0 }} {{ tr('eventos', 'events') }}</span></div>
+        <div class="objective-details"><div><h3>{{ t.fields.description }}</h3><p>{{ objective.description }}</p></div><div class="metrics"><h3>{{ tr('Cómo se evaluará', 'How success is measured') }}</h3><p>{{ objective.evaluation_metrics }}</p></div></div>
+        <footer><button class="btn btn-outline-secondary" :aria-expanded="expanded === objective.id" :disabled="!objective.events_count" @click="toggleEvents(objective)">{{ expanded === objective.id ? tr('Ocultar eventos', 'Hide events') : tr('Ver eventos vinculados', 'View linked events') }}</button><span class="muted">{{ objective.approved_events_count || 0 }} {{ tr('aceptados', 'accepted') }}</span><div v-if="canManage" class="edit-actions"><button class="btn btn-outline-secondary" @click="openEditor(objective)">{{ tr('Editar', 'Edit') }}</button><button class="btn btn-outline-danger" :disabled="!!objective.events_count" :title="objective.events_count ? tr('Los objetivos vinculados a eventos no se pueden eliminar.', 'Objectives linked to events cannot be deleted.') : ''" @click="deleteTarget = objective">{{ tr('Eliminar', 'Delete') }}</button></div></footer>
+        <div v-if="expanded === objective.id" class="linked-events">
+          <p v-if="eventsLoading" role="status">{{ tr('Cargando eventos…', 'Loading events…') }}</p><p v-else-if="eventsError" class="notice error" role="alert">{{ eventsError }}</p>
+          <div v-else class="table-responsive"><table class="table" data-dt="off"><thead><tr><th>{{ tr('Evento', 'Event') }}</th><th>{{ tr('Fecha', 'Date') }}</th><th>{{ tr('Estado', 'Status') }}</th><th>{{ tr('Lugar', 'Location') }}</th></tr></thead><tbody><tr v-for="event in linkedEvents" :key="event.id"><td>{{ event.title || '—' }}</td><td>{{ date(event.start_at) }}</td><td><span class="status" :class="event.review_status">{{ status(event.review_status) }}</span></td><td>{{ event.location || '—' }}</td></tr></tbody></table></div>
+        </div>
+      </article>
+    </div>
+    <div v-if="filtered.length" class="pagination-row"><span>{{ filtered.length }} {{ tr('objetivos', 'objectives') }} · {{ page }} / {{ totalPages }}</span><div><button class="btn btn-outline-secondary" :disabled="page === 1" @click="page--">{{ tr('Anterior', 'Previous') }}</button><button class="btn btn-outline-secondary" :disabled="page === totalPages" @click="page++">{{ tr('Siguiente', 'Next') }}</button></div></div>
+    <div v-if="editor" class="modal-backdrop" @click.self="!saving && (editor = null)">
+      <section class="modal-panel modal-panel--lg" role="dialog" aria-modal="true" aria-labelledby="objective-editor-title">
+        <header class="modal-header"><h2 id="objective-editor-title">{{ editor.id ? tr('Editar objetivo', 'Edit objective') : tr('Nuevo objetivo', 'New objective') }}</h2><button class="modal-close" :disabled="saving" :aria-label="tr('Cerrar', 'Close')" @click="editor = null">×</button></header>
+        <form @submit.prevent="saveObjective"><fieldset :disabled="saving">
+          <template v-if="isSuperAdmin && !editor.id"><label>{{ t.fields.church }}<select v-model="editorChurch" class="form-select" required><option value="">{{ tr('Seleccionar', 'Select') }}</option><option v-for="church in churches" :key="church.id" :value="String(church.id)">{{ church.name }}</option></select></label><label>{{ t.fields.department }}<select v-model="editor.department_id" class="form-select" required :disabled="departmentsLoading"><option value="">{{ tr('Seleccionar', 'Select') }}</option><option v-for="department in editorDepartments" :key="department.id" :value="department.id">{{ department.name }}</option></select></label></template>
+          <p v-else class="muted">{{ editor.departmentName || auth.user?.department?.name }}</p>
+          <label>{{ t.fields.name }}<input v-model="editor.name" maxlength="255" class="form-control" required /></label>
+          <label>{{ t.fields.description }}<textarea v-model="editor.description" class="form-control" rows="3" required></textarea></label>
+          <label>{{ tr('Cómo se evaluará', 'How success is measured') }}<textarea v-model="editor.evaluation_metrics" class="form-control" rows="2" required :placeholder="tr('Ejemplo: realizar 4 talleres con al menos 20 participantes.', 'Example: hold 4 workshops with at least 20 participants.')"></textarea></label>
+          <p v-if="formError" class="notice error" role="alert">{{ formError }}</p><div class="action-row"><button type="button" class="btn btn-outline-secondary" @click="editor = null">{{ tr('Cancelar', 'Cancel') }}</button><button class="btn btn-primary" :disabled="departmentsLoading">{{ saving ? tr('Guardando…', 'Saving…') : tr('Guardar objetivo', 'Save objective') }}</button></div>
+        </fieldset></form>
+      </section>
+    </div>
+    <div v-if="deleteTarget" class="modal-backdrop" @click.self="!saving && (deleteTarget = null)"><section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="objective-delete-title"><h2 id="objective-delete-title">{{ tr('Eliminar objetivo', 'Delete objective') }}</h2><p>{{ deleteTarget.name }}</p><p>{{ tr('Esta acción no se puede deshacer.', 'This action cannot be undone.') }}</p><p v-if="formError" class="notice error">{{ formError }}</p><div class="action-row"><button class="btn btn-outline-secondary" :disabled="saving" @click="deleteTarget = null">{{ tr('Cancelar', 'Cancel') }}</button><button class="btn btn-outline-danger" :disabled="saving" @click="removeObjective">{{ tr('Eliminar', 'Delete') }}</button></div></section></div>
   </section>
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { storeToRefs } from 'pinia'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useAuthStore } from '../stores/authStore'
 import { useUiStore } from '../stores/uiStore'
 import { translations } from '../i18n/translations'
 import { objectiveApi } from '../services/objectiveApi'
 import { publicApi } from '../services/publicApi'
 import { superAdminApi } from '../services/superAdminApi'
-
-const authStore = useAuthStore()
-
-const uiStore = useUiStore()
-const { locale } = storeToRefs(uiStore)
-
-const t = computed(() => translations[locale.value].objectives)
-const common = computed(() => translations[locale.value].common)
-
-
-const objectives = ref([])
-const departments = ref([])
-const churches = ref([])
-const selectedChurchId = ref('')
-const loading = ref(false)
-const error = ref('')
-const isActive = ref(true)
-const filterText = ref('')
-const currentPage = ref(1)
-const pageSize = 10
-const sortKey = ref('department')
-const sortDir = ref('asc')
-
-const canChooseDepartment = computed(() =>
-  ['superadmin', 'secretary'].includes(authStore.user?.role || '')
-)
-const showDepartmentColumn = computed(() =>
-  ['superadmin', 'secretary'].includes(authStore.user?.role || '')
-)
-const isSuperAdmin = computed(() => authStore.user?.role === 'superadmin')
-
-const createForm = reactive({
-  department_id: '',
-  name: '',
-  description: '',
-  evaluation_metrics: '',
-})
-
-const filteredObjectives = computed(() => {
-  const list = objectives.value || []
-  const role = authStore.user?.role
-  const term = filterText.value.trim().toLowerCase()
-  const churchId = Number(selectedChurchId.value || 0)
-  const scopedList =
-    role === 'superadmin' && churchId
-      ? list.filter((item) => item.department?.church_id === churchId)
-      : list
-  if (role === 'member' || role === 'admin') {
-    const deptId = authStore.user?.department_id
-    return scopedList
-      .filter((item) => item.department_id === deptId)
-      .filter((item) => matchesFilter(item, term))
-      .sort((a, b) => compareObjectives(a, b))
-  }
-  return scopedList
-    .filter((item) => matchesFilter(item, term))
-    .sort((a, b) => compareObjectives(a, b))
-})
-
-const totalPages = computed(() => {
-  const count = filteredObjectives.value.length
-  return Math.max(1, Math.ceil(count / pageSize))
-})
-
-const paginatedObjectives = computed(() => {
-  const start = (currentPage.value - 1) * pageSize
-  return filteredObjectives.value.slice(start, start + pageSize)
-})
-
-const matchesFilter = (item, term) => {
-  if (!term) {
-    return true
-  }
-  const haystack = [
-    item.name,
-    item.description,
-    item.evaluation_metrics,
-    item.department?.name,
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase()
-
-  return haystack.includes(term)
-}
-
-const compareObjectives = (a, b) => {
-  if (sortKey.value !== 'department') {
-    return 0
-  }
-  const nameA = (a.department?.name || '').toLowerCase()
-  const nameB = (b.department?.name || '').toLowerCase()
-  if (nameA === nameB) {
-    return 0
-  }
-  const dir = sortDir.value === 'asc' ? 1 : -1
-  return nameA > nameB ? dir : -dir
-}
-
-const toggleSort = (key) => {
-  if (sortKey.value === key) {
-    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
-    return
-  }
-  sortKey.value = key
-  sortDir.value = 'asc'
-}
-
-const textColorForBg = (color) => {
-  if (!color) {
-    return '#111111'
-  }
-  const hex = color.trim()
-  if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex)) {
-    return '#111111'
-  }
-  let normalized = hex.slice(1)
-  if (normalized.length === 3) {
-    normalized = normalized
-      .split('')
-      .map((ch) => ch + ch)
-      .join('')
-  }
-  const intValue = Number.parseInt(normalized, 16)
-  const r = (intValue >> 16) & 255
-  const g = (intValue >> 8) & 255
-  const b = intValue & 255
-  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
-  return luminance > 0.7 ? '#111111' : '#ffffff'
-}
-
-const goToPage = (page) => {
-  if (page < 1 || page > totalPages.value) {
-    return
-  }
-  currentPage.value = page
-}
-
-const goPrev = () => {
-  goToPage(currentPage.value - 1)
-}
-
-const goNext = () => {
-  goToPage(currentPage.value + 1)
-}
-
-const loadDepartments = async () => {
-  const churchId = isSuperAdmin.value ? Number(selectedChurchId.value || 0) : authStore.user?.church_id
-  if (!churchId) {
-    departments.value = []
-    return
-  }
-  departments.value = await publicApi.listDepartments(churchId)
-}
-
-const loadObjectives = async () => {
-  loading.value = true
-  error.value = ''
-  try {
-    const data = await objectiveApi.list()
-    if (!isActive.value) {
-      return
-    }
-    objectives.value = Array.isArray(data) ? data.map((item) => ({ ...item })) : []
-    currentPage.value = 1
-  } catch {
-    if (!isActive.value) {
-      return
-    }
-    error.value = t.value.messages.loadError
-  } finally {
-    if (!isActive.value) {
-      return
-    }
-    loading.value = false
-  }
-}
-
-const createObjective = async () => {
-  error.value = ''
-  const departmentId = canChooseDepartment.value
-    ? Number(createForm.department_id || 0)
-    : authStore.user?.department_id
-
-  if (!departmentId) {
-    error.value = t.value.messages.departmentRequired
-    return
-  }
-
-  try {
-    await objectiveApi.create({
-      department_id: departmentId,
-      name: createForm.name,
-      description: createForm.description,
-      evaluation_metrics: createForm.evaluation_metrics,
-    })
-    createForm.name = ''
-    createForm.description = ''
-    createForm.evaluation_metrics = ''
-    if (canChooseDepartment.value) {
-      createForm.department_id = ''
-    }
-    await loadObjectives()
-  } catch {
-    error.value = t.value.messages.createError
-  }
-}
-
-const updateObjective = async (objective) => {
-  error.value = ''
-  try {
-    await objectiveApi.update(objective.id, {
-      name: objective.name,
-      description: objective.description,
-      evaluation_metrics: objective.evaluation_metrics,
-    })
-  } catch {
-    error.value = t.value.messages.updateError
-  }
-}
-
-const deleteObjective = async (objective) => {
-  error.value = ''
-  try {
-    await objectiveApi.remove(objective.id)
-    await loadObjectives()
-  } catch {
-    error.value = t.value.messages.deleteError
-  }
-}
-
-const loadData = async () => {
-  if (!authStore.user) {
-    return
-  }
-  if (isSuperAdmin.value) {
-    const response = await superAdminApi.listChurches()
-    churches.value = response.data
-  }
-  await loadDepartments()
-  await loadObjectives()
-}
-
-onMounted(() => {
-  if (authStore.user) {
-    loadData()
-    return
-  }
-  const stop = watch(
-    () => authStore.user,
-    (next) => {
-      if (next) {
-        loadData()
-        stop()
-      }
-    }
-  )
-})
-
-onUnmounted(() => {
-  isActive.value = false
-})
-
-// Locale is managed by the sidebar selector.
-
-watch(filterText, () => {
-  currentPage.value = 1
-})
-
-watch(selectedChurchId, () => {
-  if (!isSuperAdmin.value) {
-    return
-  }
-  createForm.department_id = ''
-  loadDepartments()
-  currentPage.value = 1
-})
-
-watch(
-  () => filteredObjectives.value.length,
-  () => {
-    if (currentPage.value > totalPages.value) {
-      currentPage.value = totalPages.value
-    }
-  }
-)
+const auth = useAuthStore(), ui = useUiStore()
+const tr = (es, en) => ui.locale === 'es' ? es : en
+const t = computed(() => translations[ui.locale].objectives)
+const isSuperAdmin = computed(() => auth.user?.role === 'superadmin')
+const canViewAll = computed(() => isSuperAdmin.value || auth.user?.role === 'secretary')
+const canManage = computed(() => isSuperAdmin.value || (['admin', 'member'].includes(auth.user?.role) && !!auth.user?.department_id))
+const objectives = ref([]), churches = ref([]), loading = ref(false), error = ref(''), search = ref(''), departmentFilter = ref(''), churchFilter = ref(''), sort = ref('name'), page = ref(1)
+const editor = ref(null), editorChurch = ref(''), editorDepartments = ref([]), departmentsLoading = ref(false), saving = ref(false), formError = ref(''), deleteTarget = ref(null)
+const expanded = ref(null), linkedEvents = ref([]), eventsLoading = ref(false), eventsError = ref('')
+let active = true, eventRequest = 0, departmentRequest = 0
+const filterDepartments = computed(() => [...new Map(objectives.value.filter(o => o.department && (!churchFilter.value || String(o.department.church_id) === churchFilter.value)).map(o => [o.department.id, o.department])).values()].sort((a,b) => a.name.localeCompare(b.name)))
+const filtered = computed(() => objectives.value.filter(o => (!churchFilter.value || String(o.department?.church_id) === churchFilter.value) && (!departmentFilter.value || String(o.department_id) === departmentFilter.value) && [o.name,o.description,o.evaluation_metrics,o.department?.name].join(' ').toLowerCase().includes(search.value.trim().toLowerCase())).sort((a,b) => sort.value === 'events' ? b.events_count - a.events_count || a.name.localeCompare(b.name) : sort.value === 'department' ? (a.department?.name || '').localeCompare(b.department?.name || '') || a.name.localeCompare(b.name) : a.name.localeCompare(b.name)))
+const eventCount = computed(() => filtered.value.reduce((sum,o) => sum + (o.events_count || 0), 0))
+const totalPages = computed(() => Math.max(1,Math.ceil(filtered.value.length / 8)))
+const paginated = computed(() => filtered.value.slice((page.value-1)*8,page.value*8))
+const date = value => value ? new Intl.DateTimeFormat(ui.locale, { dateStyle:'medium', timeStyle:'short' }).format(new Date(value)) : '—'
+const status = value => ({ approved:tr('Aceptado','Accepted'), denied:tr('Rechazado','Rejected'), pending:tr('Pendiente','Pending'), resubmitted:tr('Reenviado','Resubmitted'), changes_requested:tr('Cambios solicitados','Changes requested') }[value] || value)
+const message = (e,fallback) => Object.values(e.response?.data?.errors || {}).flat().join(' ') || e.response?.data?.message || fallback
+async function load() { loading.value=true; error.value=''; try { const result=await objectiveApi.list(); if(active) objectives.value=result; page.value=Math.min(page.value,totalPages.value) } catch(e) { if(active) error.value=message(e,t.value.messages.loadError) } finally { if(active) loading.value=false } }
+function openEditor(objective=null) { formError.value=''; editor.value=objective ? {...objective,departmentName:objective.department?.name} : {department_id:auth.user?.department_id || '',name:'',description:'',evaluation_metrics:''}; if(!objective) editorChurch.value=churchFilter.value }
+async function saveObjective() { if(saving.value) return; saving.value=true;formError.value='';try { const payload={name:editor.value.name,description:editor.value.description,evaluation_metrics:editor.value.evaluation_metrics}; if(editor.value.id) await objectiveApi.update(editor.value.id,payload); else await objectiveApi.create({...payload,department_id:editor.value.department_id});editor.value=null; await load();ui.showToast(tr('Objetivo guardado.','Objective saved.'),'success') } catch(e) {formError.value=message(e,t.value.messages.createError)} finally {saving.value=false} }
+async function removeObjective() {saving.value=true;formError.value='';try {await objectiveApi.remove(deleteTarget.value.id);deleteTarget.value=null;await load()} catch(e){formError.value=message(e,t.value.messages.deleteError)}finally{saving.value=false}}
+async function toggleEvents(objective) { if(expanded.value===objective.id){expanded.value=null;eventRequest++;return} expanded.value=objective.id;eventsLoading.value=true;eventsError.value='';const request=++eventRequest;try {const rows=await objectiveApi.events(objective.id);if(active && request===eventRequest)linkedEvents.value=rows}catch(e){if(request===eventRequest)eventsError.value=message(e,tr('No se pudieron cargar los eventos.','Could not load events.'))}finally{if(request===eventRequest)eventsLoading.value=false} }
+watch([search,departmentFilter,sort,churchFilter],()=>{page.value=1})
+watch(churchFilter,()=>{departmentFilter.value=''})
+watch(editorChurch,async value=>{const request=++departmentRequest;editorDepartments.value=[];if(editor.value && !editor.value.id)editor.value.department_id='';if(!value){departmentsLoading.value=false;return}departmentsLoading.value=true;try{const rows=await publicApi.listDepartments(value);if(active&&request===departmentRequest)editorDepartments.value=rows}catch(e){if(active&&request===departmentRequest)formError.value=message(e,t.value.messages.loadError)}finally{if(request===departmentRequest)departmentsLoading.value=false}})
+watch(deleteTarget,()=>{formError.value=''})
+watch([editor,deleteTarget],([edit,remove])=>{document.body.style.overflow=edit||remove?'hidden':''})
+onMounted(async()=>{await load();if(isSuperAdmin.value){try{let result, page=1, list=[];do{result=await superAdminApi.listChurches({page:page++});list.push(...result.data)}while(result.next_page_url);if(active)churches.value=list}catch(e){if(active)error.value=message(e,t.value.messages.loadError)}}})
+onUnmounted(()=>{active=false;eventRequest++;departmentRequest++;document.body.style.overflow=''})
 </script>
+
+<style scoped>
+.objectives-page {display:grid;gap:20px;font-size:13px}.objectives-heading,.card-heading{display:flex;align-items:center;justify-content:space-between;gap:18px}h1{font-size:20px;font-weight:500;margin:0 0 8px}.objectives-heading p{margin:0;color:#68766e}.eyebrow{font-size:12px;color:#28705b!important;margin-bottom:6px!important}.readonly-badge,.department-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:6px;font-size:12px;background:#edf3ef;color:#436351}.department-pill{background:color-mix(in srgb,var(--department-color) 12%,white)}.department-pill i{width:8px;height:8px;border-radius:50%;background:var(--department-color)}.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.summary article{background:white;border:1px solid #dfe5df;border-radius:9px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px}.summary span,.muted{color:#68766e}.summary strong{font-size:21px;font-weight:500;color:#254b3d}.surface{background:white;border:1px solid #dfe5df;border-radius:10px;padding:20px}.filters{display:flex;align-items:end;gap:14px;flex-wrap:wrap;background:#f8faf9}.filters .search{flex:1;min-width:200px}label{display:block;font-size:12px;margin:0}.form-control,.form-select{margin-top:6px}.btn{width:auto;font-size:12px}.btn-primary{background:#1f6f5c;border-color:#1f6f5c}.objective-list{display:grid;gap:14px}h2{font-size:16px;font-weight:500;margin:10px 0 0;overflow-wrap:anywhere}.event-count{color:#68766e;font-size:12px;white-space:nowrap}.objective-details{display:grid;grid-template-columns:1.4fr 1fr;gap:24px;margin:20px 0}.objective-details h3{font-size:11px;font-weight:500;color:#68766e;margin:0 0 8px}.objective-details p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}.metrics{border-left:2px solid #dce9e1;padding-left:18px}footer,.pagination-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}footer{padding-top:14px;border-top:1px solid #edf0ed}footer .edit-actions{margin-left:auto;display:flex;gap:8px}.pagination-row{justify-content:space-between;color:#68766e}.pagination-row button+button{margin-left:8px}.empty{text-align:center;padding:45px;color:#68766e}.notice{padding:12px;border-radius:7px;margin:0}.error{background:#fff1ef;color:#8a3931}.linked-events{margin-top:16px}.table{font-size:12px}.table th{font-weight:500;background:#f6f8f7;color:#596b61}.table th,.table td{padding:12px}.status{display:inline-block;padding:4px 8px;border-radius:12px;background:#fbf2db;color:#78612c}.status.approved{background:#e6f1e9;color:#246046}.status.denied{background:#f8e9e6;color:#8a443e}.modal-panel fieldset{border:0;padding:0;display:grid;gap:16px}.modal-panel h2{margin:0}.modal-panel form{margin-top:18px}@media(max-width:767px){.summary{grid-template-columns:1fr}.objective-details{grid-template-columns:1fr;gap:16px}.objectives-heading{align-items:start;flex-wrap:wrap}.filters label{width:100%}.edit-actions{margin-left:0!important}}
+</style>

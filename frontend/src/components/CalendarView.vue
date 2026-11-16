@@ -1,9 +1,23 @@
 <template>
   <section class="calendar-page container-xl">
+    <div v-for="hold in expiringOwnHolds" :key="hold.id" class="alert alert-warning" role="alert" aria-live="assertive">
+      {{ locale === 'es' ? 'Tu reserva está por vencer.' : 'Your reservation is about to expire.' }}
+      <button class="btn btn-warning ms-2" :disabled="extendingHold" @click="extendReservation(hold)">
+        {{ locale === 'es' ? 'Extender 5 minutos' : 'Extend 5 minutes' }}
+      </button>
+      <button class="btn btn-outline-secondary ms-2" @click="dismissedHoldWarnings.add(hold.id)">
+        {{ locale === 'es' ? 'Dejar vencer' : 'Let expire' }}
+      </button>
+      <p v-if="holdExtensionError">{{ holdExtensionError }}</p>
+    </div>
     <header class="calendar-header">
       <div class="row">
         <div class="col-12 col-lg-4">
           <h1 class="mb-1">{{ t.title }}</h1>
+          <p v-if="user?.church" class="small mb-2">
+            <strong>{{ canReview ? (locale === 'es' ? 'Vista de secretaría' : 'Clerk view') : (locale === 'es' ? 'Vista de departamento' : 'Department view') }}</strong>
+            · {{ user.church.name }}<span v-if="!canReview && user.department"> · {{ user.department.name }}</span>
+          </p>
           <button
             v-if="calendarFeedUrl"
             type="button"
@@ -79,20 +93,28 @@
           </div>
         </div>
       </div>
-      <div class="row">
-        <div
-        v-if="canViewUnseenNotes && unseenCount"
-        class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2"
-        role="alert"
-      >
-        <div>
-          {{ t.unseenNotesAlert }}: <strong>{{ unseenCount }}</strong>
+      <aside v-if="canViewUnseenNotes && unseenCount" class="unread-notes-card" aria-labelledby="unread-notes-title">
+        <div class="unread-notes-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l-3 3V11.5A7.5 7.5 0 0 1 9.5 4H12" />
+            <path d="M7 10h6M7 14h9" />
+            <circle cx="19" cy="5" r="3" fill="currentColor" stroke="none" />
+          </svg>
         </div>
-        <button type="button" class="btn btn-outline-secondary btn-sm" @click="openUnseenNotesModal">
+        <div class="unread-notes-copy">
+          <div class="unread-notes-heading">
+            <h2 id="unread-notes-title">{{ t.unseenNotesAlert }}</h2>
+            <span class="unread-notes-count" role="status" aria-live="polite" aria-atomic="true">
+              {{ unseenCount }} {{ locale === 'es' ? (unseenCount === 1 ? 'nueva' : 'nuevas') : (unseenCount === 1 ? 'new note' : 'new notes') }}
+            </span>
+          </div>
+          <p>{{ locale === 'es' ? 'Secretaría dejó comentarios en tus eventos. Revísalos para mantenerte al día.' : 'The clerk left comments on your events. Review them to stay up to date.' }}</p>
+        </div>
+        <button type="button" class="unread-notes-action" @click="openUnseenNotesModal">
           {{ t.unseenNotesButton }}
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-5-5 5 5-5 5" /></svg>
         </button>
-      </div>
-      </div>
+      </aside>
       <div class="row">
         <div class="col-12 d-flex justify-content-center">
           <div class="calendar-actions d-flex flex-nowrap align-items-center gap-2">
@@ -269,15 +291,22 @@
       </ul>
     </div>
 
-    <section v-if="canViewChangeRequests" class="review-panel">
+    <section v-if="canViewChangeRequests && rejectedEvents.length" class="review-panel">
+      <h2>{{ locale === 'es' ? 'Eventos rechazados' : 'Rejected events' }}</h2>
+      <article v-for="event in rejectedEvents" :key="event.id" class="review-item">
+        <strong>{{ event.title }}</strong>
+        <span>{{ formatEventTime(event) }}</span>
+        <p>{{ event.review_note }}</p>
+        <button class="btn btn-outline-secondary" @click="openEventDetails(event)">{{ t.viewDetailsButton }}</button>
+      </article>
+    </section>
+
+    <section v-if="canViewChangeRequests && changeRequestedEvents.length" class="review-panel">
       <div class="review-header">
         <h2 class="review-title">{{ t.changeRequestsTitle }}</h2>
         <p class="review-subtitle">{{ t.changeRequestsSubtitle }}</p>
       </div>
-      <div v-if="changeRequestedEvents.length === 0" class="review-empty">
-        {{ t.changeRequestsEmpty }}
-      </div>
-      <div v-else class="review-list">
+      <div class="review-list">
         <article v-for="event in changeRequestedEvents" :key="event.id" class="review-item">
           <div class="review-info">
             <strong>{{ event.title }}</strong>
@@ -311,15 +340,12 @@
       </div>
     </section>
 
-    <section v-if="canReview" class="review-panel">
+    <section v-if="canReview && clubConflictEvents.length" class="review-panel">
       <div class="review-header">
         <h2 class="review-title">{{ t.clubConflictsTitle }}</h2>
         <p class="review-subtitle">{{ t.clubConflictsSubtitle }}</p>
       </div>
-      <div v-if="clubConflictEvents.length === 0" class="review-empty">
-        {{ t.clubConflictsEmpty }}
-      </div>
-      <div v-else class="review-actions">
+      <div class="review-actions">
         <button type="button" class="btn btn-outline-primary" @click="openClubConflictsModal">
           {{ t.clubConflictsButton }} ({{ clubConflictEvents.length }})
         </button>
@@ -342,7 +368,7 @@
       :is-resuming-hold="isResumingHold"
       :error="formError"
       :notice="formNotice"
-      :labels="t.drawer"
+      :labels="{ ...t.drawer, saveEvent: locale === 'es' ? 'Reenviar' : 'Resubmit' }"
       @update:title="form.title = $event"
       @update:description="form.description = $event"
       @update:location="form.location = $event"
@@ -360,9 +386,15 @@
       :event="selectedEvent"
       :notes="selectedEvent?.notes || []"
       :histories="selectedEvent?.histories || []"
-      :can-reply-notes="canReplyEventNotes"
+      :can-reply-notes="selectedEvent?.status === 'locked' && (canReview || selectedEvent?.department_id === user?.department_id)"
+      :can-review="canReview"
+      :saving="eventNoteSaving"
+      :error="eventNoteError"
+      @review="handleDetailsReview"
       :can-edit-event="canEditSelectedEvent"
-      :show-status-details="showStatusDetails"
+      :can-request-open="canRequestOpen(selectedEvent)"
+      :request-open-label="locale === 'es' ? 'Solicitar apertura' : 'Request open'"
+      @request-open="requestEventOpen"
       :labels="t.eventDetails"
       @close="closeEventDetails"
       @reply-note="handleDetailsReply"
@@ -378,75 +410,6 @@
         <p class="event-details-text">{{ reviewModalMessage }}</p>
         <div class="action-row">
           <button type="button" @click="closeReviewModal">{{ t.reviewModalClose }}</button>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="statusModalOpen && activeReviewEvent" class="modal-backdrop" @click.self="closeStatusModal">
-      <div class="modal-panel">
-        <header class="modal-header">
-          <h2>{{ t.statusModalTitle }}</h2>
-          <button type="button" class="modal-close" @click="closeStatusModal">×</button>
-        </header>
-        <div class="event-details">
-          <p class="event-details-title">{{ activeReviewEvent.title }}</p>
-          <label class="form-label">
-            {{ t.reviewStatus }}
-            <select v-model="statusSelection" class="form-select">
-              <option value="approved">{{ t.statusApproved }}</option>
-              <option value="changes_requested">{{ t.statusChanges }}</option>
-              <option value="denied">{{ t.statusDenied }}</option>
-            </select>
-          </label>
-          <label v-if="statusSelection === 'approved'" class="export-toggle mt-2">
-            <input v-model="publishToFeed" type="checkbox" />
-            <span>{{ t.publishToFeed }}</span>
-          </label>
-          <label v-if="statusSelection === 'approved'" class="form-label mt-2">
-            {{ t.statusAcceptedAt }}
-            <input v-model="statusAcceptedAt" class="form-control" type="date" />
-          </label>
-          <label class="form-label mt-2">
-            {{ t.statusModalNote }}
-            <textarea v-model="statusNote" class="form-control" rows="3"></textarea>
-          </label>
-        </div>
-        <div class="action-row">
-          <button type="button" class="btn btn-outline-secondary" @click="closeStatusModal">
-            {{ t.reviewModalClose }}
-          </button>
-          <button type="button" class="btn btn-outline-primary" @click="submitStatusModal">
-            {{ t.statusModalSubmit }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="notesModalOpen && activeReviewEvent" class="modal-backdrop" @click.self="closeNotesModal">
-      <div class="modal-panel">
-        <header class="modal-header">
-          <h2>{{ t.notesModalTitle }}</h2>
-          <button type="button" class="modal-close" @click="closeNotesModal">×</button>
-        </header>
-        <div class="event-details">
-          <p class="event-details-title">{{ activeReviewEvent.title }}</p>
-          <div v-if="canAddNote" class="note-add">
-            <label class="form-label">
-              {{ t.statusModalNote }}
-              <textarea v-model="noteDraft" class="form-control" rows="3"></textarea>
-            </label>
-            <button
-              type="button"
-              class="btn btn-outline-secondary mt-2"
-              :disabled="!noteDraft || !noteDraft.trim()"
-              @click="submitNoteModal"
-            >
-              {{ t.notesModalSubmit }}
-            </button>
-          </div>
-        </div>
-        <div class="action-row">
-          <button type="button" @click="closeNotesModal">{{ t.reviewModalClose }}</button>
         </div>
       </div>
     </div>
@@ -511,11 +474,7 @@
                   </li>
                 </ul>
                 <div class="mt-3">
-                  <button
-                    type="button"
-                    class="btn btn-outline-secondary btn-sm"
-                    @click="openEventFromNote(group.notes[0])"
-                  >
+                  <button type="button" class="btn btn-outline-primary" @click="openEventFromNote(group.notes[0])">
                     {{ t.unseenNotesOpenEvent }}
                   </button>
                 </div>
@@ -551,7 +510,7 @@
                 <strong>{{ t.clubConflictsDate }}:</strong> {{ formatEventTime(event) }}
               </div>
               <div class="review-actions mt-2">
-                <button type="button" class="btn btn-outline-primary" @click="openStatusModal(event)">
+                <button type="button" class="btn btn-outline-primary" @click="openEventDetails(event)">
                   {{ t.clubConflictsReview }}
                 </button>
                 <button type="button" class="btn btn-outline-secondary" @click="openEventDetails(event)">
@@ -564,67 +523,22 @@
       </div>
     </div>
 
-    <div v-if="publishAcceptedOpen" class="modal-backdrop" @click.self="closePublishAcceptedModal">
-      <div class="modal-panel modal-panel--lg">
-        <header class="modal-header">
-          <h2>{{ t.publishAcceptedModalTitle }}</h2>
-          <button type="button" class="modal-close" @click="closePublishAcceptedModal">×</button>
-        </header>
-        <div v-if="publishAcceptedEvents.length === 0" class="event-details-text">
-          {{ t.publishAcceptedEmpty }}
-        </div>
-        <div v-else class="event-details">
-          <ul class="history-list">
-            <li
-              v-for="event in publishAcceptedEvents"
-              :key="event.id"
-              class="history-item"
-              :style="eventPillStyle(event)"
-            >
-              <div class="history-meta">
-                <strong>{{ event.title }}</strong>
-              </div>
-              <div class="event-details-text">
-                {{ formatEventTime(event) }} · {{ event.department?.name || t.unknownDepartment }}
-              </div>
-              <div class="event-details-text">
-                {{ formatDateOnly(event.start_at) }}
-              </div>
-            </li>
-          </ul>
-        </div><br><br>
-        <div class="action-row">
-          <button type="button" class="btn btn-outline-secondary" @click="closePublishAcceptedModal">
-            {{ t.publishAcceptedClose }}
-          </button>
-          <button
-            v-if="publishAcceptedEvents.length > 0"
-            type="button"
-            class="btn btn-outline-primary"
-            @click="publishAcceptedAll"
-          >
-            {{ t.publishAcceptedPublish }}
-          </button>
-        </div>
-      </div>
-    </div>
-
     <section v-if="canReview" class="review-panel">
       <div class="review-header">
         <div>
-          <h2 class="review-title">{{ reviewScopeLabel }}</h2>
+          <h2 class="review-title">{{ locale === 'es' ? 'Eventos' : 'Events' }} · {{ reviewScopeLabel }}</h2>
           <p class="review-subtitle">{{ t.reviewSubtitle }}</p>
         </div>
-        <button type="button" class="btn btn-link" @click="openPublishAcceptedModal">
-          {{ t.publishAcceptedAll }}
-        </button>
+
       </div>
       <div class="review-filters row g-2">
         <label class="col-12 col-sm-6 col-lg-3">
           <span class="form-label small mb-1">{{ t.filterStatus }}</span>
           <select v-model="statusFilter" class="form-select">
-            <option value="all">{{ t.allStatuses }}</option>
+            <option value="all">{{ locale === 'es' ? 'Todos los estados' : 'All statuses' }}</option>
+            <option value="to_handle">{{ locale === 'es' ? 'Por atender' : 'To handle' }}</option>
             <option value="pending">{{ t.statusPending }}</option>
+            <option value="resubmitted">{{ locale === 'es' ? 'Reenviados' : 'Resubmitted' }}</option>
             <option value="approved">{{ t.statusApproved }}</option>
             <option value="denied">{{ t.statusDenied }}</option>
             <option value="changes_requested">{{ t.statusChanges }}</option>
@@ -641,7 +555,7 @@
         </label>
       </div>
       <div v-if="reviewGroups.length === 0" class="review-empty">
-        {{ t.reviewEmpty }}
+        {{ locale === 'es' ? 'No hay eventos para este período y los filtros seleccionados.' : 'No events match this period and the selected filters.' }}
       </div>
       <div v-else class="review-list">
         <article v-for="group in reviewGroups" :key="group.date" class="review-group">
@@ -661,30 +575,17 @@
                   <span class="status-dot" :class="statusClass(event.review_status)"></span>
                   {{ t.reviewStatus }}: {{ reviewStatusLabel(event.review_status) }}
                 </span>
+                <span v-if="event.open_requested_at" class="review-status">{{ locale === 'es' ? 'Apertura solicitada' : 'Opening requested' }}</span>
                 <span v-if="event.accepted_at" class="review-status">
                   {{ t.reviewAcceptedAt }}: {{ formatDateOnly(event.accepted_at) }}
                 </span>
               </div>
               <div class="review-actions">
                 <div class="review-buttons">
-                  <button
-                    type="button"
-                    class="btn btn-outline-secondary"
-                    @click="openStatusModal(event)"
-                  >
-                    {{ t.statusUpdateButton }}
-                  </button>
-                  <button
-                    type="button"
-                    class="btn btn-outline-primary"
-                    @click="openNotesModal(event)"
-                  >
-                    {{ t.notesButton }}
+                  <button type="button" class="btn btn-outline-primary" @click="openEventDetails(event)">
+                    {{ locale === 'es' ? 'Notas y revisión' : 'Notes and review' }}
                   </button>
                 </div>
-                <p v-if="reviewErrors[event.id]" class="text-danger mt-1">
-                  {{ reviewErrors[event.id] }}
-                </p>
                 <div class="review-history">
                   <div class="history-header">
                     <h4 class="history-title">{{ t.historyTitle }}</h4>
@@ -738,6 +639,7 @@ import { useUiStore } from '../stores/uiStore'
 import { translations } from '../i18n/translations'
 import { objectiveApi } from '../services/objectiveApi'
 import { publicApi } from '../services/publicApi'
+import { eventActionLabel } from '../utils/eventWorkflow'
 import { calendarApi } from '../services/calendarApi'
 import EventModal from './EventModal.vue'
 import EventDetailsModal from './EventDetailsModal.vue'
@@ -759,8 +661,6 @@ const canReview = computed(() => isSecretary.value || isSuperAdmin.value)
 const canViewUnseenNotes = computed(
   () => !isSecretary.value && !isSuperAdmin.value && Boolean(user.value?.department_id)
 )
-const canReplyEventNotes = computed(() => canViewUnseenNotes.value)
-const showStatusDetails = computed(() => false)
 const canViewChangeRequests = computed(
   () => !isSecretary.value && !isSuperAdmin.value && Boolean(user.value?.department_id)
 )
@@ -832,7 +732,7 @@ const canEditSelectedEvent = computed(() => {
   if (isSecretary.value || isSuperAdmin.value) {
     return false
   }
-  if (event.review_status !== 'changes_requested') {
+  if (event.status !== 'locked' || event.review_status !== 'changes_requested') {
     return false
   }
   return Boolean(user.value?.department_id) && user.value.department_id === event.department_id
@@ -860,23 +760,16 @@ const departments = ref([])
 const isModalOpen = ref(false)
 const isEventDetailsOpen = ref(false)
 const selectedEvent = ref(null)
+const eventNoteSaving = ref(false)
+const eventNoteError = ref('')
 const departmentFilter = ref('all')
 const statusFilter = ref('all')
 const reviewDepartmentFilter = ref('all')
-const reviewErrors = reactive({})
 const monthSelection = ref('')
 const expandedHistoryIds = ref(new Set())
 const reviewModalOpen = ref(false)
 const reviewModalMessage = ref('')
-const statusModalOpen = ref(false)
-const notesModalOpen = ref(false)
-const activeReviewEvent = ref(null)
-const statusSelection = ref('pending')
-const statusNote = ref('')
-const publishToFeed = ref(false)
-const statusAcceptedAt = ref('')
 const editEventId = ref(null)
-const noteDraft = ref('')
 const includeHistoryExport = ref(false)
 const unseenNotes = ref([])
 const unseenNotesOpen = ref(false)
@@ -884,7 +777,6 @@ const unseenNotesLoading = ref(false)
 const expandedUnseenEventIds = ref(new Set())
 const markingSeenNoteIds = ref(new Set())
 const clubConflictsOpen = ref(false)
-const publishAcceptedOpen = ref(false)
 const churchSlug = ref('')
 
 const form = reactive({
@@ -1016,6 +908,7 @@ const weekCells = computed(() => {
 
 const displayEvents = computed(() => {
   let list = events.value || []
+  list = list.filter((event) => event.status !== 'cancelled' && event.review_status !== 'denied')
   list = list.filter((event) => !isHoldExpired(event) || isExpiringHold(event))
   if (departmentFilter.value && departmentFilter.value !== 'all') {
     const departmentId = Number(departmentFilter.value)
@@ -1032,24 +925,6 @@ const clubConflictEvents = computed(() => {
     return []
   }
   return (events.value || []).filter((event) => event.requires_club_review)
-})
-
-const publishAcceptedEvents = computed(() => {
-  if (!canReview.value) {
-    return []
-  }
-  const range = reviewRange.value
-  if (!range) {
-    return []
-  }
-  return (events.value || [])
-    .filter((event) => event.final_validation === 'accepted')
-    .filter((event) => !event.publish_to_feed)
-    .filter((event) => {
-      const startAt = new Date(event.start_at)
-      return startAt >= range.start && startAt <= range.end
-    })
-    .sort((a, b) => new Date(a.start_at) - new Date(b.start_at))
 })
 
 const eventsByDate = computed(() => {
@@ -1212,10 +1087,10 @@ const eventMarkerDetails = (event) => {
 }
 
 const statusDotClass = (event) => {
-  if (event.final_validation === 'accepted') {
+  if (event.review_status === 'approved') {
     return 'event-status-dot--accepted'
   }
-  if (event.final_validation === 'rejected') {
+  if (event.review_status === 'denied') {
     return 'event-status-dot--rejected'
   }
   if (event.status === 'locked') {
@@ -1315,6 +1190,7 @@ const closeModal = () => {
 }
 
 const openEventDetails = async (event) => {
+  clubConflictsOpen.value = false
   if (isHoldExpired(event)) {
     flashExpiredHold(event)
     return
@@ -1324,6 +1200,7 @@ const openEventDetails = async (event) => {
     return
   }
   selectedEvent.value = event
+  eventNoteError.value = ''
   isEventDetailsOpen.value = true
   await markNotesSeenForEvent(event)
 }
@@ -1543,7 +1420,7 @@ const canEditEvent = (event) => {
   if (isSecretary.value || isSuperAdmin.value) {
     return false
   }
-  if (event.review_status !== 'changes_requested') {
+  if (event.status !== 'locked' || event.review_status !== 'changes_requested') {
     return false
   }
   return Boolean(user.value?.department_id) && user.value.department_id === event.department_id
@@ -1652,8 +1529,13 @@ const reviewGroups = computed(() => {
   if (!canReview.value) {
     return []
   }
-  let list = displayEvents.value
+  let list = (events.value || [])
     .filter((event) => event.status === 'locked')
+    .filter((event) => {
+      if (statusFilter.value === 'all') return true
+      if (statusFilter.value === 'to_handle') return ['pending', 'resubmitted'].includes(event.review_status) || Boolean(event.open_requested_at)
+      return event.review_status === statusFilter.value
+    })
     .sort((a, b) => new Date(a.start_at) - new Date(b.start_at))
 
   if (reviewDepartmentFilter.value && reviewDepartmentFilter.value !== 'all') {
@@ -1677,6 +1559,22 @@ const reviewGroups = computed(() => {
 
   return Array.from(grouped.entries()).map(([date, events]) => ({ date, events }))
 })
+
+const rejectedEvents = computed(() => (events.value || []).filter((event) =>
+  event.status === 'locked' && event.review_status === 'denied' && event.department_id === user.value?.department_id
+))
+const canRequestOpen = (event) => event?.status === 'locked' && event.review_status === 'approved'
+  && event.department_id === user.value?.department_id && !event.open_requested_at && !canReview.value
+const requestEventOpen = async () => {
+  try {
+    const event = await calendarApi.requestOpen(selectedEvent.value.id)
+    calendarStore.upsertEvent(event)
+    selectedEvent.value = event
+  } catch (error) {
+    reviewModalMessage.value = extractErrorMessage(error)
+    reviewModalOpen.value = true
+  }
+}
 
 const changeRequestedEvents = computed(() => {
   if (!canViewChangeRequests.value) {
@@ -1766,34 +1664,13 @@ const formatDateOnly = (value) => {
   return date.toLocaleDateString(locale.value)
 }
 
-const formatDateLocal = (value) => {
-  const date = value ? new Date(value) : new Date()
-  if (Number.isNaN(date.getTime())) {
-    return ''
-  }
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-const toIsoDate = (value) => {
-  if (!value) {
-    return null
-  }
-  const date = new Date(`${value}T00:00:00`)
-  if (Number.isNaN(date.getTime())) {
-    return null
-  }
-  return date.toISOString()
-}
-
 const reviewStatusLabel = (status) => {
   if (!status) {
     return t.value.statusPending
   }
   const map = {
     pending: t.value.statusPending,
+    resubmitted: locale.value === 'es' ? 'Reenviado' : 'Resubmitted',
     approved: t.value.statusApproved,
     denied: t.value.statusDenied,
     changes_requested: t.value.statusChanges,
@@ -1826,18 +1703,17 @@ const formatHistoryValue = (value) => {
 
 const historyForEvent = (event) => {
   const historyEntries = (event?.histories || [])
-    .filter((entry) => entry?.note)
     .map((entry) => ({
       id: `history-${entry.id}`,
       kind: 'status_change',
-      note: entry.note,
+      note: [eventActionLabel(entry.action, locale.value), entry.note].filter(Boolean).join(' · '),
       reply: null,
       created_at: entry.created_at,
       authorRole: entry.user?.role || 'secretary',
       authorName: entry.user?.name || '',
     }))
 
-  const noteEntries = (event?.notes || []).map((entry) => ({
+  const noteEntries = (event?.notes || []).filter((entry) => !entry.event_history_id).map((entry) => ({
     id: `note-${entry.id}`,
     kind: 'single_note',
     note: entry.note,
@@ -1851,9 +1727,6 @@ const historyForEvent = (event) => {
 }
 
 const isSecretaryHistoryEntry = (entry) => {
-  if (entry.kind === 'status_change') {
-    return true
-  }
   return entry.authorRole === 'secretary' || entry.authorRole === 'superadmin'
 }
 
@@ -1873,7 +1746,7 @@ const formatHistoryMeta = (entry) => {
 }
 
 const isSecretaryNote = (note) => {
-  const role = note?.author?.role
+  const role = note?.author_role || note?.author?.role
   return role === 'secretary' || role === 'superadmin'
 }
 
@@ -1944,14 +1817,6 @@ const closeClubConflictsModal = () => {
   clubConflictsOpen.value = false
 }
 
-const openPublishAcceptedModal = () => {
-  publishAcceptedOpen.value = true
-}
-
-const closePublishAcceptedModal = () => {
-  publishAcceptedOpen.value = false
-}
-
 const markNoteSeen = async (note) => {
   try {
     await calendarStore.markNoteSeen(note.id)
@@ -2009,14 +1874,31 @@ const openEventFromNote = async (note) => {
 }
 
 const handleDetailsReply = async ({ reply }) => {
-  const eventId = selectedEvent.value?.id
-  if (!eventId) {
-    return
-  }
+  if (!selectedEvent.value?.id || eventNoteSaving.value) return
+  eventNoteSaving.value = true
+  eventNoteError.value = ''
   try {
-    await calendarStore.replyNote(eventId, { reply })
-  } catch {
-    // no-op
+    await calendarStore.addNote(selectedEvent.value.id, { note: reply })
+    selectedEvent.value = events.value.find(item => item.id === selectedEvent.value.id)
+  } catch (error) {
+    eventNoteError.value = error.response?.data?.message || t.value.errors.noteSendFailed
+  } finally {
+    eventNoteSaving.value = false
+  }
+}
+
+const handleDetailsReview = async ({ status, note }) => {
+  if (!selectedEvent.value?.id || eventNoteSaving.value) return
+  eventNoteSaving.value = true
+  eventNoteError.value = ''
+  try {
+    selectedEvent.value = await calendarStore.reviewEvent(selectedEvent.value.id, {
+      review_status: status, review_note: note || null,
+    })
+  } catch (error) {
+    eventNoteError.value = error.response?.data?.message || t.value.errors.reviewFailed
+  } finally {
+    eventNoteSaving.value = false
   }
 }
 
@@ -2032,125 +1914,9 @@ const toggleHistory = (eventId) => {
 
 const isHistoryExpanded = (eventId) => expandedHistoryIds.value.has(eventId)
 
-const canAddNote = computed(() => isSecretary.value || isSuperAdmin.value)
-
-const submitReview = async (event, status, noteOverride = '', publishToFeedFlag = false, acceptedAt = null) => {
-  reviewErrors[event.id] = ''
-  const note = noteOverride || ''
-  if ((status === 'denied' || status === 'changes_requested') && !note.trim()) {
-    reviewErrors[event.id] = t.value.reviewNoteRequired
-    return
-  }
-
-  try {
-    await calendarStore.reviewEvent(event.id, {
-      review_status: status,
-      review_note: note || null,
-      publish_to_feed: publishToFeedFlag,
-      accepted_at: acceptedAt,
-    })
-    reviewErrors[event.id] = ''
-    reviewModalMessage.value = t.value.errors.reviewUpdated
-    reviewModalOpen.value = true
-  } catch {
-    reviewErrors[event.id] = t.value.errors.reviewFailed
-    reviewModalMessage.value = reviewErrors[event.id]
-    reviewModalOpen.value = true
-  }
-}
-
-const publishAcceptedAll = async () => {
-  const range = reviewRange.value
-  if (!range) {
-    return
-  }
-  if (!window.confirm(t.value.publishAcceptedConfirm)) {
-    return
-  }
-
-  try {
-    const response = await calendarStore.publishAccepted({
-      start: range.start.toISOString(),
-      end: range.end.toISOString(),
-    })
-    reviewModalMessage.value = `${t.value.publishAcceptedSuccess} (${response.updated || 0})`
-    reviewModalOpen.value = true
-    publishAcceptedOpen.value = false
-  } catch {
-    reviewModalMessage.value = t.value.publishAcceptedFailed
-    reviewModalOpen.value = true
-  }
-}
-
 const closeReviewModal = () => {
   reviewModalOpen.value = false
   reviewModalMessage.value = ''
-}
-
-const openStatusModal = (event) => {
-  activeReviewEvent.value = event
-  statusSelection.value = event.review_status || 'pending'
-  statusNote.value = ''
-  publishToFeed.value = Boolean(event.publish_to_feed)
-  statusAcceptedAt.value = statusSelection.value === 'approved'
-    ? formatDateLocal(event.accepted_at)
-    : ''
-  statusModalOpen.value = true
-}
-
-const closeStatusModal = () => {
-  statusModalOpen.value = false
-  statusNote.value = ''
-  publishToFeed.value = false
-  statusAcceptedAt.value = ''
-  activeReviewEvent.value = null
-}
-
-const submitStatusModal = async () => {
-  if (!activeReviewEvent.value) {
-    return
-  }
-  await submitReview(
-    activeReviewEvent.value,
-    statusSelection.value,
-    statusNote.value,
-    statusSelection.value === 'approved' ? publishToFeed.value : false,
-    statusSelection.value === 'approved' ? toIsoDate(statusAcceptedAt.value) : null
-  )
-  closeStatusModal()
-}
-
-const openNotesModal = (event) => {
-  activeReviewEvent.value = event
-  noteDraft.value = ''
-  notesModalOpen.value = true
-}
-
-const closeNotesModal = () => {
-  notesModalOpen.value = false
-  noteDraft.value = ''
-  activeReviewEvent.value = null
-}
-
-const submitNoteModal = async () => {
-  if (!activeReviewEvent.value) {
-    return
-  }
-  const note = noteDraft.value
-  if (!note || !note.trim()) {
-    return
-  }
-  try {
-    await calendarStore.addNote(activeReviewEvent.value.id, { note: note.trim() })
-    noteDraft.value = ''
-    closeNotesModal()
-    reviewModalMessage.value = t.value.errors.noteSent
-    reviewModalOpen.value = true
-  } catch {
-    closeNotesModal()
-    reviewModalMessage.value = t.value.errors.noteSendFailed
-    reviewModalOpen.value = true
-  }
 }
 
 const exportPdf = async (view) => {
@@ -2174,22 +1940,32 @@ const handleResize = () => {
   isMobile.value = window.innerWidth <= 900
 }
 
+const holdClock = ref(Date.now())
+const dismissedHoldWarnings = reactive(new Set())
+const extendingHold = ref(false)
+const holdExtensionError = ref('')
+const expiringOwnHolds = computed(() => holds.value.filter((hold) => {
+  const remaining = new Date(hold.expires_at).getTime() - holdClock.value
+  return hold.created_by === user.value?.id && remaining > 0 && remaining <= 60000
+    && !dismissedHoldWarnings.has(hold.id)
+}))
+const extendReservation = async (hold) => {
+  extendingHold.value = true
+  holdExtensionError.value = ''
+  try {
+    const data = await calendarApi.extendHold(hold.id)
+    calendarStore.upsertEvent(data)
+  } catch (error) {
+    holdExtensionError.value = extractErrorMessage(error) || (locale.value === 'es' ? 'No se pudo extender la reserva.' : 'Unable to extend reservation.')
+  } finally {
+    extendingHold.value = false
+  }
+}
 let holdCleanupTimer = null
 
 watch(currentMonth, async () => {
   monthSelection.value = `${currentMonth.value.getFullYear()}-${String(currentMonth.value.getMonth() + 1).padStart(2, '0')}`
   await loadMonth()
-})
-
-watch(statusSelection, (next) => {
-  if (next !== 'approved') {
-    publishToFeed.value = false
-    statusAcceptedAt.value = ''
-    return
-  }
-  if (!statusAcceptedAt.value) {
-    statusAcceptedAt.value = formatDateLocal(new Date())
-  }
 })
 
 watch(liveUpdateVersion, async () => {
@@ -2205,9 +1981,6 @@ watch(liveUpdateVersion, async () => {
     selectedEvent.value = events.value.find((item) => item.id === selectedEvent.value.id) || selectedEvent.value
   }
 
-  if (activeReviewEvent.value?.id) {
-    activeReviewEvent.value = events.value.find((item) => item.id === activeReviewEvent.value.id) || activeReviewEvent.value
-  }
 })
 
 onMounted(async () => {
@@ -2222,7 +1995,7 @@ onMounted(async () => {
   calendarStore.connectRealtime()
   liveUpdateStore.connect()
   flashExpiredHolds()
-  holdCleanupTimer = window.setInterval(flashExpiredHolds, 15000)
+  holdCleanupTimer = window.setInterval(() => { holdClock.value = Date.now(); flashExpiredHolds() }, 1000)
 })
 
 watch(user, async (next) => {
@@ -2241,3 +2014,42 @@ onUnmounted(() => {
   }
 })
 </script>
+
+<style scoped>
+.unread-notes-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 1.25rem 0;
+  padding: 1.15rem 1.25rem;
+  border: 1px solid #cddfd6;
+  border-left: 4px solid #267461;
+  border-radius: .85rem;
+  background: linear-gradient(110deg, #edf6f1, #f9fbfa);
+  box-shadow: 0 3px 12px rgb(28 76 59 / 5%);
+}
+.unread-notes-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 3rem;
+  height: 3rem;
+  border-radius: .8rem;
+  background: #dceee4;
+  color: #216751;
+}
+.unread-notes-icon svg { width: 1.65rem; height: 1.65rem; }
+.unread-notes-copy { flex: 1; min-width: 0; }
+.unread-notes-heading { display: flex; align-items: center; flex-wrap: wrap; gap: .65rem; }
+.unread-notes-heading h2 { margin: 0; font-size: .875rem; font-weight: 600; color: #204b3d; }
+.unread-notes-count { border-radius: 1rem; padding: .2rem .6rem; background: #fff0cc; color: #705016; font-size: .75rem; font-weight: 600; }
+.unread-notes-copy p { margin: .4rem 0 0; color: #50675d; font-size: .8125rem; line-height: 1.5; }
+.unread-notes-action { width: auto; display: inline-flex; align-items: center; justify-content: center; gap: .65rem; flex-shrink: 0; min-height: 2.75rem; padding: .65rem 1rem; border: 1px solid #216751; border-radius: .6rem; background: #216751; color: #fff; font-size: .8125rem; font-weight: 600; }
+.unread-notes-action svg { width: 1.1rem; height: 1.1rem; }
+.unread-notes-action:hover { background: #194e3e; border-color: #194e3e; }
+.unread-notes-action:focus-visible { outline: 3px solid #af8530; outline-offset: 3px; }
+@media (max-width: 600px) {
+  .unread-notes-card { flex-wrap: wrap; gap: .8rem; padding: 1rem; align-items: flex-start; }
+  .unread-notes-copy { flex-basis: calc(100% - 4rem); }
+  .unread-notes-action { width: 100%; }
+}
+</style>

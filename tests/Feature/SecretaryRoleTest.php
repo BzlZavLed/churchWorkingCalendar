@@ -141,7 +141,7 @@ class SecretaryRoleTest extends TestCase
         ]);
         $this->assertDatabaseHas('event_histories', [
             'event_id' => $event->id,
-            'action' => 'review',
+            'action' => 'accepted',
         ]);
     }
 

@@ -1,194 +1,45 @@
 <template>
-  <section class="container py-4">
-    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3">
-      <h1 class="h3 m-0">{{ t.title }}</h1>
+  <section class="container py-4 inventory-page">
+    <header class="inventory-heading">
+      <div>
+        <p class="inventory-eyebrow">{{ authStore.user?.church?.name || t.allChurches }}</p>
+        <h1>{{ t.title }}</h1>
+        <p>{{ locale === 'es' ? 'Consulta los bienes, cantidades y valores de tu equipo.' : 'Track your team’s items, quantities and values.' }}</p>
+      </div>
+      <span v-if="!canEdit" class="inventory-readonly">{{ locale === 'es' ? 'Consulta · Todos los departamentos' : 'Read only · All departments' }}</span>
+      <button v-if="canEdit" class="btn btn-primary w-auto" type="button" @click="openCreateModal">+ {{ t.newEntry }}</button>
+    </header>
+
+    <p v-if="error" class="inventory-error" role="alert">{{ error }}</p>
+    <div class="inventory-summary" aria-live="polite">
+      <div><span>{{ locale === 'es' ? 'Artículos' : 'Items' }}</span><strong>{{ loading ? '—' : filteredItems.length }}</strong></div>
+      <div><span>{{ locale === 'es' ? 'Unidades' : 'Units' }}</span><strong>{{ loading ? '—' : quantityTotal }}</strong></div>
+      <div><span>{{ locale === 'es' ? 'Valor registrado' : 'Recorded value' }}</span><strong>{{ loading ? '—' : formatCurrency(pageTotalValue) }}</strong><small v-if="unvaluedCount">{{ unvaluedCount }} {{ locale === 'es' ? 'artículos sin valor registrado' : 'items without a recorded value' }}</small></div>
     </div>
 
-    <div v-if="loading">{{ t.loading }}</div>
-    <p v-if="error" class="text-danger">{{ error }}</p>
-
-    <div v-if="items.length === 0 && !loading" class="text-muted">
-      {{ t.empty }}
-      <div v-if="canEdit" class="mt-3">
-        <button class="btn btn-outline-primary btn-sm" type="button" @click="openCreateModal">
-          {{ t.newEntry }}
-        </button>
+    <div class="inventory-surface">
+      <div class="inventory-toolbar">
+        <label class="inventory-search">{{ t.search }}<input v-model="filterText" class="form-control" type="search" :placeholder="t.searchPlaceholder" /></label>
+        <label v-if="!authStore.user?.department_id">{{ t.fields.department }}<select v-model="departmentFilter" class="form-select"><option value="all">{{ locale === 'es' ? 'Todos los departamentos' : 'All departments' }}</option><option v-for="department in inventoryDepartments" :key="department.id" :value="String(department.id)">{{ department.name }}</option></select></label>
+        <button class="btn btn-outline-secondary w-auto" type="button" :disabled="loading || !!error || !filteredItems.length" @click="exportCsv">{{ t.export }}</button>
       </div>
-    </div>
-    <div v-else class="bg-white border rounded p-3">
-      <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3">
-        <div class="flex-grow-1">
-          <h2 class="h5 m-0">{{ tableTitle }}</h2>
-          <label class="form-label mb-0 w-100">
-            <span class="d-block small mb-1">{{ t.search }}</span>
-            <input v-model="filterText" class="form-control" type="search" :placeholder="t.searchPlaceholder" />
-          </label>
+      <div v-if="loading" class="inventory-empty" role="status">{{ t.loading }}</div>
+      <div v-else-if="!filteredItems.length" class="inventory-empty">{{ items.length ? (locale === 'es' ? 'No hay artículos con estos filtros.' : 'No items match these filters.') : t.empty }}</div>
+      <template v-else>
+        <div class="table-responsive">
+          <table class="table inventory-table mb-0" data-dt="off">
+            <thead><tr><th>{{ t.fields.description }}</th><th>{{ t.fields.department }}</th><th>{{ t.fields.location }}</th><th class="text-end">{{ t.fields.quantity }}</th><th class="text-end">{{ t.fields.value }}</th><th class="text-end">{{ t.fields.totalValue }}</th><th v-if="canEdit" class="text-end">{{ t.actions }}</th></tr></thead>
+            <tbody><tr v-for="item in paginatedItems" :key="item.id">
+              <td class="inventory-item"><strong>{{ item.description }}</strong><span v-if="item.brand || item.model">{{ [item.brand, item.model].filter(Boolean).join(' · ') }}</span><span v-if="item.serial_number">{{ t.fields.serial }}: {{ item.serial_number }}</span><a v-if="showAmazonLink(item)" class="inventory-link" :href="amazonSearchUrl(item)" target="_blank" rel="noopener noreferrer">{{ t.searchMarket }} ↗</a></td>
+              <td><span class="department-pill" :style="{ '--department-color': item.department?.color || '#8b9990' }"><span class="department-color-dot" aria-hidden="true"></span>{{ item.department?.name || '—' }}</span><small v-if="isSuperAdmin" class="d-block mt-1">{{ item.department?.church?.name }}</small></td>
+              <td class="inventory-location">{{ item.location || '—' }}</td>
+              <td class="text-end">{{ item.quantity }}</td><td class="text-end inventory-money">{{ formatCurrency(item.value) }}</td><td class="text-end inventory-money">{{ formatCurrency(totalValue(item)) }}</td>
+              <td v-if="canEdit"><div class="inventory-actions"><button class="btn btn-sm btn-outline-secondary" type="button" @click="openEditModal(item)">{{ locale === 'es' ? 'Editar' : 'Edit' }}</button><button class="btn btn-sm btn-outline-danger" type="button" @click="confirmDeleteItem(item)">{{ t.delete }}</button></div></td>
+            </tr></tbody>
+          </table>
         </div>
-        <div class="d-flex gap-2">
-          <button v-if="canEdit" class="btn btn-outline-primary btn-sm" type="button" @click="openCreateModal">
-            {{ t.newEntry }}
-          </button>
-          <button class="btn btn-outline-secondary btn-sm" type="button" @click="exportCsv">
-            {{ t.export }}
-          </button>
-        </div>
-      </div>
-      <div class="table-responsive d-none d-md-block">
-        <table class="table table-sm align-middle mb-0 inventory-table" data-dt="off">
-          <thead>
-            <tr>
-              <th>{{ tableFields.department }}</th>
-              <th>{{ tableFields.quantity }}</th>
-              <th>{{ tableFields.value }}</th>
-              <th>{{ tableFields.totalValue }}</th>
-              <th>{{ tableFields.description }}</th>
-              <th>{{ tableFields.brand }}</th>
-              <th>{{ tableFields.model }}</th>
-              <th>{{ tableFields.serial }}</th>
-              <th>{{ tableFields.location }}</th>
-              <th>{{ tableFields.market }}</th>
-              <th v-if="canEdit" class="text-end">{{ t.actions }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in paginatedItems" :key="item.id">
-              <td>{{ item.department?.name || '—' }}</td>
-              <td>{{ item.quantity }}</td>
-              <td>{{ formatCurrency(item.value) }}</td>
-              <td>{{ formatCurrency(totalValue(item)) }}</td>
-              <td><span class="inventory-description">{{ item.description }}</span></td>
-              <td>{{ item.brand || '—' }}</td>
-              <td>{{ item.model || '—' }}</td>
-              <td>{{ item.serial_number || '—' }}</td>
-              <td><span class="inventory-notes">{{ item.location || '—' }}</span></td>
-              <td>
-                <a
-                  v-if="showAmazonLink(item)"
-                  class="inventory-link"
-                  :href="amazonSearchUrl(item)"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {{ t.searchMarket }}
-                </a>
-                <span v-else>—</span>
-              </td>
-              <td v-if="canEdit" class="text-end">
-                <div class="d-flex flex-column flex-md-row justify-content-end gap-2">
-                  <button class="btn btn-sm btn-outline-secondary" type="button" @click="openEditModal(item)">
-                    ✎
-                  </button>
-                  <button class="btn btn-sm btn-outline-danger" type="button" @click="confirmDeleteItem(item)">
-                    ✕
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-          <tfoot>
-            <tr>
-              <th>{{ t.totals }}</th>
-              <th></th>
-              <th>{{ formatCurrency(pageValueTotal) }}</th>
-              <th>{{ formatCurrency(pageTotalValue) }}</th>
-              <th colspan="6"></th>
-              <th v-if="canEdit"></th>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-
-      <div class="d-md-none">
-        <div v-for="item in paginatedItems" :key="item.id" class="card mb-3 inventory-card">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-              <div>
-                <h5 class="card-title mb-1 inventory-description">{{ item.description }}</h5>
-                <p class="card-subtitle text-muted mb-0">#{{ item.id }}</p>
-              </div>
-            </div>
-            <div class="mb-2">
-              <strong>{{ t.fields.department }}:</strong> {{ item.department?.name || '—' }}
-            </div>
-            <div class="mb-2">
-              <label class="form-label small mb-1">{{ t.fields.quantity }}</label>
-              <p class="mb-0">{{ item.quantity }}</p>
-            </div>
-            <div class="mb-2">
-              <label class="form-label small mb-1">{{ t.fields.value }}</label>
-              <p class="mb-0">{{ formatCurrency(item.value) }}</p>
-            </div>
-            <div class="mb-2">
-              <label class="form-label small mb-1">{{ t.fields.totalValue }}</label>
-              <p class="mb-0">{{ formatCurrency(totalValue(item)) }}</p>
-            </div>
-            <div class="mb-2">
-              <label class="form-label small mb-1">{{ t.fields.brand }}</label>
-              <p class="mb-0">{{ item.brand || '—' }}</p>
-            </div>
-            <div class="mb-2">
-              <label class="form-label small mb-1">{{ t.fields.model }}</label>
-              <p class="mb-0">{{ item.model || '—' }}</p>
-            </div>
-            <div class="mb-2">
-              <label class="form-label small mb-1">{{ t.fields.serial }}</label>
-              <p class="mb-0">{{ item.serial_number || '—' }}</p>
-            </div>
-            <div class="mb-2">
-              <label class="form-label small mb-1">{{ t.fields.location }}</label>
-              <p class="mb-0">{{ item.location || '—' }}</p>
-            </div>
-            <div class="mb-2">
-              <label class="form-label small mb-1">{{ t.fields.market }}</label>
-              <p class="mb-0">
-                <a
-                  v-if="showAmazonLink(item)"
-                  class="inventory-link"
-                  :href="amazonSearchUrl(item)"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {{ t.searchMarket }}
-                </a>
-                <span v-else>—</span>
-              </p>
-            </div>
-            <div v-if="canEdit" class="d-flex flex-wrap gap-2">
-              <button class="btn btn-sm btn-outline-secondary" type="button" @click="openEditModal(item)">✎</button>
-              <button class="btn btn-sm btn-outline-danger" type="button" @click="confirmDeleteItem(item)">✕</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="d-flex flex-column flex-md-row align-items-center justify-content-between gap-2 mt-3">
-        <div class="text-muted small">
-          {{ t.page }} {{ currentPage }} / {{ totalPages }}
-        </div>
-        <div class="btn-group">
-          <button class="btn btn-outline-secondary btn-sm" type="button" :disabled="currentPage === 1" @click="goPrev">
-            {{ t.prev }}
-          </button>
-          <button
-            v-for="page in totalPages"
-            :key="page"
-            class="btn btn-outline-secondary btn-sm"
-            :class="{ active: currentPage === page }"
-            type="button"
-            @click="goToPage(page)"
-          >
-            {{ page }}
-          </button>
-          <button
-            class="btn btn-outline-secondary btn-sm"
-            type="button"
-            :disabled="currentPage === totalPages"
-            @click="goNext"
-          >
-            {{ t.next }}
-          </button>
-        </div>
-      </div>
+        <footer class="inventory-pagination"><span>{{ filteredItems.length }} {{ locale === 'es' ? 'artículos' : 'items' }} · {{ t.page }} {{ currentPage }} / {{ totalPages }}</span><div class="d-flex gap-2"><button class="btn btn-outline-secondary w-auto" type="button" :disabled="currentPage === 1" @click="goPrev">{{ t.prev }}</button><button class="btn btn-outline-secondary w-auto" type="button" :disabled="currentPage === totalPages" @click="goNext">{{ t.next }}</button></div></footer>
+      </template>
     </div>
 
     <div v-if="createModalOpen" class="modal-backdrop" @click.self="closeCreateModal">
@@ -394,6 +245,7 @@ const confirmOpen = ref(false)
 const confirmMessage = ref('')
 const confirmAction = ref(null)
 const filterText = ref('')
+const departmentFilter = ref('all')
 const createModalOpen = ref(false)
 const editModalOpen = ref(false)
 const editChurchId = ref('')
@@ -403,27 +255,13 @@ const pageSize = 10
 
 const t = computed(() => translations[locale.value].inventory)
 const common = computed(() => translations[locale.value].common)
-const tableFields = computed(() => t.value.tableFields || t.value.fields)
 
 const isSuperAdmin = computed(() => authStore.user?.role === 'superadmin')
 const canEdit = computed(() => authStore.user?.role === 'admin' || authStore.user?.role === 'superadmin')
 const confirmTitle = computed(() => t.value.confirmTitle || t.value.delete)
-const tableTitle = computed(() => {
-  const churchesSet = new Set()
-  items.value.forEach((item) => {
-    const name = item.department?.church?.name
-    if (name) {
-      churchesSet.add(name)
-    }
-  })
-  if (churchesSet.size === 1) {
-    return `${t.value.title}: ${Array.from(churchesSet)[0]}`
-  }
-  if (churchesSet.size > 1) {
-    return `${t.value.title}: ${t.value.allChurches}`
-  }
-  return t.value.title
-})
+const inventoryDepartments = computed(() => [...new Map(items.value.filter(item => item.department).map(item => [item.department.id, item.department])).values()].sort((a, b) => a.name.localeCompare(b.name)))
+const quantityTotal = computed(() => filteredItems.value.reduce((sum, item) => sum + Number(item.quantity || 0), 0))
+const unvaluedCount = computed(() => filteredItems.value.filter(item => item.value === null || item.value === undefined || item.value === '').length)
 
 const createForm = reactive({
   department_id: '',
@@ -438,10 +276,9 @@ const createForm = reactive({
 
 const filteredItems = computed(() => {
   const term = filterText.value.trim().toLowerCase()
-  if (!term) {
-    return items.value
-  }
   return items.value.filter((item) => {
+    if (departmentFilter.value !== 'all' && String(item.department_id) !== departmentFilter.value) return false
+    if (!term) return true
     const haystack = [
       item.description,
       item.brand,
@@ -466,13 +303,6 @@ const totalPages = computed(() => {
 const paginatedItems = computed(() => {
   const start = (currentPage.value - 1) * pageSize
   return filteredItems.value.slice(start, start + pageSize)
-})
-
-const pageValueTotal = computed(() => {
-  return filteredItems.value.reduce((sum, item) => {
-    const value = Number(item.value || 0)
-    return Number.isNaN(value) ? sum : sum + value
-  }, 0)
 })
 
 const pageTotalValue = computed(() => {
@@ -508,7 +338,8 @@ const formatCurrency = (value) => {
 }
 
 const totalValue = (item) => {
-  const unit = Number(item.value || 0)
+  if (item.value === null || item.value === undefined || item.value === '') return null
+  const unit = Number(item.value)
   const qty = Number(item.quantity || 0)
   if (Number.isNaN(unit) || Number.isNaN(qty)) {
     return 0
@@ -517,7 +348,7 @@ const totalValue = (item) => {
 }
 
 const showAmazonLink = (item) => {
-  return !item.value
+  return item.value === null || item.value === undefined || item.value === ''
 }
 
 const amazonSearchUrl = (item) => {
@@ -743,8 +574,8 @@ const exportCsv = () => {
   const rows = filteredItems.value.map((item) => ([
     item.department?.name || '',
     item.quantity || '',
-    item.value || '',
-    totalValue(item) || '',
+    item.value ?? '',
+    totalValue(item) ?? '',
     item.description || '',
     item.brand || '',
     item.model || '',
@@ -757,7 +588,7 @@ const exportCsv = () => {
     ...rows.map((row) => row.map(csvEscape).join(',')),
   ]
 
-  const blob = new Blob([csvLines.join('\\n')], { type: 'text/csv;charset=utf-8;' })
+  const blob = new Blob([csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' })
   const link = document.createElement('a')
   const now = new Date().toISOString().slice(0, 10)
   link.href = window.URL.createObjectURL(blob)
@@ -791,7 +622,7 @@ watch(editChurchId, async () => {
   }
 })
 
-watch(filterText, () => {
+watch([filterText, departmentFilter], () => {
   currentPage.value = 1
 })
 
@@ -820,3 +651,41 @@ onUnmounted(() => {
   document.body.style.overflow = ''
 })
 </script>
+
+<style scoped>
+.inventory-page { display: grid; gap: 20px; font-size: 13px; }
+.inventory-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.inventory-heading h1 { font-size: 20px; font-weight: 500; margin: 0 0 8px; }
+.inventory-heading p { margin: 0; color: #68766e; }
+.inventory-heading .inventory-eyebrow { color: #28705b; font-size: 12px; margin-bottom: 6px; }
+.inventory-readonly { padding: 7px 12px; background: #e8efeb; border-radius: 20px; font-size: 12px; color: #426052; }
+.inventory-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.inventory-summary > div { border: 1px solid #dfe5df; border-radius: 9px; background: white; padding: 16px 18px; display: grid; gap: 8px; }
+.inventory-summary span, .inventory-summary small { color: #68766e; font-size: 12px; }
+.inventory-summary strong { font-size: 20px; font-weight: 500; color: #254b3d; }
+.inventory-surface { border: 1px solid #dfe5df; border-radius: 10px; background: white; overflow: hidden; }
+.inventory-toolbar { display: flex; align-items: end; gap: 16px; padding: 18px; background: #f8faf9; }
+.inventory-toolbar label { margin: 0; font-size: 12px; min-width: 180px; }
+.inventory-toolbar input, .inventory-toolbar select { margin-top: 6px; }
+.inventory-search { flex: 1; }
+.inventory-page .btn { font-size: 12px; white-space: nowrap; }
+.inventory-page .btn-primary { background: #1f6f5c; border-color: #1f6f5c; }
+.inventory-table { font-size: 12px; }
+.inventory-table th { background: #f6f8f7; color: #596b61; font-weight: 500; padding: 12px 16px; white-space: nowrap; }
+.inventory-table td { padding: 14px 16px; vertical-align: middle; border-color: #edf0ed; }
+.inventory-table tr:hover td { background: #f9fbfa; }
+.inventory-item { min-width: 190px; }
+.inventory-item strong { display: block; font-weight: 500; color: #263d32; }
+.inventory-item > span, .inventory-item > a { display: block; margin-top: 4px; font-size: 11px; color: #6b7971; }
+.inventory-item > a { color: #28705b; }
+.inventory-location { min-width: 130px; max-width: 250px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.inventory-money { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.department-pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 5px; padding: 4px 8px; color: #263d32; background: color-mix(in srgb, var(--department-color) 12%, white); }
+.department-color-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--department-color); }
+.inventory-actions { display: flex; gap: 6px; justify-content: end; }
+.inventory-actions button { width: auto; }
+.inventory-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; color: #68766e; font-size: 12px; }
+.inventory-empty { padding: 48px 24px; text-align: center; color: #68766e; }
+.inventory-error { padding: 12px; background: #fff1ef; color: #8a3931; border-radius: 6px; margin: 0; }
+@media (max-width: 767px) { .inventory-heading, .inventory-toolbar { flex-direction: column; align-items: stretch; } .inventory-toolbar label { width: 100%; } .inventory-summary { grid-template-columns: 1fr; } .inventory-summary > div { grid-template-columns: 1fr auto; align-items: center; } .inventory-summary small { grid-column: 1 / -1; } .inventory-pagination { flex-wrap: wrap; } }
+</style>

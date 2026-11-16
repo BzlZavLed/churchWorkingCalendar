@@ -1,3 +1,4 @@
+import { adminContext, setAdminContext } from './adminContext'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { authApi, setAuthToken } from '../services/authApi'
@@ -16,7 +17,19 @@ export const getDefaultRouteForUser = (user) => {
 }
 
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref(null)
+  const account = ref(null)
+  const isPlatformAdmin = computed(() => account.value?.role === 'superadmin')
+  const user = computed(() => {
+    if (!isPlatformAdmin.value || !adminContext.value) return account.value
+    const { church, department } = adminContext.value
+    return { ...account.value, role: department ? 'admin' : 'secretary',
+      church_id: church.id, church, department_id: department?.id || null, department: department || null }
+  })
+  const contextKey = computed(() => isPlatformAdmin.value && adminContext.value
+    ? `${adminContext.value.church.id}:${adminContext.value.department?.id || 'clerk'}` : 'account')
+  const enterChurch = (church) => setAdminContext({ church, department: null })
+  const enterDepartment = (department) => setAdminContext({ church: adminContext.value.church, department })
+  const exitContext = () => setAdminContext(null)
   const storageKey = 'auth_token'
   const getStoredToken = () => sessionStorage.getItem(storageKey) || localStorage.getItem(storageKey)
   const token = ref(getStoredToken())
@@ -54,10 +67,11 @@ export const useAuthStore = defineStore('auth', () => {
       setAuthToken(token.value)
       try {
         const response = await authApi.me()
-        user.value = response.user
+        account.value = response.user
       } catch {
+        setAdminContext(null)
         applyToken(null)
-        user.value = null
+        account.value = null
       }
     }
 
@@ -65,32 +79,43 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const login = async (payload, remember = true) => {
+    setAdminContext(null)
     const response = await authApi.login(payload)
     applyToken(response.token, remember)
-    user.value = response.user
+    account.value = response.user
   }
 
   const register = async (payload, remember = true) => {
+    setAdminContext(null)
     const response = await authApi.register(payload)
     applyToken(response.token, remember)
-    user.value = response.user
+    account.value = response.user
   }
 
   const setSession = (session, remember = true) => {
+    setAdminContext(null)
     applyToken(session.token, remember)
-    user.value = session.user
+    account.value = session.user
   }
 
   const logout = async () => {
     if (token.value) {
       await authApi.logout()
     }
+    setAdminContext(null)
     applyToken(null)
-    user.value = null
+    account.value = null
   }
 
   return {
     user,
+    account,
+    isPlatformAdmin,
+    contextKey,
+    adminContext,
+    enterChurch,
+    enterDepartment,
+    exitContext,
     token,
     isInitializing,
     isAuthenticated,

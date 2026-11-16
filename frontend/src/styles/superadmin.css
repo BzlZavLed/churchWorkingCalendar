@@ -6,7 +6,11 @@
   --text: #1f1f1f;
   --muted: #5a5a5a;
   --card: #ffffff;
-  --border: #d7d3c8;
+  --border: #dce2de;
+  --font-body: 0.8125rem;
+  --font-label: 0.75rem;
+  --font-page-title: 1.25rem;
+  --font-section-title: 1rem;
 }
 
 * {
@@ -19,11 +23,14 @@ body {
   color: var(--text);
   background: var(--soft);
   min-height: 100vh;
+  font-size: var(--font-body);
+  font-weight: 400;
+  line-height: 1.5;
 }
 
 .table {
   font-family: "Manrope", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  font-size: 0.85rem;
+  font-size: .8125rem;
 }
 
 .table.main-table tbody tr {
@@ -37,7 +44,7 @@ body {
 .export-toggle {
   display: inline-flex;
   align-items: center;
-  font-size: 0.85rem;
+  font-size: .8125rem;
   color: var(--muted);
   margin: 0;
   gap: 8px;
@@ -79,7 +86,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 12px;
   color: #ffffff;
-  font-size: 1.1rem;
+  font-size: 1rem;
   margin-bottom: 12px;
   cursor: pointer;
   width: 40px;
@@ -102,7 +109,7 @@ body {
 }
 
 .app-sidebar-title {
-  font-size: 0.85rem;
+  font-size: .8125rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
@@ -127,7 +134,7 @@ body {
   text-decoration: none;
   color: #ffffff;
   background: rgba(255, 255, 255, 0.15);
-  font-size: 0.9rem;
+  font-size: .8125rem;
   line-height: 1.35;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -164,15 +171,26 @@ body {
 }
 
 .app-main {
-  padding: 48px 24px;
+  padding: 32px 24px;
   max-width: 1120px;
   margin: 0 auto;
   width: 100%;
 }
 
-h1, h2 {
-  margin: 0 0 16px;
-}
+h1, h2 { margin: 0 0 12px; }
+h1, .h1 { font-size: var(--font-page-title); font-weight: 500; line-height: 1.25; }
+h2, .h2 { font-size: var(--font-section-title); font-weight: 500; line-height: 1.35; }
+h3, .h3 { font-size: .875rem; font-weight: 500; }
+h4, .h4, h5, .h5, h6, .h6 { font-size: var(--font-body); font-weight: 500; }
+strong, b { font-weight: 600; }
+.fw-bold { font-weight: 600 !important; }
+.form-control, .form-select, .btn { font-size: var(--font-body); }
+.form-control, .form-select { min-height: 36px; padding-top: 7px; padding-bottom: 7px; }
+textarea.form-control { line-height: 1.5; }
+.form-label, label { font-size: var(--font-label); font-weight: 400; }
+.btn { --bs-btn-font-weight: 500; }
+.app-sidebar .form-label, .app-sidebar p { color: rgba(255, 255, 255, .8); }
+
 
 p {
   color: var(--muted);
@@ -191,7 +209,7 @@ form {
 
 label {
     display: block;
-    margin: 12px 0;
+    margin: 8px 0;
 }
 
 .child-row {
@@ -199,7 +217,7 @@ label {
 }
 
 .child-row td {
-    font-size: 0.85rem;
+    font-size: .8125rem;
 }
 
 .child-table th {
@@ -210,9 +228,9 @@ label {
 
 input, select, button {
   width: 100%;
-  padding: 10px 12px;
+  padding: 7px 10px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 6px;
   font: inherit;
 }
 
@@ -417,13 +435,13 @@ tbody td {
 }
 
 .sidebar-user-name {
-  font-weight: 700;
+  font-weight: 600;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
 
 .sidebar-user-role {
-  font-size: 0.85rem;
+  font-size: .8125rem;
   opacity: 0.85;
   overflow-wrap: anywhere;
 }
@@ -480,7 +498,7 @@ tbody td {
   background: rgba(255, 255, 255, 0.14);
   color: #ffffff;
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .sidebar-logout-button {
@@ -544,7 +562,7 @@ tbody td {
 }
 
 .calendar-label {
-  font-size: 1rem;
+  font-size: .875rem;
   text-align: center;
   white-space: nowrap;
 }
@@ -601,7 +619,7 @@ tbody td {
 }
 
 .child-title {
-  font-size: 0.85rem;
+  font-size: .8125rem;
   font-weight: 600;
   margin-bottom: 6px;
 }
@@ -629,7 +647,7 @@ tbody td {
 
 
 .export-label {
-  font-size: 0.85rem;
+  font-size: .8125rem;
   color: var(--muted);
   line-height: 1.2;
 }
@@ -652,7 +670,7 @@ tbody td {
   display: flex;
   flex-wrap: wrap;
   gap: 8px 16px;
-  font-size: 0.85rem;
+  font-size: .8125rem;
   color: var(--muted);
 }
 
@@ -723,7 +741,7 @@ tbody td {
   list-style: none;
   padding: 0;
   margin: 0;
-  font-size: 0.9rem;
+  font-size: .8125rem;
 }
 
 .event-pill {
@@ -790,7 +808,7 @@ tbody td {
 }
 
 .event-more {
-  font-size: 0.9rem;
+  font-size: .8125rem;
   color: var(--muted);
   margin-top: 4px;
 }
@@ -826,7 +844,7 @@ tbody td {
 
 .confirm-modal-title {
   margin: 0 0 8px;
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .confirm-modal-text {
@@ -853,7 +871,7 @@ tbody td {
   color: #ffffff;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
   z-index: 1400;
-  font-size: 0.9rem;
+  font-size: .8125rem;
   max-width: min(90vw, 360px);
 }
 
@@ -873,7 +891,7 @@ tbody td {
   background: transparent;
   border: none;
   color: inherit;
-  font-size: 1.1rem;
+  font-size: 1rem;
   line-height: 1;
   cursor: pointer;
 }
@@ -882,8 +900,8 @@ tbody td {
   border: 1px solid var(--border);
   background: #ffffff;
   color: var(--dominant);
-  font-size: 0.85rem;
-  font-weight: 700;
+  font-size: .8125rem;
+  font-weight: 600;
   border-radius: 6px;
   width: 22px;
   height: 22px;
@@ -898,7 +916,7 @@ tbody td {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 0.85rem;
+  font-size: .8125rem;
 }
 
 .calendar-legend {
@@ -908,7 +926,7 @@ tbody td {
 }
 
 .legend-title {
-  font-size: 0.9rem;
+  font-size: .8125rem;
   margin: 0 0 8px;
 }
 
@@ -1007,12 +1025,12 @@ tbody td {
 
 .review-title {
   margin: 0 0 4px;
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .review-subtitle {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: .8125rem;
   color: var(--muted);
 }
 
@@ -1026,7 +1044,7 @@ tbody td {
 
 .review-date {
   margin: 0 0 8px;
-  font-size: 1rem;
+  font-size: .875rem;
 }
 
 .review-item {
@@ -1041,12 +1059,12 @@ tbody td {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 0.9rem;
+  font-size: .8125rem;
 }
 
 .review-status {
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: .8125rem;
 }
 
 .status-dot {
@@ -1115,7 +1133,7 @@ tbody td {
   border: 1px solid var(--border);
   background: #ffffff;
   padding: 4px 10px;
-  font-size: 0.85rem;
+  font-size: .8125rem;
   border-radius: 12px;
   cursor: pointer;
   color: #1f1f1f;
@@ -1170,7 +1188,7 @@ tbody td {
 .review-history {
   border-top: 1px dashed var(--border);
   padding-top: 8px;
-  font-size: 0.85rem;
+  font-size: .8125rem;
 }
 
 .review-history .history-list {
@@ -1205,7 +1223,7 @@ tbody td {
 
 .history-title {
   margin: 0 0 6px;
-  font-size: 0.9rem;
+  font-size: .8125rem;
 }
 
 .history-empty {
@@ -1378,8 +1396,8 @@ tbody td {
 .modal-header .h6 {
   margin: 0;
   color: #0f172a;
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: .875rem;
+  font-weight: 600;
   line-height: 1.3;
 }
 
@@ -1387,7 +1405,7 @@ tbody td {
   background: #f8fafc;
   border: 1px solid #dbe4ee;
   border-radius: 999px;
-  font-size: 1.1rem;
+  font-size: 1rem;
   cursor: pointer;
   width: 34px;
   height: 34px;
@@ -1406,8 +1424,8 @@ tbody td {
 }
 
 .event-details-title {
-  font-weight: 700;
-  font-size: 1rem;
+  font-weight: 600;
+  font-size: .875rem;
   line-height: 1.35;
   color: #0f172a;
   margin: 0 0 10px;
@@ -1429,7 +1447,7 @@ tbody td {
 .modal-panel .form-label,
 .drawer-panel .form-label {
   font-size: 0.77rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.01em;
   color: #475569;
 }
@@ -1456,9 +1474,9 @@ tbody td {
 
 .event-drawer textarea {
   width: 100%;
-  padding: 10px 12px;
+  padding: 7px 10px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 6px;
   font: inherit;
 }
 
@@ -1498,7 +1516,7 @@ tbody td {
 
 .day-title {
   margin: 0 0 12px;
-  font-size: 1rem;
+  font-size: .875rem;
 }
 
 .day-hours {
@@ -1570,7 +1588,7 @@ tbody td {
   }
 
   .app-nav a {
-    font-size: 0.88rem;
+    font-size: .8125rem;
   }
 
   .app-main {
@@ -1587,10 +1605,24 @@ tbody td {
   }
 
   .cell-date {
-    font-size: 0.95rem;
+    font-size: .8125rem;
   }
 
   .event-pill {
     font-size: 0.8rem;
   }
+}
+
+/* Shared compact surfaces; retain larger text inputs on touch screens. */
+form, .review-panel { border-radius: 8px; }
+.modal-header h2 { font-size: var(--font-section-title); font-weight: 500; }
+.event-details-title { font-size: .875rem; font-weight: 600; }
+.event-details-text, .review-subtitle { font-size: var(--font-body); }
+.app-nav a { font-size: var(--font-body); font-weight: 400; }
+.app-nav a.router-link-active { font-weight: 500; }
+.app-sidebar-title { font-size: .75rem; font-weight: 500; letter-spacing: .05em; }
+.app-sidebar-inner { padding: 12px; }
+@media (max-width: 600px) {
+  .app-main { padding: 24px 16px; }
+  .form-control, .form-select, input:not([type="checkbox"]):not([type="radio"]), textarea, select { font-size: 1rem; }
 }

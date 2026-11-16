@@ -23,6 +23,10 @@ class ExpireEventHolds extends Command
             ->chunkById(100, function ($events) {
                 foreach ($events as $event) {
                     DB::transaction(function () use ($event) {
+                        $event = Event::whereKey($event->id)->lockForUpdate()->first();
+                        if (!$event || $event->status !== 'hold' || !$event->expires_at || $event->expires_at->isFuture()) {
+                            return;
+                        }
                         $event->update([
                             'status' => 'cancelled',
                             'expires_at' => null,

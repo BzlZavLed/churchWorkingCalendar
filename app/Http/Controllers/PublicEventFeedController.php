@@ -22,8 +22,8 @@ class PublicEventFeedController extends Controller
 
         $query = Event::query()
             ->with(['department', 'objective'])
-            ->where('final_validation', 'accepted')
-            ->where('publish_to_feed', true)
+            ->where('status', 'locked')
+            ->where('review_status', 'approved')
             ->whereHas('department', function ($builder) use ($churchId) {
                 $builder->where('church_id', $churchId);
             });
@@ -49,8 +49,8 @@ class PublicEventFeedController extends Controller
 
         $events = Event::query()
             ->with(['department', 'objective'])
-            ->where('final_validation', 'accepted')
-            ->where('publish_to_feed', true)
+            ->where('status', 'locked')
+            ->where('review_status', 'approved')
             ->whereHas('department', function ($builder) use ($churchId) {
                 $builder->where('church_id', $churchId);
             })
@@ -132,8 +132,8 @@ class PublicEventFeedController extends Controller
 
     private function escapeIcsText(string $value): string
     {
-        $value = str_replace(["\r\n", "\n", "\r"], '\\n', $value);
         $value = str_replace(['\\', ';', ','], ['\\\\', '\;', '\,'], $value);
+        $value = str_replace(["\r\n", "\n", "\r"], '\n', $value);
         return $value;
     }
 }

@@ -1,6 +1,7 @@
 import { apiClient } from './authApi'
 
 export const objectiveApi = {
+  async events(id) { return (await apiClient.get(`/objectives/${id}/events`)).data },
   async list() {
     const { data } = await apiClient.get('/objectives')
     return data

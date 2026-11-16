@@ -14,6 +14,7 @@ class Event extends Model
     use HasFactory;
 
     protected $fillable = [
+        'open_requested_at',
         'department_id',
         'objective_id',
         'objective_name_snapshot',
@@ -43,6 +44,7 @@ class Event extends Model
     ];
 
     protected $casts = [
+        'open_requested_at' => 'datetime',
         'start_at' => 'datetime',
         'end_at' => 'datetime',
         'expires_at' => 'datetime',
@@ -53,6 +55,53 @@ class Event extends Model
         'is_club_event' => 'boolean',
         'requires_club_review' => 'boolean',
     ];
+
+    // review_status is authoritative; legacy output fields stay synchronized here.
+    public function transitionReview(string $state, User $actor, string $action, ?string $note = null, array $changes = []): void
+    {
+        $previous = $this->review_status;
+        $approved = $state === 'approved';
+        $this->update([
+            'review_status' => $state,
+            'final_validation' => match ($state) {
+                'approved' => 'accepted',
+                'denied' => 'rejected',
+                'changes_requested' => 'update_requested',
+                default => null,
+            },
+            'review_note' => null,
+            'reviewed_by' => in_array($state, ['approved', 'denied', 'changes_requested']) ? $actor->id : null,
+            'reviewed_at' => in_array($state, ['approved', 'denied', 'changes_requested']) ? now() : null,
+            'accepted_at' => $approved ? now() : null,
+            'publish_to_feed' => $approved,
+            'published_at' => $approved ? now() : null,
+            'open_requested_at' => null,
+            'updated_by' => $actor->id,
+        ]);
+        $this->recordAction($actor, $action, $note, array_merge($changes, [
+            'review_status' => ['from' => $previous, 'to' => $state],
+        ]));
+    }
+
+    public function recordAction(User $actor, string $action, ?string $note = null, array $changes = []): void
+    {
+        $history = $this->histories()->create([
+            'user_id' => $actor->id, 'action' => $action, 'changes' => $changes,
+        ]);
+        if ($note !== null && trim($note) !== '') {
+            $this->notes()->create([
+                'user_id' => $actor->id, 'note' => trim($note), 'kind' => $action,
+                'event_history_id' => $history->id, 'author_role' => $actor->role,
+                'seen_note' => false,
+            ]);
+        }
+    }
+
+    public function getReviewNoteAttribute($legacy): ?string
+    {
+        if (!in_array($this->review_status, ['approved', 'denied', 'changes_requested'], true)) return null;
+        return $this->histories()->whereIn('action', ['accepted', 'rejected', 'changes_requested', 'reopened', 'review'])->latest('id')->first()?->note ?? $legacy;
+    }
 
     public function department(): BelongsTo
     {
@@ -98,7 +147,7 @@ class Event extends Model
     public function scopeActiveBlocking(Builder $query): Builder
     {
         return $query->where(function (Builder $query) {
-            $query->where('status', 'locked')
+            $query->where('status', 'locked')->where('review_status', '!=', 'denied')
                 ->orWhere(function (Builder $query) {
                     $query->where('status', 'hold')
                         ->whereNotNull('expires_at')
@@ -107,9 +156,13 @@ class Event extends Model
         });
     }
 
-    public static function hasConflict(CarbonInterface $startAt, CarbonInterface $endAt, ?int $ignoreId = null): bool
+    public static function hasConflict(CarbonInterface $startAt, CarbonInterface $endAt, ?int $ignoreId = null, ?int $churchId = null): bool
     {
         $query = static::query()->overlapping($startAt, $endAt)->activeBlocking();
+
+        if ($churchId !== null) {
+            $query->whereHas('department', fn ($q) => $q->where('church_id', $churchId));
+        }
 
         if ($ignoreId !== null) {
             $query->where('id', '!=', $ignoreId);

@@ -11,6 +11,9 @@ class EventNote extends Model
     use HasFactory;
 
     protected $fillable = [
+        'event_history_id',
+        'kind',
+        'author_role',
         'event_id',
         'user_id',
         'note',

@@ -1,8 +1,8 @@
 import { apiClient } from './authApi'
 
 export const superAdminApi = {
-  async listChurches() {
-    const { data } = await apiClient.get('/superadmin/churches')
+  async listChurches(params = {}) {
+    const { data } = await apiClient.get('/superadmin/churches', { params })
     return data
   },
   async createChurch(payload) {

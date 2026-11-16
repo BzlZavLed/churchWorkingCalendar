@@ -9,6 +9,10 @@ export const calendarApi = {
     const { data } = await apiClient.post('/events/hold', payload)
     return data
   },
+  async extendHold(eventId) {
+    const { data } = await apiClient.post(`/events/${eventId}/extend`)
+    return data
+  },
   async lockEvent(eventId) {
     const { data } = await apiClient.post(`/events/${eventId}/lock`)
     return data
@@ -17,12 +21,12 @@ export const calendarApi = {
     const { data } = await apiClient.patch(`/events/${eventId}`, payload)
     return data
   },
-  async reviewEvent(eventId, payload) {
-    const { data } = await apiClient.post(`/events/${eventId}/review`, payload)
+  async requestOpen(eventId) {
+    const { data } = await apiClient.post(`/events/${eventId}/request-open`)
     return data
   },
-  async publishAccepted(payload) {
-    const { data } = await apiClient.post('/events/publish-accepted', payload)
+  async reviewEvent(eventId, payload) {
+    const { data } = await apiClient.post(`/events/${eventId}/review`, payload)
     return data
   },
   async addNote(eventId, payload) {

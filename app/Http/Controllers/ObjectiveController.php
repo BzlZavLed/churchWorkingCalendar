@@ -16,7 +16,10 @@ class ObjectiveController extends Controller
 
     public function index(Request $request)
     {
-        $query = Objective::query()->with('department');
+        $query = Objective::query()->with('department')->withCount([
+            'events as events_count' => fn ($query) => $query->where('status', 'locked'),
+            'events as approved_events_count' => fn ($query) => $query->where('status', 'locked')->where('review_status', 'approved'),
+        ]);
 
         if (!$request->user()->isSuperAdmin()) {
             $query->whereHas('department', function ($departmentQuery) use ($request) {
@@ -33,6 +36,13 @@ class ObjectiveController extends Controller
         $objectives = $query->orderBy('name')->get();
 
         return response()->json($objectives);
+    }
+
+    public function events(Request $request, Objective $objective)
+    {
+        $this->authorize('view', $objective);
+        return response()->json($objective->events()->where('status', 'locked')
+            ->orderByDesc('start_at')->get(['id', 'title', 'start_at', 'end_at', 'location', 'review_status']));
     }
 
     public function store(Request $request)
@@ -83,6 +93,9 @@ class ObjectiveController extends Controller
     {
         $this->authorize('delete', $objective);
 
+        if (\App\Models\Event::where('objective_id', $objective->id)->where('status', 'locked')->exists()) {
+            throw ValidationException::withMessages(['objective' => ['Objectives linked to confirmed events cannot be deleted.']]);
+        }
         $objective->delete();
 
         return response()->noContent();
@@ -101,7 +114,7 @@ class ObjectiveController extends Controller
             ]);
         }
 
-        if (!$user->isSuperAdmin() && !$user->isAdmin() && $resolved !== $user->department_id) {
+        if (!$user->isSuperAdmin() && $resolved !== $user->department_id) {
             throw ValidationException::withMessages([
                 'department_id' => ['You cannot create objectives for other departments.'],
             ]);

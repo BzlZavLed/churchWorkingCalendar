@@ -85,6 +85,7 @@ export const translations = {
       days: ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'],
       drawer: {
         createEvent: 'Crear evento',
+        editEvent: 'Editar evento',
         title: 'Titulo',
         description: 'Descripcion',
         location: 'Ubicacion',
@@ -1022,6 +1023,7 @@ export const translations = {
       days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
       drawer: {
         createEvent: 'Create Event',
+        editEvent: 'Edit event',
         title: 'Title',
         description: 'Description',
         location: 'Location',

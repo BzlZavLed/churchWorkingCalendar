@@ -55,6 +55,7 @@
             <label class="form-check-label" for="dept-greeting">
               {{ t.greetingLabel }}
             </label>
+<label class="form-check d-flex gap-2"><input v-model="createForm.is_treasury" class="form-check-input" type="checkbox" /><span>{{ locale === 'es' ? 'Tesorería (publica asignaciones)' : 'Treasury (publishes allocations)' }}</span></label>
           </div>
         </div>
       </div>
@@ -77,6 +78,7 @@
             <th>{{ t.columns.users }}</th>
             <th>{{ t.columns.club }}</th>
             <th>{{ t.columns.greeting }}</th>
+            <th>{{ locale === 'es' ? 'Tesorería' : 'Treasury' }}</th>
             <th class="text-end">{{ t.columns.actions }}</th>
           </tr>
         </thead>
@@ -98,6 +100,7 @@
             <td>
               <input v-model="department.is_greeting" class="form-check-input" type="checkbox" />
             </td>
+            <td><input v-model="department.is_treasury" :aria-label="locale === 'es' ? 'Tesorería' : 'Treasury'" class="form-check-input" type="checkbox" /></td>
             <td class="text-end">
               <div class="d-flex flex-column flex-md-row justify-content-end gap-2">
                 <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateDepartment(department)">{{ t.save }}</button>
@@ -162,6 +165,7 @@
               <label class="form-check-label" :for="`dept-greeting-${department.id}`">
                 {{ t.greetingLabel }}
               </label>
+<label class="form-check d-flex gap-2"><input v-model="department.is_treasury" class="form-check-input" type="checkbox" /><span>{{ locale === 'es' ? 'Tesorería (publica asignaciones)' : 'Treasury (publishes allocations)' }}</span></label>
             </div>
             <div class="d-flex flex-wrap gap-2">
               <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateDepartment(department)">{{ t.save }}</button>
@@ -242,6 +246,7 @@ const createForm = reactive({
   name: '',
   color: '',
   user_name: '',
+  is_treasury: false,
   is_club: false,
   is_greeting: false,
 })
@@ -286,6 +291,7 @@ const createDepartment = async () => {
       ...createForm,
       color: createForm.color || null,
       user_name: createForm.user_name || null,
+      is_treasury: Boolean(createForm.is_treasury),
       is_club: Boolean(createForm.is_club),
       is_greeting: Boolean(createForm.is_greeting),
     }
@@ -293,6 +299,7 @@ const createDepartment = async () => {
     createForm.name = ''
     createForm.color = ''
     createForm.user_name = ''
+    createForm.is_treasury = false
     createForm.is_club = false
     createForm.is_greeting = false
     setSuccessMessage()
@@ -379,6 +386,7 @@ const updateDepartment = async (department) => {
       name: department.name,
       color: department.color || null,
       user_name: department.user_name || null,
+      is_treasury: Boolean(department.is_treasury),
       is_club: Boolean(department.is_club),
       is_greeting: Boolean(department.is_greeting),
     }

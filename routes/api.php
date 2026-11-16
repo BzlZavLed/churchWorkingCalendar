@@ -50,12 +50,13 @@ Route::prefix('public')->group(function () {
     Route::get('events.ics', [PublicEventFeedController::class, 'ics']);
 });
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'superadmin.context'])->group(function () {
     Route::get('events', [EventController::class, 'index']);
     Route::post('events/hold', [EventController::class, 'storeHold']);
+    Route::post('events/{event}/extend', [EventController::class, 'extendHold']);
     Route::post('events/{event}/lock', [EventController::class, 'lockEvent']);
+    Route::post('events/{event}/request-open', [EventController::class, 'requestOpen']);
     Route::post('events/{event}/review', [EventController::class, 'review']);
-    Route::post('events/publish-accepted', [EventController::class, 'publishAccepted']);
     Route::patch('events/{event}', [EventController::class, 'update']);
     Route::delete('events/{event}', [EventController::class, 'destroy']);
     Route::post('events/{event}/notes', [EventNoteController::class, 'store']);
@@ -68,6 +69,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('calendar/export', [CalendarExportController::class, 'export']);
 
     Route::get('objectives', [ObjectiveController::class, 'index']);
+    Route::get('objectives/{objective}/events', [ObjectiveController::class, 'events']);
     Route::post('objectives', [ObjectiveController::class, 'store']);
     Route::put('objectives/{objective}', [ObjectiveController::class, 'update']);
     Route::delete('objectives/{objective}', [ObjectiveController::class, 'destroy']);
@@ -75,6 +77,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('invitations', [InvitationController::class, 'index']);
     Route::post('invitations', [InvitationController::class, 'store']);
     Route::post('invitations/{invitation}/revoke', [InvitationController::class, 'revoke']);
+
+    Route::get('budget', [\App\Http\Controllers\BudgetController::class, 'index']);
+    Route::put('budget/settings', [\App\Http\Controllers\BudgetController::class, 'settings']);
+    Route::put('budget/plan', [\App\Http\Controllers\BudgetController::class, 'plan']);
+    Route::post('budget/start', [\App\Http\Controllers\BudgetController::class, 'start']);
+    Route::post('budget/entries', [\App\Http\Controllers\BudgetController::class, 'entry']);
+    Route::post('budget/allocations', [\App\Http\Controllers\BudgetController::class, 'publish']);
+    Route::post('budget/allocations/preview', [\App\Http\Controllers\BudgetController::class, 'preview']);
 
     Route::get('inventory', [InventoryController::class, 'index']);
     Route::post('inventory', [InventoryController::class, 'store']);
@@ -109,7 +119,7 @@ Route::middleware('integration.token')->prefix('integrations/clubs')->group(func
     Route::post('calendar', [ClubCalendarController::class, 'importCalendar']);
 });
 
-Route::middleware(['auth:sanctum', 'admin'])->group(function () {
+Route::middleware(['auth:sanctum', 'superadmin.context', 'admin'])->group(function () {
     Route::get('admin/departments', [AdminUserController::class, 'listDepartments']);
     Route::get('admin/users', [AdminUserController::class, 'listUsers']);
     Route::post('admin/users', [AdminUserController::class, 'storeUser']);
@@ -117,7 +127,7 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::delete('admin/users/{user}', [AdminUserController::class, 'destroyUser']);
 });
 
-Route::middleware(['auth:sanctum', 'secretary'])->group(function () {
+Route::middleware(['auth:sanctum', 'superadmin.context', 'secretary'])->group(function () {
     Route::get('secretary/departments', [AdminUserController::class, 'listDepartmentsWithUsers']);
     Route::put('secretary/departments/{department}', [AdminUserController::class, 'updateDepartment']);
     Route::get('secretary/users', [AdminUserController::class, 'listUsers']);

@@ -283,7 +283,7 @@ const createForm = reactive({
   name: '',
   email: '',
   password: '',
-  role: 'member',
+  role: route.query.role === 'secretary' ? 'secretary' : 'member',
   department_id: '',
 })
 
@@ -466,6 +466,10 @@ const submitPasswordUpdate = async () => {
 
 onMounted(async () => {
   await loadChurches()
+  if (selectedChurchId.value) {
+    await loadDepartments(selectedChurchId.value)
+    await loadUsers()
+  }
 })
 
 watch(

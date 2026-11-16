@@ -56,6 +56,8 @@
           <div v-if="departmentLabel" class="sidebar-user-dept">{{ departmentLabel }}</div>
         </div>
 
+        <SuperAdminDrilldown v-show="!shouldShowIconsOnly" />
+
         <h2 v-if="authStore.isAuthenticated" class="app-sidebar-title">{{ t.navigation }}</h2>
 
         <nav v-if="authStore.isAuthenticated" @click="handleNavClick">
@@ -120,6 +122,7 @@ import { useUiStore } from '../stores/uiStore'
 import { translations } from '../i18n/translations'
 import { storeToRefs } from 'pinia'
 import ToastMessage from './ToastMessage.vue'
+import SuperAdminDrilldown from './SuperAdminDrilldown.vue'
 import { useLiveUpdateStore } from '../stores/liveUpdateStore'
 
 const authStore = useAuthStore()
@@ -146,6 +149,7 @@ const iconPaths = {
   departments: 'M4 6h16M4 12h16M4 18h10',
   calendarManager: 'M5 5h14v14H5zM9 3v4M15 3v4M8 11h3M13 11h3M8 15h3',
   meetings: 'M5 7h14M7 11h10M9 15h6M4 4h16v16H4z',
+  budget: 'M4 6h16v14H4zM4 10h16M15 14h3M7 3v3',
   inventory: 'M6 7 12 4l6 3-6 3-6-3Zm0 5 6 3 6-3M6 17l6 3 6-3',
   users: 'M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm-7 8a7 7 0 0 1 14 0',
   reports: 'M5 19V9M12 19V5M19 19v-8',
@@ -161,11 +165,12 @@ const navItems = computed(() => {
   }
 
   const role = authStore.user?.role
-  const isGreetingUser = Boolean(authStore.user?.department?.is_greeting)
+  const isGreetingUser = !authStore.isPlatformAdmin && Boolean(authStore.user?.department?.is_greeting)
 
   if (isGreetingUser) {
     return [
       { to: '/greeting', label: t.value.greeting, icon: iconPaths.greeting },
+      { to: '/budget', label: locale.value === 'es' ? 'Presupuesto' : 'Budget', icon: iconPaths.budget },
       { to: '/greeting/contacts', label: t.value.greetingContacts, icon: iconPaths.greetingList },
     ]
   }
@@ -188,13 +193,13 @@ const navItems = computed(() => {
     { to: '/reports', label: t.value.reports, icon: iconPaths.reports },
   ]
 
+  items.push({ to: '/budget', label: locale.value === 'es' ? 'Presupuesto' : 'Budget', icon: iconPaths.budget })
+
   if (role === 'admin') {
     items.push({ to: '/meeting-points', label: t.value.meetingPoints, icon: iconPaths.meetingPoints })
   }
 
-  if (role !== 'secretary') {
-    items.push({ to: '/objectives', label: t.value.objectives, icon: iconPaths.objectives })
-  }
+  items.push({ to: '/objectives', label: t.value.objectives, icon: iconPaths.objectives })
 
   if (['admin', 'secretary'].includes(role || '')) {
     items.push({ to: '/inventory', label: t.value.inventory, icon: iconPaths.inventory })
@@ -209,6 +214,7 @@ const navItems = computed(() => {
     )
   }
 
+  if (authStore.isPlatformAdmin) items.unshift({ to: '/superadmin/churches', label: t.value.churches, icon: iconPaths.churches })
   return items
 })
 
@@ -251,7 +257,7 @@ const roleLabel = computed(() => {
   return t.value.roleLabels?.[role] || role
 })
 
-const isGreetingFocusMode = computed(() => Boolean(authStore.user?.department?.is_greeting))
+const isGreetingFocusMode = computed(() => !authStore.isPlatformAdmin && Boolean(authStore.user?.department?.is_greeting))
 
 const userInitials = computed(() => {
   const name = authStore.user?.name || ''

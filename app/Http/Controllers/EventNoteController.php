@@ -7,10 +7,10 @@ use App\Models\EventNote;
 use App\Support\DomainUpdate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class EventNoteController extends Controller
 {
+    use \Illuminate\Foundation\Auth\Access\AuthorizesRequests;
     public function store(Request $request, Event $event)
     {
         $data = $request->validate([
@@ -18,16 +18,15 @@ class EventNoteController extends Controller
         ]);
 
         $user = $request->user();
-        if (!$user->isSuperAdmin() && !$user->isSecretary()) {
-            abort(403);
-        }
+        $this->authorize('comment', $event);
 
         $note = DB::transaction(function () use ($event, $user, $data) {
             return EventNote::create([
                 'event_id' => $event->id,
                 'user_id' => $user->id,
                 'note' => $data['note'],
-                'seen_note' => false,
+                'author_role' => $user->role,
+                'seen_note' => !$user->isSecretary() && !$user->isSuperAdmin(),
             ]);
         });
 
@@ -73,9 +72,7 @@ class EventNoteController extends Controller
             ->whereHas('event', function ($query) use ($user) {
                 $query->where('department_id', $user->department_id);
             })
-            ->whereHas('author', function ($query) {
-                $query->whereIn('role', ['secretary', 'superadmin']);
-            })
+            ->whereIn('author_role', ['secretary', 'superadmin'])
             ->orderByDesc('created_at')
             ->get();
 
@@ -118,37 +115,14 @@ class EventNoteController extends Controller
             abort(403);
         }
 
-        $hasSecretaryNote = EventNote::query()
-            ->where('event_id', $event->id)
-            ->whereHas('author', function ($query) {
-                $query->whereIn('role', ['secretary', 'superadmin']);
-            })
-            ->exists();
-
-        if (!$hasSecretaryNote) {
-            throw ValidationException::withMessages([
-                'reply' => ['A secretary note is required before replying.'],
-            ]);
-        }
-
-        $hasDepartmentReply = EventNote::query()
-            ->where('event_id', $event->id)
-            ->whereHas('author', function ($query) {
-                $query->whereNotIn('role', ['secretary', 'superadmin']);
-            })
-            ->exists();
-
-        if ($hasDepartmentReply) {
-            throw ValidationException::withMessages([
-                'reply' => ['A reply already exists for this event.'],
-            ]);
-        }
+        $this->authorize('comment', $event);
 
         return DB::transaction(function () use ($event, $user, $reply) {
             return EventNote::create([
                 'event_id' => $event->id,
                 'user_id' => $user->id,
                 'note' => $reply,
+                'author_role' => $user->role,
                 'seen_note' => true,
                 'seen_at' => now(),
                 'seen_by_user_id' => $user->id,
