@@ -3,23 +3,10 @@
     <section class="consent-card">
       <p class="consent-kicker">{{ t.kicker }}</p>
       <h1 class="consent-title">{{ t.title }}</h1>
-      <p class="consent-copy">{{ t.subtitle }}</p>
+      <p class="consent-copy">{{ locale === 'es' ? 'Administra el permiso para recibir comunicaciones de tu iglesia.' : 'Manage permission to receive communications from your church.' }}</p>
 
-      <form class="consent-search" @submit.prevent="search">
-        <label class="form-label">
-          {{ t.searchEmail }}
-          <input v-model="lookup.email" class="form-control" type="email" />
-        </label>
-        <label class="form-label">
-          {{ t.searchPhone }}
-          <input v-model="lookup.phone" class="form-control" type="tel" />
-        </label>
-        <button class="btn btn-primary" type="submit" :disabled="loading">
-          {{ loading ? t.loading : t.search }}
-        </button>
-      </form>
-
-      <p class="consent-note">{{ t.searchNote }}</p>
+      <p v-if="!route.params.token" class="consent-note">{{ locale === 'es' ? 'Solicita a la iglesia tu enlace personal de preferencias. Con ese enlace puedes retirar el permiso para recibir SMS o correos sin iniciar sesión. Por privacidad, no es posible buscar registros por teléfono o correo en esta página.' : 'Ask the church for your personal preferences link. Use it to withdraw SMS or email permission without signing in. For privacy, visitor records cannot be searched by phone or email on this page.' }}</p>
+      <p v-if="loading" role="status">{{ t.loading }}</p>
       <p v-if="error" class="alert alert-danger mb-0">{{ error }}</p>
       <p v-if="notice" class="alert alert-success mb-0 mt-3">{{ notice }}</p>
 
@@ -83,7 +70,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { publicApi } from '../services/publicApi'
@@ -94,10 +81,6 @@ const route = useRoute()
 const uiStore = useUiStore()
 const { locale } = storeToRefs(uiStore)
 const t = computed(() => translations[locale.value].consentPage)
-const lookup = reactive({
-  email: '',
-  phone: '',
-})
 const loading = ref(false)
 const savingToken = ref('')
 const searched = ref(false)
@@ -110,25 +93,6 @@ const normalizeResult = (contact) => ({
   withdraw_sms: false,
   withdraw_email: false,
 })
-
-const search = async () => {
-  loading.value = true
-  searched.value = true
-  error.value = ''
-  notice.value = ''
-  try {
-    const response = await publicApi.searchConsent({
-      email: lookup.email || undefined,
-      phone: lookup.phone || undefined,
-    })
-    results.value = (response.contacts || []).map(normalizeResult)
-  } catch (err) {
-    error.value = err?.response?.data?.errors?.lookup?.[0] || t.value.loadError
-    results.value = []
-  } finally {
-    loading.value = false
-  }
-}
 
 const submit = async (contact) => {
   savingToken.value = contact.token

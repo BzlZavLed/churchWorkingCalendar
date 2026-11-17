@@ -5,11 +5,11 @@
     <title>{{ $locale === 'en' ? 'Meeting Summary' : 'Resumen de Junta' }}</title>
     <style>
       body { font-family: DejaVu Sans, sans-serif; font-size: 12px; color: #1b1f23; }
-      h1, h2, h3 { margin: 0 0 8px; }
+      h1, h2, h3 { page-break-after: avoid; margin: 0 0 8px; }
       .section { margin-bottom: 18px; }
       .meta { margin-bottom: 12px; }
       .meta div { margin-bottom: 4px; }
-      .point { padding: 10px 0; border-bottom: 1px solid #e0e0e0; }
+      .point { page-break-inside: avoid; padding: 10px 0; border-bottom: 1px solid #e0e0e0; }
       .point:last-child { border-bottom: none; }
       .label { font-weight: bold; }
       .note { margin: 4px 0; }
@@ -20,25 +20,26 @@
     <h1>{{ $locale === 'en' ? 'Meeting Summary' : 'Resumen de Junta' }}</h1>
 
     <div class="section meta">
+      <div class="muted">{{ $locale === 'en' ? 'Time zone' : 'Zona horaria' }}: {{ $timezone }}</div>
       <div><span class="label">{{ $locale === 'en' ? 'Church' : 'Iglesia' }}:</span> {{ $meeting->church?->name ?? '—' }}</div>
       <div><span class="label">{{ $locale === 'en' ? 'Meeting date' : 'Fecha de junta' }}:</span> {{ $meeting->meeting_date?->format('Y-m-d') }}</div>
-      <div><span class="label">{{ $locale === 'en' ? 'Planned start' : 'Hora planificada' }}:</span> {{ optional($meeting->planned_start_at)->format('Y-m-d H:i') }}</div>
-      <div><span class="label">{{ $locale === 'en' ? 'Started at' : 'Inicio real' }}:</span> {{ optional($meeting->start_at)->format('Y-m-d H:i') ?? '—' }}</div>
-      <div><span class="label">{{ $locale === 'en' ? 'Ended at' : 'Fin real' }}:</span> {{ optional($meeting->end_at)->format('Y-m-d H:i') ?? '—' }}</div>
+      <div><span class="label">{{ $locale === 'en' ? 'Planned start' : 'Hora planificada' }}:</span> {{ $meeting->planned_start_at?->copy()->setTimezone($timezone)->format('Y-m-d H:i') }}</div>
+      <div><span class="label">{{ $locale === 'en' ? 'Started at' : 'Inicio real' }}:</span> {{ $meeting->start_at?->copy()->setTimezone($timezone)->format('Y-m-d H:i') ?? '—' }}</div>
+      <div><span class="label">{{ $locale === 'en' ? 'Ended at' : 'Fin real' }}:</span> {{ $meeting->end_at?->copy()->setTimezone($timezone)->format('Y-m-d H:i') ?? '—' }}</div>
       <div><span class="label">{{ $locale === 'en' ? 'Location' : 'Lugar' }}:</span> {{ $meeting->location ?? '—' }}</div>
     </div>
 
     <div class="section">
       <h2>{{ $locale === 'en' ? 'Opening Notes' : 'Notas de apertura' }}</h2>
       <div class="note"><span class="label">{{ $locale === 'en' ? 'Opened by' : 'Abierta por' }}:</span> {{ $meeting->opener?->name ?? '—' }}</div>
-      <div class="note"><span class="label">{{ $locale === 'en' ? 'Opening prayer' : 'Oracion inicial' }}:</span> {{ $meeting->opening_prayer ?? '' }}</div>
-      <div class="note"><span class="label">{{ $locale === 'en' ? 'Opening remarks' : 'Observaciones iniciales' }}:</span> {{ $meeting->opening_remarks ?? '' }}</div>
+      <div class="note"><span class="label">{{ $locale === 'en' ? 'Opening prayer' : 'Oracion inicial' }}:</span> {{ $meeting->opening_prayer ?? '' }} <span class="muted">{{ $meeting->opening_prayer_recorded_at?->copy()->setTimezone($timezone)->format('Y-m-d H:i') ?? ($locale === 'en' ? 'Recording time unavailable' : 'Fecha de registro no disponible') }}</span></div>
+      <div class="note"><span class="label">{{ $locale === 'en' ? 'Opening remarks' : 'Observaciones iniciales' }}:</span> {{ $meeting->opening_remarks ?? '' }} <span class="muted">{{ $meeting->opening_remarks_recorded_at?->copy()->setTimezone($timezone)->format('Y-m-d H:i') ?? ($locale === 'en' ? 'Recording time unavailable' : 'Fecha de registro no disponible') }}</span></div>
     </div>
 
     <div class="section">
       <h2>{{ $locale === 'en' ? 'Attendance' : 'Asistencia' }}</h2>
       @foreach(($meeting->attendance ?? []) as $person)
-        <div>{{ $person['name'] }} — {{ ($locale === 'en' ? ['present' => 'Present', 'absent' => 'Absent', 'online' => 'Online'] : ['present' => 'Presente', 'absent' => 'Ausente', 'online' => 'En línea'])[$person['status']] ?? $person['status'] }}</div>
+        <div>{{ $person['name'] }} — {{ ($locale === 'en' ? ['present' => 'Present', 'absent' => 'Absent', 'online' => 'Online'] : ['present' => 'Presente', 'absent' => 'Ausente', 'online' => 'En línea'])[$person['status']] ?? $person['status'] }} <span class="muted">{{ !empty($person['recorded_at']) ? \Carbon\Carbon::parse($person['recorded_at'])->setTimezone($timezone)->format('Y-m-d H:i') : ($locale === 'en' ? 'Recording time unavailable' : 'Fecha de registro no disponible') }}</span></div>
       @endforeach
     </div>
     <div class="section">
@@ -53,12 +54,24 @@
           @if($point->review_note)
             <div class="note"><span class="label">{{ $locale === 'en' ? 'Review note' : 'Nota de revision' }}:</span> {{ $point->review_note }}</div>
           @endif
+          @if($point->calendar_review)
+            <h3>{{ $locale === 'en' ? 'Calendar review' : 'Revisión del calendario' }}</h3>
+            @forelse($point->calendar_decisions ?? [] as $decision)
+              <p><strong>{{ $decision['title'] }}</strong> — {{ $decision['department'] }}<br>
+                {{ \Carbon\Carbon::parse($decision['start_at'])->setTimezone($timezone)->format('Y-m-d H:i') }} —
+                {{ ['approved'=>($locale === 'en' ? 'Accepted':'Aceptado'),'denied'=>($locale === 'en' ? 'Rejected':'Rechazado'),'changes_requested'=>($locale === 'en' ? 'Changes requested':'Cambios solicitados')][$decision['status']] ?? $decision['status'] }}<br>
+                {{ $decision['note'] ?? '' }}<br><span class="muted">{{ \Carbon\Carbon::parse($decision['at'])->setTimezone($timezone)->format('Y-m-d H:i') }} · {{ $decision['actor'] }}</span>
+              </p>
+            @empty
+              <p>{{ $locale === 'en' ? 'No event decisions recorded.' : 'Sin decisiones de eventos registradas.' }}</p>
+            @endforelse
+          @endif
           @if($point->final_note)
             <div class="note">
               <span class="label">{{ $locale === 'en' ? 'Point note' : 'Nota del punto' }}:</span>
               {{ $point->final_note }}
               @if($point->finalized_at)
-                ({{ optional($point->finalized_at)->format('Y-m-d H:i') }})
+                ({{ $point->finalized_at?->copy()->setTimezone($timezone)->format('Y-m-d H:i') }})
               @endif
             </div>
           @endif
@@ -71,13 +84,20 @@
       <div class="note">{!! nl2br(e($meeting->summary_text ?: $meeting->summary_generated)) !!}</div>
     </div>
 
+    @if($meeting->closing_notes)
+      <div class="section">
+        <h2>{{ $locale === 'en' ? 'Closing notes' : 'Notas de cierre' }}</h2>
+        <p class="muted">{{ $meeting->end_at?->copy()->setTimezone($timezone)->format('Y-m-d H:i') }}</p>
+        <div>{!! nl2br(e($meeting->closing_notes)) !!}</div>
+      </div>
+    @endif
     <div class="section">
       <h2>{{ $locale === 'en' ? 'General Notes' : 'Notas generales' }}</h2>
       @if($meeting->meetingNotes->count())
         <ul>
           @foreach($meeting->meetingNotes->sortBy('created_at') as $note)
             <li>
-              {{ optional($note->created_at)->format('Y-m-d H:i') }} - {{ $note->note }}
+              {{ $note->created_at?->copy()->setTimezone($timezone)->format('Y-m-d H:i') }} - {{ $note->note }}
               @if($note->author)
                 ({{ $note->author->name }})
               @endif

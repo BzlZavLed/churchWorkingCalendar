@@ -76,7 +76,18 @@ class MeetingController extends Controller
                 $data['planned_start_at'] = $start->utc();
                 $data['meeting_date'] = $date;
             }
-            if (isset($data['attendance'])) $data['attendance'] = array_map(fn ($row) => ['name' => $row['name'], 'status' => $row['status']], $data['attendance']);
+            foreach (['opening_prayer', 'opening_remarks'] as $field) {
+                if (array_key_exists($field, $data) && ($data[$field] !== $meeting->{$field} || !$meeting->{$field.'_recorded_at'})) {
+                    $data[$field.'_recorded_at'] = now();
+                }
+            }
+            if (isset($data['attendance'])) {
+                $previous = collect($meeting->attendance ?? []);
+                $data['attendance'] = array_map(function ($row) use ($previous) {
+                    $existing = $previous->first(fn ($old) => $old['name'] === $row['name'] && $old['status'] === $row['status']);
+                    return ['name' => $row['name'], 'status' => $row['status'], 'recorded_at' => $existing['recorded_at'] ?? now()->toIso8601String()];
+                }, $data['attendance']);
+            }
             $meeting->update($data + ['updated_by' => $request->user()->id]);
             DomainUpdate::forMeeting('updated', $meeting, $request->user());
             return response()->json($this->workflow->meetingFor($meeting, $request->user()));
@@ -108,6 +119,7 @@ class MeetingController extends Controller
     public function adjourn(Request $request, Meeting $meeting)
     {
         $this->authorize('update', $meeting);
+        $request->validate(['closing_notes' => ['nullable', 'string', 'max:20000']]);
         return DB::transaction(function () use ($meeting, $request) {
             Church::whereKey($meeting->church_id)->lockForUpdate()->firstOrFail();
             $meeting = Meeting::whereKey($meeting->id)->lockForUpdate()->firstOrFail();
@@ -118,7 +130,7 @@ class MeetingController extends Controller
                     ? ['approved' => 'Accepted', 'denied' => 'Rejected', 'needs_update' => 'Updates requested', 'postponed' => 'Next meeting', 'informative' => 'Informative']
                     : ['approved' => 'Aceptado', 'denied' => 'Rechazado', 'needs_update' => 'Actualización solicitada', 'postponed' => 'Próxima junta', 'informative' => 'Informativo'];
                 $summary = $meeting->points()->where('status', 'accepted')->orderBy('agenda_order')->get()->map(fn ($p) => $p->title.' ('.($labels[$p->final_status] ?? $p->final_status).')'.($p->final_note ? ': '.$p->final_note : ''))->implode("\n");
-                $meeting->update(['end_at' => now(), 'active_meeting_point_id' => null, 'summary_generated' => $summary, 'summary_public' => false, 'updated_by' => $request->user()->id]);
+                $meeting->update(['end_at' => now(), 'active_meeting_point_id' => null, 'summary_generated' => $summary, 'closing_notes' => $request->input('closing_notes'), 'summary_public' => false, 'updated_by' => $request->user()->id]);
                 $next = Meeting::where('church_id', $meeting->church_id)->where('planned_start_at', '>', $meeting->planned_start_at)->whereNull('agenda_closed_at')->whereNull('start_at')->whereNull('end_at')->orderBy('planned_start_at')->first();
                 if ($next) $this->workflow->carryover($next, $request->user());
             }

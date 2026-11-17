@@ -19,6 +19,11 @@ class User extends Authenticatable
     public const ROLE_ADMIN = 'admin';
     public const ROLE_MEMBER = 'member';
     public const ROLE_SECRETARY = 'secretary';
+    public const ROLE_PASTOR = 'pastor';
+
+    public function hasCapability(string $capability): bool { return app(\App\Services\ModuleAccess::class)->allows($this, $capability); }
+
+    public function isPastor(): bool { return $this->role === self::ROLE_PASTOR; }
 
     /**
      * The attributes that are mass assignable.
@@ -32,6 +37,7 @@ class User extends Authenticatable
         'password',
         'department_id',
         'role',
+        'church_role_id',
     ];
 
     /**

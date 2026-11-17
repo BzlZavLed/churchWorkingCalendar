@@ -29,7 +29,7 @@ class ObjectiveController extends Controller
 
         if ($request->user()->isAdmin() || $request->user()->role === User::ROLE_MEMBER) {
             $query->where('department_id', $request->user()->department_id);
-        } elseif (!$request->user()->isSuperAdmin() && !$request->user()->isSecretary()) {
+        } elseif ($request->user()->department_id && !$request->user()->isSuperAdmin() && !$request->user()->isSecretary()) {
             $query->where('department_id', $request->user()->department_id);
         }
 

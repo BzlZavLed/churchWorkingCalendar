@@ -23,9 +23,7 @@ class CalendarExportController extends Controller
             ->orderBy('start_at');
 
         if (!$request->user()->isSuperAdmin()) {
-            $query->whereHas('department', function ($departmentQuery) use ($request) {
-                $departmentQuery->where('church_id', $request->user()->church_id);
-            });
+            $query->forChurch($request->user()->church_id ?? 0);
         }
 
         $events = $query->get();

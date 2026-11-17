@@ -7,59 +7,6 @@ use Illuminate\Http\Request;
 
 class PublicChurchContactConsentController extends Controller
 {
-    public function search(Request $request)
-    {
-        $data = $request->validate([
-            'email' => ['nullable', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:50'],
-        ]);
-
-        $email = isset($data['email']) ? trim((string) $data['email']) : '';
-        $phone = isset($data['phone']) ? trim((string) $data['phone']) : '';
-
-        if ($email === '' && $phone === '') {
-            return response()->json([
-                'message' => 'Email or phone is required.',
-                'errors' => [
-                    'lookup' => ['Email or phone is required.'],
-                ],
-            ], 422);
-        }
-
-        $contacts = ChurchContact::query()
-            ->with('church:id,name')
-            ->when($email !== '' && $phone !== '', function ($query) use ($email, $phone) {
-                $query->where('email', $email)
-                    ->where('phone', $phone);
-            })
-            ->when($email !== '' && $phone === '', function ($query) use ($email) {
-                $query->where('email', $email);
-            })
-            ->when($phone !== '' && $email === '', function ($query) use ($phone) {
-                $query->where('phone', $phone);
-            })
-            ->latest()
-            ->limit(10)
-            ->get()
-            ->map(function (ChurchContact $contact) {
-                return [
-                    'token' => $contact->consent_token,
-                    'name' => $contact->name,
-                    'phone' => $contact->phone,
-                    'email' => $contact->email,
-                    'sms_consent' => $contact->sms_consent,
-                    'email_consent' => $contact->email_consent,
-                    'church' => $contact->church,
-                ];
-            })
-            ->values();
-
-        return response()->json([
-            'status' => 'ok',
-            'contacts' => $contacts,
-        ]);
-    }
-
     public function show(string $token)
     {
         $contact = ChurchContact::query()

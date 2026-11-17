@@ -25,7 +25,7 @@ class MeetingPolicy
 
     public function create(User $user): bool
     {
-        return $user->isSuperAdmin() || $user->isSecretary();
+        return $user->isSuperAdmin() || $user->hasCapability('meetings.manage');
     }
 
     public function update(User $user, Meeting $meeting): bool
@@ -36,6 +36,6 @@ class MeetingPolicy
 
         $churchId = $user->church_id ?? $user->department?->church_id;
 
-        return $user->isSecretary() && $churchId === $meeting->church_id;
+        return $user->hasCapability('meetings.manage') && $churchId === $meeting->church_id;
     }
 }

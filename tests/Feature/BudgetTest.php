@@ -214,7 +214,8 @@ class BudgetTest extends TestCase
         $overview = $this->getJson('/api/budget')->assertOk();
         $music = collect($overview->json('departments'))->firstWhere('id', $department->id);
         $this->assertCount(3, $music['budget']['entries']);
-        $this->assertSame($itemId, $music['budget']['entries'][0]['inventory_item']['id']);
+        $inventoryEntry = collect($music['budget']['entries'])->firstWhere('id', $result->json('id'));
+        $this->assertSame($itemId, $inventoryEntry['inventory_item']['id']);
         $this->assertNotSame($department->id, $overview->json('writable_department_id'));
         $this->putJson('/api/budget/entries/'.$result->json('id'), ['amount' => '1'])->assertStatus(405);
         $this->assertDatabaseHas('budget_entries', ['id' => $result->json('id'), 'amount_cents' => 10000]);

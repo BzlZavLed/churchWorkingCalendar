@@ -257,7 +257,7 @@ const t = computed(() => translations[locale.value].inventory)
 const common = computed(() => translations[locale.value].common)
 
 const isSuperAdmin = computed(() => authStore.user?.role === 'superadmin')
-const canEdit = computed(() => authStore.user?.role === 'admin' || authStore.user?.role === 'superadmin')
+const canEdit = computed(() => authStore.can('inventory.manage') && (authStore.isSuperAdmin || !!authStore.user?.department_id))
 const confirmTitle = computed(() => t.value.confirmTitle || t.value.delete)
 const inventoryDepartments = computed(() => [...new Map(items.value.filter(item => item.department).map(item => [item.department.id, item.department])).values()].sort((a, b) => a.name.localeCompare(b.name)))
 const quantityTotal = computed(() => filteredItems.value.reduce((sum, item) => sum + Number(item.quantity || 0), 0))

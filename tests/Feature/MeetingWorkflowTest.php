@@ -33,6 +33,88 @@ class MeetingWorkflowTest extends TestCase
         Sanctum::actingAs($clerk);
         $this->postJson("/api/meeting-points/$id/review", ['status' => 'accepted'])->assertOk();
     }
+    public function test_optional_calendar_review_records_only_decisions_made_in_live_meeting(): void
+    {
+        [$church,$clerk,$admin,,$meeting]=$this->setupMeeting();
+        $payload=['title'=>'Next month calendar','description'=>'Review selected events','calendar_review'=>true,'calendar_from'=>'2026-12-01','calendar_until'=>'2026-12-31'];
+        Sanctum::actingAs($admin);
+        $this->postJson("/api/meetings/{$meeting->id}/points",$payload)->assertForbidden();
+        Sanctum::actingAs($clerk);
+        $id=$this->postJson("/api/meetings/{$meeting->id}/points",$payload)->assertCreated()->json('id');
+        $event=\App\Models\Event::create(['department_id'=>$admin->department_id,'title'=>'Concert','start_at'=>'2026-12-12 10:00:00','end_at'=>'2026-12-12 11:00:00','status'=>'locked','review_status'=>'pending','created_by'=>$admin->id,'updated_by'=>$admin->id]);
+        $review=['review_status'=>'approved','meeting_point_id'=>$id];
+        $this->postJson("/api/events/{$event->id}/review",$review)->assertUnprocessable();
+        $this->travelTo($meeting->planned_start_at);
+        $this->postJson("/api/meetings/{$meeting->id}/start")->assertOk();
+        $this->postJson("/api/meeting-points/$id/activate")->assertOk();
+        $this->postJson("/api/events/{$event->id}/review",$review)->assertOk();
+        $this->assertSame('Concert',MeetingPoint::find($id)->calendar_decisions[0]['title']);
+        $event->update(['title'=>'Changed later']);
+        $this->postJson("/api/meeting-points/$id/finalize",['final_status'=>'informative','final_note'=>'Partial calendar review'])->assertOk();
+        $this->postJson("/api/meetings/{$meeting->id}/adjourn")->assertOk();
+        Sanctum::actingAs($admin);
+        $this->getJson("/api/meetings/{$meeting->id}")->assertJsonMissingPath('calendar_reviews');
+        Sanctum::actingAs($clerk);
+        $this->patchJson("/api/meetings/{$meeting->id}",['summary_public'=>true])->assertOk();
+        Sanctum::actingAs($admin);
+        $this->getJson("/api/meetings/{$meeting->id}")->assertJsonPath('calendar_reviews.0.calendar_decisions.0.title','Concert');
+        $html=view('exports.meeting-summary',['meeting'=>$meeting->fresh()->load('points'),'locale'=>'en','timezone'=>'UTC'])->render();
+        $this->assertStringContainsString('Concert',$html);
+        $this->assertStringContainsString('Calendar review',$html);
+    }
+
+    public function test_live_deferral_closing_notes_and_timestamped_private_public_overview(): void
+    {
+        [, $clerk, $admin, , $meeting] = $this->setupMeeting();
+        $active = $this->point($meeting, $admin, 'Active discussion');
+        $deferred = $this->point($meeting, $admin, 'No time to discuss');
+        $this->accept($active, $clerk);
+        $this->accept($deferred, $clerk);
+        $this->patchJson("/api/meetings/{$meeting->id}", [
+            'opening_prayer' => 'Prayer leader', 'opening_remarks' => 'Welcome',
+            'attendance' => [['name'=>'Attendee', 'status'=>'online', 'recorded_at'=>'2000-01-01']],
+        ])->assertOk();
+        $meeting->refresh();
+        $recorded = $meeting->attendance[0]['recorded_at'];
+        $this->assertNotNull($meeting->opening_prayer_recorded_at);
+        $this->assertNotNull($meeting->opening_remarks_recorded_at);
+        $this->assertTrue($meeting->opening_prayer_recorded_at->equalTo(now()));
+        $this->assertTrue($meeting->opening_remarks_recorded_at->equalTo(now()));
+        $this->assertStringContainsString('2026-12-01', $recorded);
+        $this->travelTo($meeting->planned_start_at);
+        $this->postJson("/api/meetings/{$meeting->id}/start")->assertOk();
+        $this->postJson("/api/meeting-points/$active/activate")->assertOk();
+        $this->postJson("/api/meeting-points/$deferred/finalize", ['final_status'=>'postponed', 'final_note'=>'Ran out of time'])->assertOk();
+        $this->assertSame($active, $meeting->fresh()->active_meeting_point_id);
+        $this->postJson("/api/meetings/{$meeting->id}/adjourn", ['closing_notes'=>'Not yet'])->assertUnprocessable();
+        $this->postJson("/api/meeting-points/$active/finalize", ['final_status'=>'postponed'])->assertOk();
+        $this->postJson("/api/meetings/{$meeting->id}/adjourn", ['closing_notes'=>'Resume discussion next month.'])->assertOk()->assertJsonPath('closing_notes','Resume discussion next month.');
+        $this->postJson("/api/meeting-points/$deferred/finalize", ['final_status'=>'postponed'])->assertUnprocessable();
+        Sanctum::actingAs($admin);
+        $this->getJson('/api/meetings')->assertJsonCount(1)->assertJsonPath('0.summary_public',false)->assertJsonMissingPath('0.closing_notes')->assertJsonMissingPath('0.attendance');
+        $this->getJson("/api/meetings/{$meeting->id}/summary.pdf")->assertForbidden();
+        Sanctum::actingAs($clerk);
+        $this->patchJson("/api/meetings/{$meeting->id}", ['summary_public'=>true])->assertOk();
+        Sanctum::actingAs($admin);
+        $this->getJson("/api/meetings/{$meeting->id}")->assertOk()->assertJsonPath('closing_notes','Resume discussion next month.')->assertJsonPath('attendance.0.recorded_at',$recorded);
+        $html = view('exports.meeting-summary',['meeting'=>$meeting->fresh(),'locale'=>'en','timezone'=>'UTC'])->render();
+        $this->assertStringContainsString('Resume discussion next month.', $html);
+        $this->assertStringContainsString('Prayer leader', $html);
+    }
+
+    public function test_minutes_render_local_times_and_validate_export_timezone(): void
+    {
+        [, $clerk, , , $meeting] = $this->setupMeeting();
+        $meeting->update(['start_at' => '2026-12-05 12:00:00', 'end_at' => '2026-12-05 13:00:00']);
+        Sanctum::actingAs($clerk);
+        $this->getJson("/api/meetings/{$meeting->id}/summary.pdf?timezone=invalid")->assertUnprocessable();
+        $html = view('exports.meeting-summary', ['meeting' => $meeting->fresh(), 'locale' => 'en', 'timezone' => 'America/New_York'])->render();
+        $this->assertStringContainsString('America/New_York', $html);
+        $this->assertStringContainsString('2026-12-05 07:00', $html);
+        $this->assertStringContainsString('2026-12-05 08:00', $html);
+        $this->assertStringNotContainsString('2026-12-05 12:00', $html);
+    }
+
     public function test_exact_deadline_freezes_submissions_reviews_and_order_and_shares_only_accepted_agenda(): void
     {
         [, $clerk, $admin, $other, $meeting] = $this->setupMeeting();

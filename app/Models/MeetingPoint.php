@@ -23,6 +23,7 @@ class MeetingPoint extends Model
     public const FINAL_NEEDS_UPDATE = 'needs_update';
 
     protected $fillable = [
+        'calendar_review', 'calendar_from', 'calendar_until', 'calendar_decisions',
         'revision',
         'history',
         'meeting_id',
@@ -46,6 +47,7 @@ class MeetingPoint extends Model
     ];
 
     protected $casts = [
+        'calendar_review' => 'boolean', 'calendar_decisions' => 'array',
         'revision' => 'array',
         'history' => 'array',
         'reviewed_at' => 'datetime',

@@ -1,3 +1,4 @@
+import { accessApi } from '../services/accessApi'
 import { adminContext, setAdminContext } from './adminContext'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
@@ -7,6 +8,7 @@ export const getDefaultRouteForUser = (user) => {
   if (!user) {
     return '/login'
   }
+  if (user.role === 'pastor') return '/greeting/contacts'
   if (user.role === 'superadmin') {
     return '/superadmin/churches'
   }
@@ -18,17 +20,34 @@ export const getDefaultRouteForUser = (user) => {
 
 export const useAuthStore = defineStore('auth', () => {
   const account = ref(null)
+  const permissions = ref({})
+  const capabilities = ref({})
+  const can = capability => role.value === 'superadmin' || capabilities.value[capability] === true
+  const accessModules = ref({})
+  const roleName = ref(null)
+  const canAccess = module => role.value === 'superadmin' || ['read','edit'].includes(permissions.value[module])
+  const canEdit = module => role.value === 'superadmin' || permissions.value[module] === 'edit'
+  const refreshAccess = async () => {
+    if (!account.value) { permissions.value={};return }
+    const result=await accessApi.current()
+    if(!adminContext.value) account.value=result.user
+    capabilities.value=result.capabilities || {};permissions.value=result.permissions;accessModules.value=result.modules;roleName.value=result.role_name
+  }
+  const firstAccessibleRoute = () => Object.entries(accessModules.value).find(([key])=>canAccess(key))?.[1].path || '/no-access'
+
   const isPlatformAdmin = computed(() => account.value?.role === 'superadmin')
   const user = computed(() => {
     if (!isPlatformAdmin.value || !adminContext.value) return account.value
-    const { church, department } = adminContext.value
-    return { ...account.value, role: department ? 'admin' : 'secretary',
+    const { church, department, role, churchRole } = adminContext.value
+    return { ...account.value, role: churchRole?.base_role || (department ? 'admin' : role === 'pastor' ? 'pastor' : 'secretary'),
       church_id: church.id, church, department_id: department?.id || null, department: department || null }
   })
   const contextKey = computed(() => isPlatformAdmin.value && adminContext.value
-    ? `${adminContext.value.church.id}:${adminContext.value.department?.id || 'clerk'}` : 'account')
+    ? `${adminContext.value.church.id}:${adminContext.value.churchRole?.id || adminContext.value.role || 'clerk'}:${adminContext.value.department?.id || 'all'}` : 'account')
   const enterChurch = (church) => setAdminContext({ church, department: null })
+  const enterPastor = () => setAdminContext({ church: adminContext.value.church, department: null, role: 'pastor' })
   const enterDepartment = (department) => setAdminContext({ church: adminContext.value.church, department })
+  const enterRole = (churchRole, department = null) => setAdminContext({church:adminContext.value.church,churchRole,department})
   const exitContext = () => setAdminContext(null)
   const storageKey = 'auth_token'
   const getStoredToken = () => sessionStorage.getItem(storageKey) || localStorage.getItem(storageKey)
@@ -108,6 +127,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return {
+    can, capabilities, permissions, accessModules, roleName, canAccess, canEdit, refreshAccess, firstAccessibleRoute,
     user,
     account,
     isPlatformAdmin,
@@ -115,6 +135,8 @@ export const useAuthStore = defineStore('auth', () => {
     adminContext,
     enterChurch,
     enterDepartment,
+    enterPastor,
+    enterRole,
     exitContext,
     token,
     isInitializing,

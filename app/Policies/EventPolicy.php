@@ -14,19 +14,12 @@ class EventPolicy
 
     public function create(User $user): bool
     {
-        if ($user->isSuperAdmin()) {
-            return true;
-        }
-
-        if ($user->isSecretary()) {
-            return false;
-        }
-
-        return $user->department_id !== null || $user->isAdmin();
+        return $user->hasCapability('calendar.create');
     }
 
     public function update(User $user, Event $event): bool
     {
+        if ($event->is_conference_event) return false;
         if (($event->status === 'locked' && $event->review_status !== 'changes_requested')
             || $event->status === 'cancelled'
             || ($event->status === 'hold' && (!$event->expires_at || $event->expires_at->lte(now())))) {
@@ -36,20 +29,12 @@ class EventPolicy
             return true;
         }
 
-        if ($user->isSecretary()) {
-            return false;
-        }
-
-        if ($user->isAdmin()) {
-            return $event->department?->church_id !== null
-                && $event->department->church_id === $user->church_id;
-        }
-
-        return $user->department_id === $event->department_id;
+        return ($user->hasCapability('calendar.edit') || ($event->status === 'hold' && $event->created_by === $user->id && $user->hasCapability('calendar.create'))) && $this->inScope($user, $event);
     }
 
     public function delete(User $user, Event $event): bool
     {
+        if ($event->is_conference_event) return false;
         if ($event->review_status === 'approved') {
             return false;
         }
@@ -57,37 +42,29 @@ class EventPolicy
             return true;
         }
 
-        if ($user->isSecretary()) {
-            return false;
-        }
-
-        if ($user->isAdmin()) {
-            return $event->department?->church_id !== null
-                && $event->department->church_id === $user->church_id;
-        }
-
-        return $user->department_id === $event->department_id;
+        return $user->hasCapability('calendar.edit') && $this->inScope($user, $event);
     }
 
     public function review(User $user, Event $event): bool
     {
+        if ($event->is_conference_event) return false;
         if ($user->isSuperAdmin()) {
             return true;
         }
 
-        if ($user->isSecretary()) {
-            return $event->department?->church_id !== null
-                && $event->department->church_id === $user->church_id;
-        }
+        return $user->hasCapability('calendar.review') && $event->department?->church_id === $user->church_id;
+    }
 
-        return false;
+    private function inScope(User $user, Event $event): bool
+    {
+        return $event->department?->church_id === $user->church_id && ($user->hasCapability('calendar.all_departments') || ($user->department_id !== null && $user->department_id === $event->department_id));
     }
 
     public function comment(User $user, Event $event): bool
     {
         if ($event->status !== 'locked') return false;
         if ($user->isSuperAdmin()) return true;
-        if ($user->isSecretary()) return $this->review($user, $event);
+        if ($user->hasCapability('calendar.review')) return $this->review($user, $event);
         return $user->department_id !== null && $user->department_id === $event->department_id;
     }
 }

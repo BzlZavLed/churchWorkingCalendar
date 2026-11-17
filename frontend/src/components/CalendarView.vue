@@ -1,6 +1,6 @@
 <template>
   <section class="calendar-page container-xl">
-    <div v-for="hold in expiringOwnHolds" :key="hold.id" class="alert alert-warning" role="alert" aria-live="assertive">
+    <div v-for="hold in expiringOwnHolds" :key="hold.id" class="alert alert-warning hold-expiry-alert" role="alert" aria-live="assertive">
       {{ locale === 'es' ? 'Tu reserva está por vencer.' : 'Your reservation is about to expire.' }}
       <button class="btn btn-warning ms-2" :disabled="extendingHold" @click="extendReservation(hold)">
         {{ locale === 'es' ? 'Extender 5 minutos' : 'Extend 5 minutes' }}
@@ -28,8 +28,8 @@
           </button>
         </div>
       </div>
-      <div class="row" id="filters">
-        <label v-if="canReview" class="col-3">
+      <div class="row g-3 calendar-filters" id="filters">
+        <label v-if="canReview" class="col-12 col-sm-6 col-lg-4">
           <span class="form-label small mb-1">{{ t.filterDepartment }}</span>
           <select v-model="departmentFilter" class="form-select">
             <option value="all">{{ t.allDepartments }}</option>
@@ -38,7 +38,7 @@
             </option>
           </select>
         </label>
-        <label v-if="showMonthDropdown" class="col-3">
+        <label v-if="showMonthDropdown" class="col-12 col-sm-6 col-lg-4">
           <span class="form-label small mb-1">{{ t.monthSelect }}</span>
           <select v-model="monthSelection" class="form-select" @change="applyMonthSelection">
             <option v-for="option in monthOptions" :key="option.value" :value="option.value">
@@ -46,7 +46,7 @@
             </option>
           </select>
         </label>
-        <div class="col-3">
+        <div class="col-12 col-sm-6 col-lg-4">
           <div class="calendar-export d-flex flex-column align-items-start gap-2">
             <span class="export-label">{{ t.exportLabel }}</span>
             <div class="calendar-export-row d-flex flex-wrap align-items-center gap-2">
@@ -127,7 +127,7 @@
               </button>
               <span class="calendar-label fw-semibold text-center">
                 <span v-if="!isMobile">{{ monthLabel }}</span>
-                <span v-else>{{ monthLabel }} - {{ weekLabel }}</span>
+                <span v-else class="calendar-mobile-period"><span>{{ monthLabel }}</span><small>{{ weekLabel }}</small></span>
               </span>
               <button type="button" class="btn btn-outline-secondary calendar-nav-btn" @click="goNextMonth">
                 {{ t.next }}
@@ -352,9 +352,11 @@
       </div>
     </section>
 
+    <ConferenceEvents v-if="authStore.can('calendar.conference') && effectiveChurchId" :church-id="effectiveChurchId" :locale="locale" :events="events" @changed="loadMonth" />
     <EventModal
       :open="isModalOpen && canCreateEvents"
       :selected-date="selectedDate"
+      @update:selectedDate="selectedDate = $event ? new Date($event + 'T00:00:00') : null"
       :title="form.title"
       :description="form.description"
       :location="form.location"
@@ -362,6 +364,9 @@
       :end-time="form.endTime"
       :objective-id="form.objectiveId"
       :objectives="objectiveOptions"
+      :departments="authStore.can('calendar.all_departments') ? departments : []"
+      :department-id="form.departmentId"
+      @update:departmentId="form.departmentId = $event; form.objectiveId = ''"
       :active-hold-id="activeHoldId"
       :hold-expires-at="activeHold?.expires_at || ''"
       :is-editing="Boolean(editEventId)"
@@ -386,8 +391,8 @@
       :event="selectedEvent"
       :notes="selectedEvent?.notes || []"
       :histories="selectedEvent?.histories || []"
-      :can-reply-notes="selectedEvent?.status === 'locked' && (canReview || selectedEvent?.department_id === user?.department_id)"
-      :can-review="canReview"
+      :can-reply-notes="authStore.canEdit('calendar') && !selectedEvent?.is_conference_event && selectedEvent?.status === 'locked' && (canReview || selectedEvent?.department_id === user?.department_id)"
+      :can-review="canReview && !selectedEvent?.is_conference_event"
       :saving="eventNoteSaving"
       :error="eventNoteError"
       @review="handleDetailsReview"
@@ -637,10 +642,12 @@ import { useCalendarStore } from '../stores/calendarStore'
 import { useLiveUpdateStore } from '../stores/liveUpdateStore'
 import { useUiStore } from '../stores/uiStore'
 import { translations } from '../i18n/translations'
+import { apiClient } from '../services/authApi'
 import { objectiveApi } from '../services/objectiveApi'
 import { publicApi } from '../services/publicApi'
 import { eventActionLabel } from '../utils/eventWorkflow'
 import { calendarApi } from '../services/calendarApi'
+import ConferenceEvents from './ConferenceEvents.vue'
 import EventModal from './EventModal.vue'
 import EventDetailsModal from './EventDetailsModal.vue'
 
@@ -656,8 +663,8 @@ const user = computed(() => authStore.user)
 const isSuperAdmin = computed(() => authStore.isSuperAdmin)
 const isSecretary = computed(() => authStore.isSecretary)
 const role = computed(() => authStore.role)
-const canCreateEvents = computed(() => !isSecretary.value)
-const canReview = computed(() => isSecretary.value || isSuperAdmin.value)
+const canCreateEvents = computed(() => authStore.can('calendar.create') && (authStore.can('calendar.all_departments') || !!user.value?.department_id))
+const canReview = computed(() => authStore.can('calendar.review'))
 const canViewUnseenNotes = computed(
   () => !isSecretary.value && !isSuperAdmin.value && Boolean(user.value?.department_id)
 )
@@ -726,16 +733,15 @@ const activeHold = computed(() =>
 )
 const canEditSelectedEvent = computed(() => {
   const event = selectedEvent.value
+  if (!authStore.can('calendar.edit')) return false
   if (!event) {
     return false
   }
-  if (isSecretary.value || isSuperAdmin.value) {
-    return false
-  }
+
   if (event.status !== 'locked' || event.review_status !== 'changes_requested') {
     return false
   }
-  return Boolean(user.value?.department_id) && user.value.department_id === event.department_id
+  return authStore.can('calendar.all_departments') || (Boolean(user.value?.department_id) && user.value.department_id === event.department_id)
 })
 const unseenCount = computed(() => unseenNotes.value.length)
 const showMonthDropdown = computed(() => !isDayView.value)
@@ -786,6 +792,7 @@ const form = reactive({
   startTime: '09:00',
   endTime: '10:00',
   objectiveId: '',
+  departmentId: user.value?.department_id || '',
 })
 
 const t = computed(() => translations[locale.value].calendar)
@@ -912,7 +919,7 @@ const displayEvents = computed(() => {
   list = list.filter((event) => !isHoldExpired(event) || isExpiringHold(event))
   if (departmentFilter.value && departmentFilter.value !== 'all') {
     const departmentId = Number(departmentFilter.value)
-    list = list.filter((event) => event.department_id === departmentId)
+    list = list.filter((event) => event.is_conference_event || event.department_id === departmentId)
   }
   if (statusFilter.value && statusFilter.value !== 'all') {
     list = list.filter((event) => event.review_status === statusFilter.value)
@@ -976,6 +983,7 @@ const departmentOptions = computed(() => {
 })
 
 const eventColor = (event) => {
+  if (event.is_conference_event) return '#6253a2'
   return event.department?.color || departmentMap.value.get(event.department_id)?.color || ''
 }
 
@@ -1101,16 +1109,7 @@ const statusDotClass = (event) => {
 
 const objectiveOptions = computed(() => {
   const list = objectives.value || []
-  if (isSuperAdmin.value) {
-    return list.map((objective) => ({
-      ...objective,
-      display_name: objective.department?.name
-        ? `${objective.name} - ${objective.department.name}`
-        : objective.name,
-    }))
-  }
-
-  const departmentId = user.value?.department_id
+  const departmentId = authStore.can('calendar.all_departments') ? Number(form.departmentId) : user.value?.department_id
   if (!departmentId) {
     return []
   }
@@ -1224,6 +1223,7 @@ const openEditModal = () => {
     return
   }
   prefillFormFromEvent(selectedEvent.value)
+  isEventDetailsOpen.value = false
   isModalOpen.value = true
 }
 
@@ -1284,6 +1284,7 @@ const createHold = async () => {
 
   try {
     const event = await calendarStore.createHold({
+      department_id: authStore.can('calendar.all_departments') ? (Number(form.departmentId) || null) : user.value?.department_id,
       title: form.title || null,
       description: form.description || null,
       location: form.location || null,
@@ -1361,14 +1362,14 @@ const saveEditedEvent = async () => {
     formNotice.value = t.value.errors.eventUpdated
     editEventId.value = null
     isModalOpen.value = false
-  } catch {
-    formError.value = t.value.errors.eventUpdateFailed
+  } catch (err) {
+    formError.value = extractErrorMessage(err) || t.value.errors.eventUpdateFailed
   }
 }
 
 const handleHourClick = (hour) => {
   const hourEvents = eventsForHour(hour)
-  if (isSecretary.value) {
+  if (!canCreateEvents.value) {
     if (hourEvents.length > 0) {
       openEventDetails(hourEvents[0])
     }
@@ -1414,29 +1415,27 @@ const selectHour = (hour) => {
 }
 
 const canEditEvent = (event) => {
+  if (!authStore.can('calendar.edit')) return false
   if (!event) {
     return false
   }
-  if (isSecretary.value || isSuperAdmin.value) {
-    return false
-  }
+
   if (event.status !== 'locked' || event.review_status !== 'changes_requested') {
     return false
   }
-  return Boolean(user.value?.department_id) && user.value.department_id === event.department_id
+  return authStore.can('calendar.all_departments') || (Boolean(user.value?.department_id) && user.value.department_id === event.department_id)
 }
 
 const canResumeHold = (event) => {
+  if (!authStore.can('calendar.edit') && !(authStore.can('calendar.create') && event?.created_by === user.value?.id)) return false
   if (!event || event.status !== 'hold') {
     return false
   }
-  if (isSecretary.value || isSuperAdmin.value) {
-    return false
-  }
+
   if (isHoldExpired(event)) {
     return false
   }
-  return Boolean(user.value?.department_id) && user.value.department_id === event.department_id
+  return authStore.can('calendar.all_departments') || (Boolean(user.value?.department_id) && user.value.department_id === event.department_id)
 }
 
 const openHoldModal = (event) => {
@@ -1458,6 +1457,7 @@ const prefillFormFromEvent = (event, options = {}) => {
   form.description = event.description || ''
   form.location = event.location || ''
   form.objectiveId = event.objective_id ? String(event.objective_id) : ''
+  form.departmentId = event.department_id
   form.startTime = start.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
   form.endTime = end.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
   if (!options.isHold) {
@@ -1530,7 +1530,7 @@ const reviewGroups = computed(() => {
     return []
   }
   let list = (events.value || [])
-    .filter((event) => event.status === 'locked')
+    .filter((event) => event.status === 'locked' && !event.is_conference_event)
     .filter((event) => {
       if (statusFilter.value === 'all') return true
       if (statusFilter.value === 'to_handle') return ['pending', 'resubmitted'].includes(event.review_status) || Boolean(event.open_requested_at)
@@ -1563,7 +1563,7 @@ const reviewGroups = computed(() => {
 const rejectedEvents = computed(() => (events.value || []).filter((event) =>
   event.status === 'locked' && event.review_status === 'denied' && event.department_id === user.value?.department_id
 ))
-const canRequestOpen = (event) => event?.status === 'locked' && event.review_status === 'approved'
+const canRequestOpen = (event) => authStore.canEdit('calendar') && event?.status === 'locked' && event.review_status === 'approved'
   && event.department_id === user.value?.department_id && !event.open_requested_at && !canReview.value
 const requestEventOpen = async () => {
   try {
@@ -1747,7 +1747,7 @@ const formatHistoryMeta = (entry) => {
 
 const isSecretaryNote = (note) => {
   const role = note?.author_role || note?.author?.role
-  return role === 'secretary' || role === 'superadmin'
+  return note?.author_is_reviewer ?? (role === 'secretary' || role === 'superadmin')
 }
 
 const noteClass = (note) => (isSecretaryNote(note) ? 'note-item--incoming' : 'note-item--outgoing')
@@ -1857,7 +1857,7 @@ const toggleNoteSeen = async (note, checked) => {
 }
 
 const markNotesSeenForEvent = async (event) => {
-  if (!canViewUnseenNotes.value || !event?.notes?.length) {
+  if (!authStore.canEdit('calendar') || !canViewUnseenNotes.value || !event?.notes?.length) {
     return
   }
   const unseen = event.notes.filter((note) => !note.seen_note && isSecretaryNote(note))
@@ -1946,7 +1946,7 @@ const extendingHold = ref(false)
 const holdExtensionError = ref('')
 const expiringOwnHolds = computed(() => holds.value.filter((hold) => {
   const remaining = new Date(hold.expires_at).getTime() - holdClock.value
-  return hold.created_by === user.value?.id && remaining > 0 && remaining <= 60000
+  return canCreateEvents.value && hold.created_by === user.value?.id && remaining > 0 && remaining <= 60000
     && !dismissedHoldWarnings.has(hold.id)
 }))
 const extendReservation = async (hold) => {
@@ -1962,6 +1962,13 @@ const extendReservation = async (hold) => {
   }
 }
 let holdCleanupTimer = null
+let calendarRefreshTimer = null
+let refreshingCalendar = false
+const refreshVisibleCalendar = async () => {
+  if (document.hidden || refreshingCalendar) return
+  refreshingCalendar = true
+  try { await loadMonth(); await fetchUnseenNotes() } catch {} finally { refreshingCalendar = false }
+}
 
 watch(currentMonth, async () => {
   monthSelection.value = `${currentMonth.value.getFullYear()}-${String(currentMonth.value.getMonth() + 1).padStart(2, '0')}`
@@ -1986,7 +1993,7 @@ watch(liveUpdateVersion, async () => {
 onMounted(async () => {
   handleResize()
   window.addEventListener('resize', handleResize)
-  objectives.value = await objectiveApi.list()
+  objectives.value = await apiClient.get('/calendar/objectives').then(r=>r.data)
   await loadChurchFeedUrl()
   await loadDepartments(user.value?.church_id)
   monthSelection.value = `${currentMonth.value.getFullYear()}-${String(currentMonth.value.getMonth() + 1).padStart(2, '0')}`
@@ -1995,6 +2002,8 @@ onMounted(async () => {
   calendarStore.connectRealtime()
   liveUpdateStore.connect()
   flashExpiredHolds()
+  calendarRefreshTimer = window.setInterval(refreshVisibleCalendar, 15000)
+  document.addEventListener('visibilitychange', refreshVisibleCalendar)
   holdCleanupTimer = window.setInterval(() => { holdClock.value = Date.now(); flashExpiredHolds() }, 1000)
 })
 
@@ -2008,6 +2017,8 @@ watch(user, async (next) => {
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
+  window.clearInterval(calendarRefreshTimer)
+  document.removeEventListener('visibilitychange', refreshVisibleCalendar)
   if (holdCleanupTimer) {
     window.clearInterval(holdCleanupTimer)
     holdCleanupTimer = null
@@ -2052,4 +2063,8 @@ onUnmounted(() => {
   .unread-notes-copy { flex-basis: calc(100% - 4rem); }
   .unread-notes-action { width: 100%; }
 }
+</style>
+
+<style scoped>
+.hold-expiry-alert { position: fixed; top: 16px; right: 16px; z-index: 11000; width: min(430px, calc(100vw - 32px)); box-shadow: 0 8px 28px #0003; }
 </style>

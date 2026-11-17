@@ -5,8 +5,9 @@
         <h2>{{ isEditing ? resolvedLabels.editEvent : resolvedLabels.createEvent }}</h2>
         <button type="button" class="modal-close" @click="$emit('close')">×</button>
       </header>
-      <p class="event-date">{{ formattedDate }}</p>
+      <p class="event-date">{{ formattedDate }}</p><label v-if="isEditing">{{ locale === 'es' ? 'Fecha del evento' : 'Event date' }}<input class="form-control" type="date" :value="dateValue" @change="$emit('update:selectedDate', $event.target.value)" /></label>
 
+      <label v-if="departments.length">{{ locale === 'es' ? 'Departamento' : 'Department' }}<select class="form-select" :value="departmentId" :disabled="!!activeHoldId || isEditing" @change="$emit('update:departmentId', $event.target.value)"><option value="">{{ locale === 'es' ? 'Seleccionar departamento' : 'Select department' }}</option><option v-for="department in departments" :key="department.id" :value="department.id">{{ department.name }}</option></select></label>
       <div v-if="!isEditing && !isResumingHold" class="event-step">
         <div class="event-step-title">{{ resolvedLabels.stepHoldTitle }}</div>
         <div class="action-row action-row--top">
@@ -105,6 +106,8 @@ import { useUiStore } from '../stores/uiStore'
 import { translations } from '../i18n/translations'
 
 const props = defineProps({
+  departments: { type: Array, default: () => [] },
+  departmentId: { type: [String, Number], default: '' },
   open: {
     type: Boolean,
     default: false,
@@ -172,6 +175,8 @@ const props = defineProps({
 })
 
 const emit = defineEmits([
+  'update:selectedDate',
+  'update:departmentId',
   'update:title',
   'update:description',
   'update:location',
@@ -191,6 +196,7 @@ const common = computed(() => translations[locale.value].common)
 const resolvedLabels = computed(() => props.labels || fallbackLabels.value)
 const objectivePlaceholder = computed(() => resolvedLabels.value.selectObjective || common.value.select)
 
+const dateValue = computed(() => props.selectedDate ? `${props.selectedDate.getFullYear()}-${String(props.selectedDate.getMonth()+1).padStart(2,'0')}-${String(props.selectedDate.getDate()).padStart(2,'0')}` : '')
 const formattedDate = computed(() => {
   if (!props.selectedDate) {
     return ''

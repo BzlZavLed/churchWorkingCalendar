@@ -24,9 +24,8 @@ class PublicEventFeedController extends Controller
             ->with(['department', 'objective'])
             ->where('status', 'locked')
             ->where('review_status', 'approved')
-            ->whereHas('department', function ($builder) use ($churchId) {
-                $builder->where('church_id', $churchId);
-            });
+            ->where(fn ($q) => $q->where('is_conference_event', false)->orWhere('publish_to_feed', true))
+            ->forChurch($churchId);
 
         if ($request->filled('start') && $request->filled('end')) {
             $start = Carbon::parse($request->input('start'))->utc();
@@ -51,9 +50,8 @@ class PublicEventFeedController extends Controller
             ->with(['department', 'objective'])
             ->where('status', 'locked')
             ->where('review_status', 'approved')
-            ->whereHas('department', function ($builder) use ($churchId) {
-                $builder->where('church_id', $churchId);
-            })
+            ->where(fn ($q) => $q->where('is_conference_event', false)->orWhere('publish_to_feed', true))
+            ->forChurch($churchId)
             ->orderBy('start_at')
             ->get();
 

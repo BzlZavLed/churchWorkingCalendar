@@ -32,7 +32,7 @@ class PublicChurchContactConsentTest extends TestCase
             ->assertJsonPath('church.name', 'Main Church');
     }
 
-    public function test_public_search_can_find_contact_by_email(): void
+    public function test_public_search_does_not_expose_contacts_or_tokens(): void
     {
         $church = Church::create(['name' => 'Main Church']);
         ChurchContact::create([
@@ -45,17 +45,15 @@ class PublicChurchContactConsentTest extends TestCase
 
         $response = $this->getJson('/api/public/consent/search?email=john@example.com');
 
-        $response->assertOk()
-            ->assertJsonPath('contacts.0.name', 'John Visitor')
-            ->assertJsonPath('contacts.0.email_consent', true);
+        $response->assertNotFound()->assertJsonMissingPath('contacts');
+        $response->assertDontSee('john@example.com')->assertDontSee('John Visitor');
     }
 
-    public function test_public_search_requires_phone_or_email(): void
+    public function test_public_search_is_unavailable(): void
     {
         $response = $this->getJson('/api/public/consent/search');
 
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['lookup']);
+        $response->assertNotFound();
     }
 
     public function test_public_consent_link_can_withdraw_sms_and_email(): void

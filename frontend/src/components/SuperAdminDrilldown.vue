@@ -12,11 +12,13 @@
     </label>
     <label v-if="context" class="d-block">
       <span class="form-label small mb-1">{{ es ? 'Vista de trabajo' : 'Working view' }}</span>
-      <select class="form-select form-select-sm" :value="context.department?.id || ''" :disabled="loadingDepartments" @change="selectDepartment">
+      <select class="form-select form-select-sm" :value="context.churchRole ? `role:${context.churchRole.id}` : context.role === 'pastor' ? 'pastor' : context.department?.id || ''" :disabled="loadingDepartments" @change="selectDepartment">
         <option value="">{{ es ? 'Secretaría · Todos los departamentos' : 'Clerk · All departments' }}</option>
+        <option value="pastor">Pastor</option><option v-for="role in churchRoles.filter(r=>!r.is_builtin)" :key="role.id" :value="`role:${role.id}`">{{ role.name }}</option>
         <option v-for="department in departments" :key="department.id" :value="department.id">{{ es ? 'Departamento' : 'Department' }} · {{ department.name }}</option>
       </select>
     </label>
+    <label v-if="context?.churchRole && ['admin','member'].includes(context.churchRole.base_role)" class="d-block mt-2">{{ es?'Departamento':'Department' }}<select class="form-select form-select-sm" :value="context.department?.id || ''" @change="selectRoleDepartment"><option value="">{{ es?'Seleccionar':'Select' }}</option><option v-for="department in departments" :key="department.id" :value="department.id">{{ department.name }}</option></select></label>
     <p v-if="context" class="small mt-2 mb-0">
       {{ es ? 'Para revisar todos los eventos, elige Secretaría. Filtra por departamento dentro de la lista de eventos.' : 'Choose Clerk to review all events. Filter by department within the event list.' }}
     </p>
@@ -29,6 +31,7 @@ import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { useUiStore } from '../stores/uiStore'
+import { accessApi } from '../services/accessApi'
 import { superAdminApi } from '../services/superAdminApi'
 
 const auth = useAuthStore()
@@ -38,6 +41,7 @@ const es = computed(() => ui.locale === 'es')
 const context = computed(() => auth.adminContext)
 const churches = ref([])
 const departments = ref([])
+const churchRoles = ref([])
 const loadingChurches = ref(false)
 const loadingDepartments = ref(false)
 const error = ref('')
@@ -64,13 +68,14 @@ watch(() => auth.isPlatformAdmin, async (enabled) => {
 }, { immediate: true })
 
 watch([() => context.value?.church.id, () => auth.isPlatformAdmin], async ([churchId]) => {
-  departments.value = []
+  departments.value = []; churchRoles.value=[]
   error.value = ''
   loadingDepartments.value = false
   if (!churchId || !auth.isPlatformAdmin) return
   loadingDepartments.value = true
   try {
-    const result = await superAdminApi.listDepartments(churchId)
+    const [result,roleData] = await Promise.all([superAdminApi.listDepartments(churchId),accessApi.list(churchId)])
+    if(context.value?.church.id===churchId) churchRoles.value=roleData.roles
     if (context.value?.church.id === churchId) departments.value = result
   } catch {
     if (context.value?.church.id === churchId) {
@@ -92,11 +97,21 @@ const selectChurch = async (event) => {
   }
 }
 const selectDepartment = async (event) => {
+  if (event.target.value.startsWith('role:')) {
+    auth.enterRole(churchRoles.value.find(r=>r.id===Number(event.target.value.slice(5))))
+    await auth.refreshAccess(); await router.push(auth.firstAccessibleRoute()); return
+  }
+  if (event.target.value === 'pastor') {
+    auth.enterPastor()
+    await router.push('/greeting/contacts')
+    return
+  }
   const department = departments.value.find((item) => item.id === Number(event.target.value))
   if (department) auth.enterDepartment(department)
   else auth.enterChurch(context.value.church)
   await router.push('/calendar')
 }
+const selectRoleDepartment = async event => {auth.enterRole(context.value.churchRole,departments.value.find(d=>d.id===Number(event.target.value))||null);await auth.refreshAccess();await router.push(auth.firstAccessibleRoute())}
 </script>
 
 <style scoped>

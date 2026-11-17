@@ -14,6 +14,7 @@ class EventNote extends Model
         'event_history_id',
         'kind',
         'author_role',
+        'author_is_reviewer',
         'event_id',
         'user_id',
         'note',
@@ -28,6 +29,7 @@ class EventNote extends Model
     protected $casts = [
         'replied_at' => 'datetime',
         'seen_note' => 'boolean',
+        'author_is_reviewer' => 'boolean',
         'seen_at' => 'datetime',
     ];
 

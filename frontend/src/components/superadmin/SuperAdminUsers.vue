@@ -44,7 +44,7 @@
             <select v-model="createForm.role" class="form-select">
               <option value="admin">{{ roleLabels.admin }}</option>
               <option value="member">{{ roleLabels.member }}</option>
-              <option value="secretary">{{ roleLabels.secretary }}</option>
+              <option value="secretary">{{ roleLabels.secretary }}</option><option value="pastor">{{ roleLabels.pastor }}</option>
             </select>
           </label>
         </div>
@@ -104,7 +104,7 @@
                 <select v-model="user.role" class="form-select">
                   <option value="admin">{{ roleLabels.admin }}</option>
                   <option value="member">{{ roleLabels.member }}</option>
-                  <option value="secretary">{{ roleLabels.secretary }}</option>
+                  <option value="secretary">{{ roleLabels.secretary }}</option><option value="pastor">{{ roleLabels.pastor }}</option>
                 </select>
               </td>
               <td>
@@ -157,7 +157,7 @@
               <select v-model="user.role" class="form-select">
                 <option value="admin">{{ roleLabels.admin }}</option>
                 <option value="member">{{ roleLabels.member }}</option>
-                <option value="secretary">{{ roleLabels.secretary }}</option>
+                <option value="secretary">{{ roleLabels.secretary }}</option><option value="pastor">{{ roleLabels.pastor }}</option>
               </select>
             </div>
             <div class="mb-3">

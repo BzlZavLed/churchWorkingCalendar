@@ -39,6 +39,27 @@ class SuperAdminContextTest extends TestCase
         $this->getJson('/api/superadmin/churches')->assertOk()->assertJsonCount(2, 'data');
     }
 
+    public function test_pastor_context_can_configure_selected_church_form_only(): void
+    {
+        $church = Church::create(['name' => 'Selected']);
+        $other = Church::create(['name' => 'Other']);
+        $actor = User::factory()->create(['role' => 'superadmin', 'church_id' => null]);
+        Sanctum::actingAs($actor);
+        $headers = ['X-Church-Context' => (string) $church->id, 'X-Role-Context' => 'pastor'];
+        $this->getJson('/api/visitor-form', $headers)->assertOk()->assertJsonPath('version', 0);
+        $this->postJson('/api/visitor-form', ['base_version' => 0, 'fields' => []], $headers)->assertCreated()->assertJsonPath('version', 1);
+        $this->assertDatabaseHas('visitor_forms', ['church_id' => $church->id, 'published_by' => $actor->id]);
+        $this->getJson('/api/visitor-form', array_merge($headers, ['X-Church-Context' => (string) $other->id]))->assertOk()->assertJsonPath('version', 0);
+        $this->getJson('/api/secretary/departments', $headers)->assertForbidden();
+        $this->postJson('/api/visitor-form', ['base_version' => 1, 'fields' => []], ['X-Church-Context' => (string) $church->id])->assertForbidden();
+        $this->getJson('/api/visitor-form', $headers + ['X-Department-Context' => '1'])->assertUnprocessable();
+        $this->getJson('/api/visitor-form', array_merge($headers, ['X-Role-Context' => 'superadmin']))->assertUnprocessable();
+        $this->assertSame('superadmin', $actor->fresh()->role);
+        $this->assertNull($actor->fresh()->church_id);
+        Sanctum::actingAs(User::factory()->create(['role' => 'secretary', 'church_id' => $church->id]));
+        $this->getJson('/api/visitor-form', $headers)->assertForbidden();
+    }
+
     public function test_context_rejects_regular_users_and_departments_from_another_church(): void
     {
         $church = Church::create(['name' => 'Selected']);

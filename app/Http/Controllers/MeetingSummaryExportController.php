@@ -22,11 +22,13 @@ class MeetingSummaryExportController extends Controller
             abort(403, 'Summary is not public.');
         }
 
+        $data = $request->validate(['timezone' => ['sometimes', 'timezone'], 'locale' => ['sometimes', 'in:en,es']]);
         $meeting->load(['church', 'points' => fn ($q) => $q->where('status', 'accepted')->with('department'), 'points.notes.author', 'opener', 'meetingNotes.author']);
 
         $pdf = Pdf::loadView('exports.meeting-summary', [
             'meeting' => $meeting,
-            'locale' => $request->input('locale', 'es'),
+            'locale' => $data['locale'] ?? 'es',
+            'timezone' => $data['timezone'] ?? 'UTC',
         ])->setPaper('letter', 'portrait');
 
         $filename = "meeting-summary-{$meeting->id}.pdf";

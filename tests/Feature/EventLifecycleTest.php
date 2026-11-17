@@ -22,6 +22,39 @@ class EventLifecycleTest extends TestCase
         return [$church, $department, $member, $clerk, $event];
     }
 
+    public function test_conference_priority_import_is_atomic_and_private(): void
+    {
+        [$church, $department, $member, $clerk, $event] = $this->context();
+        Sanctum::actingAs($clerk);
+        $this->postJson("/api/events/{$event->id}/review", ['review_status'=>'approved'])->assertOk();
+        $payload=['title'=>'Conference', 'start_at'=>$event->start_at->toIso8601String(), 'end_at'=>$event->end_at->toIso8601String()];
+        $id=$this->postJson('/api/conference-events',$payload)->assertCreated()->assertJsonPath('department_id',null)->json('id');
+        $this->assertSame('changes_requested',$event->fresh()->review_status);
+        $this->get('/api/public/churches/church/events.ics')->assertDontSee('SUMMARY:Conference',false)->assertDontSee('SUMMARY:Service',false);
+        $this->getJson('/api/events?start='.$event->start_at->copy()->subDay()->toDateString().'&end='.$event->end_at->copy()->addDay()->toDateString())->assertJsonCount(2);
+        $this->postJson("/api/events/$id/review",['review_status'=>'approved'])->assertForbidden();
+        Sanctum::actingAs($member);
+        $this->postJson('/api/conference-events',$payload)->assertForbidden();
+        $this->patchJson("/api/events/{$event->id}",['title'=>'Still conflicting'])->assertUnprocessable();
+        $this->postJson('/api/events/hold',$payload)->assertUnprocessable();
+        $this->patchJson("/api/events/{$event->id}",['start_at'=>$event->start_at->copy()->addDays(2)->toIso8601String(),'end_at'=>$event->end_at->copy()->addDays(2)->toIso8601String()])->assertOk()->assertJsonPath('review_status','resubmitted');
+        Sanctum::actingAs($clerk);
+        $csv="title,start_at,end_at\nAnother,2030-01-01T10:00:00Z,2030-01-01T11:00:00Z\nInvalid,not-a-date,2030-01-01T11:00:00Z";
+        $this->post('/api/conference-events/import',['file'=>\Illuminate\Http\UploadedFile::fake()->createWithContent('test.csv',$csv)],['Accept'=>'application/json'])->assertUnprocessable();
+        $this->assertDatabaseMissing('events',['title'=>'Another']);
+        $csv="title,start_at,end_at\nAnother,2030-01-01T10:00:00Z,2030-01-01T11:00:00Z";
+        $this->post('/api/conference-events/import',['file'=>\Illuminate\Http\UploadedFile::fake()->createWithContent('test.csv',$csv)],['Accept'=>'application/json'])->assertCreated()->assertJsonPath('created',1);
+        $this->post('/api/conference-events/import',['file'=>\Illuminate\Http\UploadedFile::fake()->createWithContent('test.csv',$csv)],['Accept'=>'application/json'])->assertCreated()->assertJsonPath('skipped',1);
+        $this->postJson("/api/conference-events/$id/publish")->assertOk()->assertJsonPath('changed',1);
+        $this->get('/api/public/churches/church/events.ics')->assertSee('SUMMARY:Conference',false)->assertDontSee('SUMMARY:Another',false);
+        $this->postJson('/api/conference-events/publish-all')->assertOk()->assertJsonPath('changed',1);
+        $this->get('/api/public/churches/church/events.ics')->assertSee('SUMMARY:Another',false);
+        $this->postJson("/api/conference-events/$id/publish",['published'=>false])->assertOk();
+        $this->get('/api/public/churches/church/events.ics')->assertDontSee('SUMMARY:Conference',false);
+        $this->deleteJson("/api/conference-events/$id")->assertOk();
+        $this->assertFalse(Event::hasConflict(\Carbon\Carbon::parse($payload['start_at']),\Carbon\Carbon::parse($payload['end_at']),null,$church->id));
+    }
+
     public function test_acceptance_publishes_and_clerk_reopening_removes_event_until_reaccepted(): void
     {
         [, , $member, $clerk, $event] = $this->context();

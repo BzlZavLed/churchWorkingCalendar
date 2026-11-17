@@ -49,7 +49,7 @@
                     <div class="event">
                       <div class="event-title">{{ $event->title }}</div>
                       <div class="muted">{{ $event->start_at->format('H:i') }} - {{ $event->end_at->format('H:i') }}</div>
-                      <div class="muted">{{ $event->department->name ?? '—' }}</div>
+                      <div class="muted">{{ $event->is_conference_event ? ($locale === 'en' ? 'Conference' : 'Conferencia') : ($event->department->name ?? '—') }}</div>
                       <div class="muted">{{ $isEs ? 'Votado en' : 'Approved on' }}: {{ $event->accepted_at?->format('Y-m-d') ?? '—' }}</div>
                     </div>
                   @endforeach

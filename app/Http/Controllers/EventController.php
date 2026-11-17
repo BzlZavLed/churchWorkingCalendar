@@ -12,6 +12,8 @@ use App\Models\Church;
 use App\Models\Event;
 use App\Models\EventNote;
 use App\Models\Objective;
+use App\Models\Meeting;
+use App\Models\MeetingPoint;
 use App\Models\User;
 use App\Support\DomainUpdate;
 use Carbon\Carbon;
@@ -42,9 +44,7 @@ class EventController extends Controller
             ->with(['objective', 'department', 'histories.user', 'notes.author', 'notes.replyAuthor'])
             ->overlapping($start, $end)
             ->when(!$request->user()->isSuperAdmin(), function ($query) use ($request) {
-                $query->whereHas('department', function ($departmentQuery) use ($request) {
-                    $departmentQuery->where('church_id', $request->user()->church_id);
-                });
+                $query->forChurch($request->user()->church_id ?? 0);
             })
             ->when($request->filled('department_id'), function ($query) use ($request) {
                 $query->where('department_id', $request->integer('department_id'));
@@ -292,6 +292,7 @@ class EventController extends Controller
 
         $data = $request->validate([
             'review_status' => ['required', 'in:approved,denied,changes_requested'],
+            'meeting_point_id' => ['nullable', 'integer'],
             'review_note' => ['nullable', 'string'],
         ]);
 
@@ -316,6 +317,17 @@ class EventController extends Controller
             if ($data['review_status'] !== 'denied' && Event::hasConflict($event->start_at, $event->end_at, $event->id, $event->department->church_id)) {
                 throw ValidationException::withMessages(['start_at' => ['The selected time is already blocked.']]);
             }
+            $point = null;
+            if (!empty($data['meeting_point_id'])) {
+                $candidate = MeetingPoint::findOrFail($data['meeting_point_id']);
+                $meeting = Meeting::whereKey($candidate->meeting_id)->lockForUpdate()->firstOrFail();
+                $point = MeetingPoint::whereKey($candidate->id)->lockForUpdate()->firstOrFail();
+                abort_unless($meeting->church_id === $event->churchId(), 403);
+                abort_unless($point->calendar_review && $point->status === 'accepted' && !$point->final_status
+                    && $meeting->start_at && !$meeting->end_at && $meeting->active_meeting_point_id === $point->id,
+                    422, 'Activate the calendar review point in a live meeting first.');
+                // The clerk may review any subset of events; the selected period is a browsing aid.
+            }
             $state = $data['review_status'];
             if (!in_array($event->review_status, ['pending', 'resubmitted'], true)
                 && !($event->review_status === 'approved' && $state === 'changes_requested')) {
@@ -326,7 +338,21 @@ class EventController extends Controller
                 'denied' => 'rejected',
                 'changes_requested' => 'changes_requested',
             };
-            $event->transitionReview($state, $request->user(), $action, $data['review_note'] ?? null);
+            $previous = $event->review_status;
+            $event->transitionReview($state, $request->user(), $action, $data['review_note'] ?? null,
+                $point ? ['meeting_id' => $point->meeting_id, 'meeting_point_id' => $point->id] : []);
+            if ($point) {
+                $decisions = $point->calendar_decisions ?? [];
+                $decisions[] = [
+                    'event_id' => $event->id, 'title' => $event->title,
+                    'department' => $event->department?->name,
+                    'start_at' => $event->start_at->toIso8601String(), 'end_at' => $event->end_at->toIso8601String(),
+                    'from' => $previous, 'status' => $state, 'note' => $data['review_note'] ?? null,
+                    'at' => now()->toIso8601String(), 'actor' => $request->user()->name,
+                ];
+                $point->update(['calendar_decisions' => $decisions]);
+                DomainUpdate::forMeetingPoint('calendar_reviewed', $point, $request->user());
+            }
             $event->update(['requires_club_review' => false]);
 
             event(new EventUpdated($event));
@@ -389,7 +415,7 @@ class EventController extends Controller
             ]);
         }
 
-        if (!$user->isSuperAdmin() && !$user->isAdmin() && $resolved !== $user->department_id) {
+        if (!$user->isSuperAdmin() && !$user->hasCapability('calendar.all_departments') && $resolved !== $user->department_id) {
             throw ValidationException::withMessages([
                 'department_id' => ['You cannot create events for other departments.'],
             ]);

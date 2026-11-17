@@ -38,6 +38,11 @@ class Church extends Model
         return $slug;
     }
 
+    public function visitorLogoUrl(): ?string
+    {
+        return $this->visitor_logo_path ? url('/api/public/churches/'.$this->id.'/visitor-logo').'?v='.substr(hash('sha256', $this->visitor_logo_path), 0, 12) : null;
+    }
+
     public function departments(): HasMany
     {
         return $this->hasMany(Department::class);

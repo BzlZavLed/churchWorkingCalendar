@@ -31,9 +31,11 @@ export const useCalendarStore = defineStore('calendar', () => {
     events.value = events.value.filter((item) => item.id !== id)
   }
 
+  let rangeRequest = 0
   const fetchRange = async (start, end) => {
+    const request = ++rangeRequest
     const response = await calendarApi.fetchEvents({ start, end })
-    setEvents(response)
+    if (request === rangeRequest) setEvents(response)
   }
 
   const createHold = async (payload) => {

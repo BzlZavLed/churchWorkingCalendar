@@ -51,7 +51,7 @@
           <tbody>
             <tr v-for="event in events" :key="event.id">
               <td>{{ event.id }}</td>
-              <td>{{ event.department?.name || '—' }}</td>
+              <td>{{ event.is_conference_event ? (locale === 'es' ? 'Conferencia' : 'Conference') : event.department?.name || '—' }}</td>
               <td>{{ event.title || '—' }}</td>
               <td>{{ formatDateTime(event.start_at) }}</td>
               <td>{{ formatDateTime(event.end_at) }}</td>
@@ -75,7 +75,7 @@
               </div>
             </div>
             <div class="mb-2">
-              <strong>{{ t.columns.department }}:</strong> {{ event.department?.name || '—' }}
+              <strong>{{ t.columns.department }}:</strong> {{ event.is_conference_event ? (locale === 'es' ? 'Conferencia' : 'Conference') : event.department?.name || '—' }}
             </div>
             <div class="mb-2">
               <strong>{{ t.columns.start }}:</strong> {{ formatDateTime(event.start_at) }}

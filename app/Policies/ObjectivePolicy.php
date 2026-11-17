@@ -13,12 +13,12 @@ class ObjectivePolicy
     {
         if ($user->isSuperAdmin()) return true;
         if ($objective->department?->church_id !== $user->church_id) return false;
-        return $user->isSecretary() || $user->department_id === $objective->department_id;
+        return $user->isSecretary() || $user->department_id === $objective->department_id || (!$user->department_id && app(\App\Services\ModuleAccess::class)->read($user,'objectives'));
     }
 
     public function create(User $user): bool
     {
-        return $user->isSuperAdmin() || (in_array($user->role, [User::ROLE_ADMIN, User::ROLE_MEMBER], true) && $user->department_id !== null);
+        return $user->isSuperAdmin() || ($user->hasCapability('objectives.manage') && $user->department_id !== null);
     }
 
     public function update(User $user, Objective $objective): bool

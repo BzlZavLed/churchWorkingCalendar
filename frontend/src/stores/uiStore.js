@@ -5,6 +5,7 @@ const LOCALE_KEY = 'ui_locale'
 
 export const useUiStore = defineStore('ui', () => {
   const locale = ref(localStorage.getItem(LOCALE_KEY) || 'es')
+  const greetingKiosk = ref(false)
   const toastMessage = ref('')
   const toastType = ref('success')
   const toastVisible = ref(false)
@@ -38,6 +39,7 @@ export const useUiStore = defineStore('ui', () => {
   }
 
   return {
+    greetingKiosk,
     locale,
     toastMessage,
     toastType,

@@ -18,10 +18,20 @@ import InventoryView from '../components/InventoryView.vue'
 import MeetingPointsView from '../components/MeetingPointsView.vue'
 import GreetingIntakeView from '../components/GreetingIntakeView.vue'
 import GreetingContactsView from '../components/GreetingContactsView.vue'
+import NoAccessView from '../components/NoAccessView.vue'
+import SuperAdminRoles from '../components/superadmin/SuperAdminRoles.vue'
+import { moduleForPath } from '../services/accessApi'
+import MembersView from '../components/MembersView.vue'
+import VisitorFormBuilder from '../components/VisitorFormBuilder.vue'
 import PublicConsentView from '../components/PublicConsentView.vue'
 import { getDefaultRouteForUser } from '../stores/authStore'
 
 const routes = [
+  { path: '/superadmin/roles', component: SuperAdminRoles, meta: { requiresAuth: true, superadminOnly: true } },
+  { path: '/no-access', component: NoAccessView, meta: { requiresAuth: true } },
+  { path: '/members', component: MembersView, meta: { requiresAuth: true, pastorOnly: true } },
+  { path: '/greeting/form-builder', component: VisitorFormBuilder, meta: { requiresAuth: true, pastorOnly: true } },
+  { path: '/visit/:churchId', component: GreetingIntakeView, meta: { noLayout: true } },
   { path: '/', redirect: '/calendar' },
   { path: '/login', component: LoginForm, meta: { guestOnly: true, noLayout: true } },
   { path: '/register', component: RegisterWithInvite, meta: { guestOnly: true, noLayout: true } },
@@ -62,7 +72,7 @@ router.beforeEach(async (to) => {
   if (to.path.startsWith('/superadmin/') && !to.meta.noLayout && authStore.isPlatformAdmin) authStore.exitContext()
 
   const isGreetingUser = !authStore.isPlatformAdmin && authStore.user?.role !== 'secretary' && Boolean(authStore.user?.department?.is_greeting)
-  const isContactsAllowed = ['admin', 'secretary', 'superadmin'].includes(authStore.user?.role || '') || isGreetingUser
+  const isContactsAllowed = ['admin', 'secretary', 'superadmin', 'pastor'].includes(authStore.user?.role || '') || isGreetingUser
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     return '/login'
@@ -72,32 +82,12 @@ router.beforeEach(async (to) => {
     return getDefaultRouteForUser(authStore.user)
   }
 
-  if (to.meta.superadminOnly && !authStore.isPlatformAdmin) {
-    return '/calendar'
-  }
-
-  if (to.meta.adminOnly && !['admin', 'superadmin'].includes(authStore.user?.role || '')) {
-    return '/calendar'
-  }
-
-  if (to.meta.secretaryOnly && authStore.user?.role !== 'secretary') {
-    return '/calendar'
-  }
-
-  if (to.meta.inventoryOnly && !['admin', 'secretary', 'superadmin'].includes(authStore.user?.role || '')) {
-    return '/calendar'
-  }
-
-  if (to.meta.greetingOnly && !isGreetingUser && authStore.user?.role !== 'secretary') {
-    return getDefaultRouteForUser(authStore.user)
-  }
-
-  if (to.meta.contactsAllowed && !isContactsAllowed) {
-    return getDefaultRouteForUser(authStore.user)
-  }
-
-  if (authStore.isAuthenticated && isGreetingUser && !to.meta.noLayout && !['/greeting', '/greeting/contacts', '/budget', '/meeting-points'].includes(to.path)) {
-    return '/greeting'
+  if (authStore.isAuthenticated && to.meta.requiresAuth) {
+    try { await authStore.refreshAccess() } catch { return to.path === '/no-access' ? true : '/no-access' }
+    if (to.meta.superadminOnly && !authStore.isPlatformAdmin) return authStore.firstAccessibleRoute()
+    const module = moduleForPath(to.path)
+    if (module && !authStore.canAccess(module)) return authStore.firstAccessibleRoute()
+    if (to.path === '/greeting/form-builder' && !authStore.can('visitors.configure')) return '/greeting/contacts'
   }
 
   return true

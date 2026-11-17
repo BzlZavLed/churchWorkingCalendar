@@ -65,7 +65,7 @@ class WebAuthnController extends Controller
         $token = $user->createToken('auth')->plainTextToken;
 
         return response()->json([
-            'user' => $user->load('department'),
+            'user' => $user->load(['department', 'church']),
             'token' => $token,
         ]);
     }
@@ -137,7 +137,7 @@ class WebAuthnController extends Controller
         $token = $user->createToken('auth')->plainTextToken;
 
         return response()->json([
-            'user' => $user->load('department'),
+            'user' => $user->load(['department', 'church']),
             'token' => $token,
         ]);
     }

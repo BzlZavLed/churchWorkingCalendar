@@ -21,12 +21,12 @@
       </label>
     </div>
 
-    <form
+    <details
       v-if="canCreate && selectedChurchId"
       class="management-surface management-create"
-      @submit.prevent="createDepartment"
     >
-      <h2 class="h5 mb-3">{{ t.createTitle }}</h2>
+      <summary>{{ t.createTitle }}</summary>
+      <form class="mt-3" @submit.prevent="createDepartment">
       <div class="row g-3">
         <div class="col-12 col-md-6">
           <label class="form-label">
@@ -47,25 +47,25 @@
           </label>
         </div>
         <div class="col-12">
-          <div class="form-check">
-            <input id="dept-club" v-model="createForm.is_club" class="form-check-input" type="checkbox" />
-            <label class="form-check-label" for="dept-club">
-              {{ t.clubLabel }}
+          <div class="department-create-options">
+            <label class="department-create-option">
+              <input v-model="createForm.is_club" class="form-check-input" type="checkbox" />
+              <span>{{ t.clubLabel }}</span>
             </label>
-          </div>
-        </div>
-        <div class="col-12">
-          <div class="form-check">
-            <input id="dept-greeting" v-model="createForm.is_greeting" class="form-check-input" type="checkbox" />
-            <label class="form-check-label" for="dept-greeting">
-              {{ t.greetingLabel }}
+            <label class="department-create-option">
+              <input v-model="createForm.is_greeting" class="form-check-input" type="checkbox" />
+              <span>{{ t.greetingLabel }}</span>
             </label>
-<label class="form-check d-flex gap-2"><input v-model="createForm.is_treasury" class="form-check-input" type="checkbox" /><span>{{ locale === 'es' ? 'Tesorería (publica asignaciones)' : 'Treasury (publishes allocations)' }}</span></label>
+            <label class="department-create-option">
+              <input v-model="createForm.is_treasury" class="form-check-input" type="checkbox" />
+              <span>{{ locale === 'es' ? 'Tesorería (publica asignaciones)' : 'Treasury (publishes allocations)' }}</span>
+            </label>
           </div>
         </div>
       </div>
       <button class="btn btn-primary mt-3" type="submit">{{ t.create }}</button>
-    </form>
+      </form>
+    </details>
 
     <div v-if="loading" class="management-state" role="status">{{ t.loading }}</div>
     <p v-if="error" class="management-error" role="alert">{{ error }}</p>
@@ -96,8 +96,8 @@
         <tbody>
           <tr v-for="department in departments" :key="department.id">
 
-            <td><input :aria-label="t.name" v-model="department.name" class="form-control" type="text" /></td>
-            <td><input :aria-label="t.color" v-model="department.color" class="form-control form-control-color" type="color" /></td>
+            <td><input :aria-label="t.name" v-model="department.name" class="form-control" type="text" :disabled="!canCreate" /></td>
+            <td><input :aria-label="t.color" v-model="department.color" class="form-control form-control-color" type="color" :disabled="!canCreate" /></td>
             <td>{{ adminNameForDepartment(department) }}</td>
             <td>
               <span v-if="memberNamesForDepartment(department)">
@@ -106,15 +106,15 @@
               <span v-else>—</span>
             </td>
             <td>
-              <input :aria-label="t.clubLabel" v-model="department.is_club" class="form-check-input" type="checkbox" />
+              <input :aria-label="t.clubLabel" v-model="department.is_club" class="form-check-input" type="checkbox" :disabled="!canCreate" />
             </td>
             <td>
-              <input :aria-label="t.greetingLabel" v-model="department.is_greeting" class="form-check-input" type="checkbox" />
+              <input :aria-label="t.greetingLabel" v-model="department.is_greeting" class="form-check-input" type="checkbox" :disabled="!canCreate" />
             </td>
-            <td><input v-model="department.is_treasury" :aria-label="locale === 'es' ? 'Tesorería' : 'Treasury'" class="form-check-input" type="checkbox" /></td>
+            <td><input v-model="department.is_treasury" :aria-label="locale === 'es' ? 'Tesorería' : 'Treasury'" class="form-check-input" type="checkbox" :disabled="!canCreate" /></td>
             <td class="text-end">
               <div class="d-flex flex-column flex-md-row justify-content-end gap-2">
-                <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateDepartment(department)">{{ t.save }}</button>
+                <button class="btn btn-sm btn-outline-secondary" type="button" v-if="canCreate" @click="updateDepartment(department)">{{ t.save }}</button>
                 <button
                   v-if="canDelete"
                   class="btn btn-sm btn-outline-danger"
@@ -146,11 +146,11 @@
                 <h5 class="card-title mb-1">{{ department.name }}</h5>
                 <p class="card-subtitle text-muted mb-0">#{{ department.id }}</p>
               </div>
-              <input :aria-label="t.color" v-model="department.color" class="form-control form-control-color" type="color" />
+              <input :aria-label="t.color" v-model="department.color" class="form-control form-control-color" type="color" :disabled="!canCreate" />
             </div>
             <div class="mb-2">
               <label class="form-label small mb-1">{{ t.name }}</label>
-              <input :aria-label="t.name" v-model="department.name" class="form-control" type="text" />
+              <input :aria-label="t.name" v-model="department.name" class="form-control" type="text" :disabled="!canCreate" />
             </div>
             <div class="mb-2">
               <label class="form-label small mb-1">{{ t.userName }}</label>
@@ -166,20 +166,20 @@
               </p>
             </div>
             <div class="form-check mb-3">
-              <input :id="`dept-club-${department.id}`" v-model="department.is_club" class="form-check-input" type="checkbox" />
+              <input :id="`dept-club-${department.id}`" v-model="department.is_club" class="form-check-input" type="checkbox" :disabled="!canCreate" />
               <label class="form-check-label" :for="`dept-club-${department.id}`">
                 {{ t.clubLabel }}
               </label>
             </div>
             <div class="form-check mb-3">
-              <input :id="`dept-greeting-${department.id}`" v-model="department.is_greeting" class="form-check-input" type="checkbox" />
+              <input :id="`dept-greeting-${department.id}`" v-model="department.is_greeting" class="form-check-input" type="checkbox" :disabled="!canCreate" />
               <label class="form-check-label" :for="`dept-greeting-${department.id}`">
                 {{ t.greetingLabel }}
               </label>
-<label class="form-check d-flex gap-2"><input v-model="department.is_treasury" class="form-check-input" type="checkbox" /><span>{{ locale === 'es' ? 'Tesorería (publica asignaciones)' : 'Treasury (publishes allocations)' }}</span></label>
+<label class="form-check d-flex gap-2"><input v-model="department.is_treasury" class="form-check-input" type="checkbox" :disabled="!canCreate" /><span>{{ locale === 'es' ? 'Tesorería (publica asignaciones)' : 'Treasury (publishes allocations)' }}</span></label>
             </div>
             <div class="d-flex flex-wrap gap-2">
-              <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateDepartment(department)">{{ t.save }}</button>
+              <button class="btn btn-sm btn-outline-secondary" type="button" v-if="canCreate" @click="updateDepartment(department)">{{ t.save }}</button>
               <button
                 v-if="canDelete"
                 class="btn btn-sm btn-outline-danger"
@@ -245,9 +245,9 @@ const t = computed(() => translations[locale.value].superadmin.departments)
 const common = computed(() => translations[locale.value].common)
 const confirmTitle = computed(() => t.value.confirmTitle || t.value.delete)
 const isSuperAdmin = computed(() => authStore.user?.role === 'superadmin')
-const isSecretary = computed(() => authStore.user?.role === 'secretary')
+const isSecretary = computed(() => !authStore.isSuperAdmin)
 const showChurchSelector = computed(() => isSuperAdmin.value)
-const canCreate = computed(() => isSuperAdmin.value)
+const canCreate = computed(() => isSuperAdmin.value || (authStore.can('departments.manage')))
 const canDelete = computed(() => isSuperAdmin.value)
 const showSuccessToast = (message = '') => {
   const fallback = locale.value === 'es' ? 'Guardado correctamente.' : 'Saved successfully.'
@@ -307,7 +307,11 @@ const createDepartment = async () => {
       is_club: Boolean(createForm.is_club),
       is_greeting: Boolean(createForm.is_greeting),
     }
-    await superAdminApi.createDepartment(selectedChurchId.value, payload)
+    if (isSecretary.value) {
+      await secretaryApi.createDepartment(payload)
+    } else {
+      await superAdminApi.createDepartment(selectedChurchId.value, payload)
+    }
     createForm.name = ''
     createForm.color = ''
     createForm.user_name = ''

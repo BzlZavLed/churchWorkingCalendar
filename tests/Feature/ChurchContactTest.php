@@ -14,6 +14,58 @@ class ChurchContactTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_public_phone_registration_is_scoped_and_does_not_expose_contact_tokens(): void
+    {
+        $church = Church::create(['name' => 'Welcome church']);
+        $other = Church::create(['name' => 'Other']);
+        $this->getJson("/api/public/churches/{$church->id}/visit")->assertOk()->assertJsonPath('name', 'Welcome church')->assertJsonPath('form.version', 0);
+        $payload = ['name' => 'Phone visitor', 'is_sda' => false, 'sms_consent' => false, 'email_consent' => false,
+            'church_id' => $other->id, 'created_by' => 999, 'department_id' => 999];
+        $this->postJson("/api/public/churches/{$church->id}/visit", $payload)
+            ->assertCreated()->assertExactJson(['message' => 'Visitor registered.']);
+        $this->assertDatabaseHas('church_contacts', ['name' => 'Phone visitor', 'church_id' => $church->id,
+            'created_by' => null, 'department_id' => null, 'sms_consent' => false]);
+        $payload['sms_consent'] = true;
+        $this->postJson("/api/public/churches/{$church->id}/visit", $payload)->assertUnprocessable();
+        $this->getJson('/api/public/churches/999999/visit')->assertNotFound();
+    }
+
+    public function test_clerk_can_restore_each_channel_with_confirmed_consent(): void
+    {
+        $church = Church::create(['name' => 'Main']);
+        $contact = ChurchContact::create(['church_id' => $church->id, 'name' => 'Visitor',
+            'phone' => '555-1010', 'email' => 'visitor@example.test', 'sms_consent' => false, 'email_consent' => false]);
+        Sanctum::actingAs(User::factory()->create(['role' => 'secretary', 'church_id' => $church->id]));
+        $url = "/api/church-contacts/{$contact->id}/consent";
+        $this->patchJson($url, ['channel' => 'sms'])->assertUnprocessable();
+        $this->patchJson($url, ['channel' => 'sms', 'consent_confirmed' => true])
+            ->assertOk()->assertJsonPath('sms_consent', true)->assertJsonPath('email_consent', false);
+        $this->assertNotNull($contact->fresh()->sms_consented_at);
+        $this->patchJson($url, ['channel' => 'email', 'consent_confirmed' => true])
+            ->assertOk()->assertJsonPath('email_consent', true);
+        $this->assertNotNull($contact->fresh()->email_consented_at);
+        $this->postJson("/api/public/consent/{$contact->consent_token}/revoke",
+            ['withdraw_sms' => true, 'withdraw_email' => true])->assertOk()->assertJsonPath('contact.sms_consent', false);
+    }
+
+    public function test_restore_consent_checks_church_role_and_contact_details(): void
+    {
+        $church = Church::create(['name' => 'Main']);
+        $other = Church::create(['name' => 'Other']);
+        $contact = ChurchContact::create(['church_id' => $church->id, 'name' => 'Visitor']);
+        $url = "/api/church-contacts/{$contact->id}/consent";
+        $payload = ['channel' => 'sms', 'consent_confirmed' => true];
+        Sanctum::actingAs(User::factory()->create(['role' => 'secretary', 'church_id' => $other->id]));
+        $this->patchJson($url, $payload)->assertNotFound();
+        Sanctum::actingAs(User::factory()->create(['role' => 'admin', 'church_id' => $church->id]));
+        $this->patchJson($url, $payload)->assertForbidden();
+        $dept = Department::create(['church_id' => $church->id, 'name' => 'Welcome', 'is_greeting' => true]);
+        Sanctum::actingAs(User::factory()->create(['role' => 'member', 'church_id' => $church->id, 'department_id' => $dept->id]));
+        $this->patchJson($url, $payload)->assertUnprocessable();
+        $contact->update(['phone' => '555-1010']);
+        $this->patchJson($url, $payload)->assertOk()->assertJsonPath('sms_consent', true);
+    }
+
     public function test_clerk_can_register_visitors_only_for_own_church(): void
     {
         $church = Church::create(['name' => 'Main']);

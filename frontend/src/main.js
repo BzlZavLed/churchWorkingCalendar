@@ -4,6 +4,7 @@ import './style.css'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import 'datatables.net-bs5/css/dataTables.bootstrap5.min.css'
 import './styles/superadmin.css'
+import { moduleWrite } from './plugins/moduleWrite'
 import App from './App.vue'
 import router from './router'
 import { initDatatables, observeDatatables } from './plugins/datatables'
@@ -11,6 +12,7 @@ import { initDatatables, observeDatatables } from './plugins/datatables'
 const app = createApp(App)
 
 app.use(createPinia())
+app.directive('write',moduleWrite)
 app.use(router)
 app.mount('#app')
 

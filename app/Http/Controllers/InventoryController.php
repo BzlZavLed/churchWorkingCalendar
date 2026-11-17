@@ -20,7 +20,7 @@ class InventoryController extends Controller
                 ->get();
         }
 
-        if ($user->isSecretary()) {
+        if ($user->isSecretary() || (!$user->department_id && app(\App\Services\ModuleAccess::class)->read($user,'inventory'))) {
             return InventoryItem::query()
                 ->whereHas('department', function ($query) use ($user) {
                     $query->where('church_id', $user->church_id);
@@ -30,7 +30,7 @@ class InventoryController extends Controller
                 ->get();
         }
 
-        if ($user->isAdmin()) {
+        if ($user->department_id && app(\App\Services\ModuleAccess::class)->read($user,'inventory')) {
             if (!$user->department_id) {
                 return response()->json([], 200);
             }
@@ -125,7 +125,7 @@ class InventoryController extends Controller
             return $requestedDepartmentId;
         }
 
-        if ($user->isAdmin()) {
+        if ($user->hasCapability('inventory.manage')) {
             if (!$user->department_id) {
                 throw ValidationException::withMessages([
                     'department_id' => ['Department is required.'],
@@ -145,7 +145,7 @@ class InventoryController extends Controller
             return;
         }
 
-        if ($user->isAdmin() && $user->department_id === $inventory->department_id) {
+        if ($user->hasCapability('inventory.manage') && $user->department_id === $inventory->department_id) {
             return;
         }
 

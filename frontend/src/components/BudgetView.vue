@@ -65,7 +65,7 @@
             <select v-model="assetChoice" class="form-select" required :aria-label="tr('Registrar en inventario', 'Add to inventory')">
               <option value="" disabled>{{ tr('Selecciona una opción', 'Choose an option') }}</option>
               <option value="no">{{ tr('No · Servicio u otro gasto', 'No · Service or other expense') }}</option>
-              <option value="yes">{{ tr('Sí · Registrar el bien en inventario', 'Yes · Add the item to inventory') }}</option>
+              <option v-if="auth.canEdit('inventory')" value="yes">{{ tr('Sí · Registrar el bien en inventario', 'Yes · Add the item to inventory') }}</option>
             </select>
             <div v-if="assetChoice === 'yes'" class="asset-grid">
               <label>{{ tr('Nombre del bien', 'Item name') }}<input v-model="asset.description" class="form-control" maxlength="255" required /></label>
@@ -155,7 +155,7 @@ const visibleEntries = computed(() => {
     .sort((a, b) => b.occurred_on.localeCompare(a.occurred_on) || b.id - a.id)
 })
 const selected = computed(() => data.value?.departments.find(d => String(d.id) === departmentId.value))
-const canWrite = computed(() => selected.value && data.value?.writable_department_id === selected.value.id)
+const canWrite = computed(() => auth.canEdit('budget') && selected.value && data.value?.writable_department_id === selected.value.id)
 const expectedTotal = computed(() => (selected.value ? [selected.value] : data.value?.departments || []).reduce((sum, d) => sum + (d.expected_cents || 0), 0))
 const totals = computed(() => (selected.value ? [selected.value] : data.value?.departments || []).reduce((sum, d) => { for (const key of Object.keys(sum)) sum[key] += d.budget?.[key] || 0; return sum }, { opening_cents: 0, income_cents: 0, expense_cents: 0, balance_cents: 0 }))
 const allocationRows = computed(() => Object.entries(amounts).filter(([,value]) => value !== '' && value !== null).map(([department_id, amount]) => ({ department_id: Number(department_id), amount, ...(allocation.kind === 'opening' ? { expected_amount: bulkExpected[department_id] ?? '' } : {}) })))

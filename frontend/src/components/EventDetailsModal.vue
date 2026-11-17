@@ -7,14 +7,14 @@
       </header>
 
       <div class="event-details">
-        <p class="event-details-title">{{ event.title }}</p>
+        <p class="event-details-title">{{ event.title }}</p><p v-if="event.is_conference_event">{{ locale === 'es' ? (event.publish_to_feed ? 'Conferencia · Publicado' : 'Conferencia · Horario reservado · No publicado') : (event.publish_to_feed ? 'Conference · Published' : 'Conference · Reserved time · Unpublished') }}</p>
         <p v-if="event.description" class="event-details-text">
           <strong>{{ resolvedLabels.description }}:</strong> {{ event.description }}
         </p>
         <p class="event-details-text">
-          <strong>{{ resolvedLabels.department }}:</strong> {{ event.department?.name || '—' }}
+          <strong>{{ resolvedLabels.department }}:</strong> {{ event.is_conference_event ? (locale === 'es' ? 'Conferencia' : 'Conference') : event.department?.name || '—' }}
         </p>
-        <p class="event-details-text">
+        <p v-if="!event.is_conference_event" class="event-details-text">
           <strong>{{ resolvedLabels.objective }}:</strong> {{ event.objective?.name || '—' }}
         </p>
         <p v-if="event.location" class="event-details-text">

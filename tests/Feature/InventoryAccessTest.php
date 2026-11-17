@@ -26,9 +26,9 @@ class InventoryAccessTest extends TestCase
             Sanctum::actingAs(User::factory()->create(['role' => $role, 'church_id' => $church->id, 'department_id' => null]));
             $headers = $role === 'superadmin' ? ['X-Church-Context' => (string) $church->id] : [];
             $this->getJson('/api/inventory', $headers)->assertOk()->assertJsonCount(2)->assertJsonMissing(['description' => 'Private']);
-            $this->postJson('/api/inventory', ['department_id' => $music->id, 'description' => 'Blocked'], $headers)->assertUnprocessable();
-            $this->putJson('/api/inventory/'.$item->id, ['description' => 'Changed'], $headers)->assertUnprocessable();
-            $this->deleteJson('/api/inventory/'.$item->id, [], $headers)->assertUnprocessable();
+            $this->postJson('/api/inventory', ['department_id' => $music->id, 'description' => 'Blocked'], $headers)->assertForbidden();
+            $this->putJson('/api/inventory/'.$item->id, ['description' => 'Changed'], $headers)->assertForbidden();
+            $this->deleteJson('/api/inventory/'.$item->id, [], $headers)->assertForbidden();
         }
         $this->assertDatabaseCount('inventory_items', 3);
         $this->assertDatabaseHas('inventory_items', ['id' => $item->id, 'description' => 'Piano']);

@@ -45,7 +45,7 @@
               <td>{{ $event->start_at->format('Y-m-d') }}</td>
               <td>{{ $event->start_at->format('H:i') }} - {{ $event->end_at->format('H:i') }}</td>
               <td>{{ $event->title }}</td>
-              <td>{{ $event->department->name ?? '—' }}</td>
+              <td>{{ $event->is_conference_event ? ($locale === 'en' ? 'Conference' : 'Conferencia') : ($event->department->name ?? '—') }}</td>
               <td>{{ $event->objective->name ?? '—' }}</td>
               <td>{{ $event->location ?? '—' }}</td>
               <td class="muted">{{ $event->status }}</td>

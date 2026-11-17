@@ -380,6 +380,7 @@ import { useAuthStore } from '../stores/authStore'
 import { useUiStore } from '../stores/uiStore'
 import { translations } from '../i18n/translations'
 import { objectiveApi } from '../services/objectiveApi'
+import { apiClient } from '../services/authApi'
 import { calendarApi } from '../services/calendarApi'
 import { publicApi } from '../services/publicApi'
 import EventDetailsModal from './EventDetailsModal.vue'
@@ -402,7 +403,7 @@ const showNotesTab = computed(() => isMember.value || isAdmin.value)
 const activeTab = ref(showNotesTab.value ? 'notes' : 'objectives')
 const departments = ref([])
 const canChooseDepartment = computed(() =>
-  ['superadmin', 'secretary'].includes(authStore.user?.role || '')
+  !authStore.user?.department_id || ['superadmin', 'secretary'].includes(authStore.user?.role || '')
 )
 const departmentId = computed(() => authStore.user?.department_id || null)
 
@@ -434,7 +435,7 @@ const isEventDetailsOpen = ref(false)
 const expandedNoteEventIds = ref(new Set())
 
 const canReplyEventNotes = computed(() =>
-  ['member', 'admin'].includes(authStore.user?.role) && Boolean(authStore.user?.department_id) && selectedEvent.value?.status === 'locked'
+  authStore.canEdit('reports') && ['member', 'admin'].includes(authStore.user?.role) && Boolean(authStore.user?.department_id) && selectedEvent.value?.status === 'locked'
 )
 
 const objectiveOptions = computed(() => {
@@ -545,7 +546,7 @@ const loadObjectives = async () => {
   objectivesLoading.value = true
   objectivesError.value = ''
   try {
-    objectives.value = await objectiveApi.list()
+    objectives.value = await apiClient.get('/reports/objectives').then(r=>r.data)
     objectivesLoaded.value = true
   } catch {
     objectivesError.value = 'Unable to load objectives.'
@@ -584,7 +585,7 @@ const fetchEvents = async () => {
     if (eventStatusFilter.value !== 'all') {
       params.review_status = eventStatusFilter.value
     }
-    events.value = await calendarApi.fetchEvents(params)
+    events.value = await apiClient.get('/reports/events',{params}).then(r=>r.data)
     eventsLoaded.value = true
   } catch {
     eventsError.value = 'Unable to load events.'
@@ -607,7 +608,7 @@ const fetchNotes = async () => {
     if (authStore.user?.department_id) {
       params.department_id = authStore.user.department_id
     }
-    notesEvents.value = await calendarApi.fetchEvents(params)
+    notesEvents.value = await apiClient.get('/reports/events',{params}).then(r=>r.data)
     notesLoaded.value = true
   } catch {
     notesError.value = t.value.messages.loadFailed
@@ -633,7 +634,7 @@ const fetchObjectiveEvents = async () => {
     if (objectiveFilter.value !== 'all') {
       params.objective_id = objectiveFilter.value
     }
-    objectiveEvents.value = await calendarApi.fetchEvents(params)
+    objectiveEvents.value = await apiClient.get('/reports/events',{params}).then(r=>r.data)
   } catch {
     // keep previous events if fetch fails
   }
@@ -946,7 +947,7 @@ const handleDetailsReply = async ({ reply }) => {
   try {
     replySaving.value = true
     replyError.value = ''
-    const response = await calendarApi.addNote(selectedEvent.value.id, { note: reply })
+    const response = await apiClient.post(`/reports/events/${selectedEvent.value.id}/notes`,{note:reply}).then(r=>r.data)
     selectedEvent.value.notes = [...(selectedEvent.value.notes || []), response]
     await fetchNotes()
   } catch {

@@ -21,6 +21,7 @@ class ChurchContact extends Model
     }
 
     protected $fillable = [
+        'visitor_form_id', 'custom_answers',
         'church_id',
         'department_id',
         'created_by',
@@ -37,12 +38,16 @@ class ChurchContact extends Model
     ];
 
     protected $casts = [
+        'custom_answers' => 'array',
+        'original_custom_answers' => 'array',
         'is_sda' => 'boolean',
         'sms_consent' => 'boolean',
         'sms_consented_at' => 'datetime',
         'email_consent' => 'boolean',
         'email_consented_at' => 'datetime',
     ];
+
+    public function visitorForm(): BelongsTo { return $this->belongsTo(VisitorForm::class); }
 
     public function church(): BelongsTo
     {

@@ -22,19 +22,18 @@ class BudgetController extends Controller
     private function publisher(Request $request): bool
     {
         $user = $request->user();
-        return $user->isAdmin() && Department::where('church_id', $user->church_id)->whereKey($user->department_id)->where('is_treasury', true)->exists();
+        return $user->hasCapability('budget.publish');
     }
 
     private function ownDepartment(Request $request): Department
     {
-        abort_unless($request->user()->isAdmin(), 403);
+        abort_unless($request->user()->hasCapability('budget.manage'), 403);
         return Department::where('church_id', $this->churchId($request))->findOrFail($request->user()->department_id);
     }
 
     private function hasTreasurer(int $churchId): bool
     {
-        return User::where('church_id', $churchId)->where('role', 'admin')
-            ->whereHas('department', fn ($query) => $query->where('church_id', $churchId)->where('is_treasury', true))->exists();
+        return User::where('church_id', $churchId)->get()->contains(fn ($user) => $user->hasCapability('budget.publish'));
     }
 
     private function selfManagement(Church $church): bool
@@ -86,7 +85,7 @@ class BudgetController extends Controller
         $church = Church::findOrFail($churchId);
         $user = $request->user();
         $canPublish = $this->publisher($request);
-        $all = $user->isSecretary() || $user->isSuperAdmin() || $canPublish;
+        $all = $user->isSecretary() || $user->isSuperAdmin() || $canPublish || (!$user->department_id && app(\App\Services\ModuleAccess::class)->read($user,'budget'));
         abort_unless($all || $user->department_id, 403);
         $departments = Department::where('church_id', $churchId)->when(!$all, fn ($query) => $query->whereKey($user->department_id))->orderBy('name')->get();
         $budgets = DepartmentBudget::whereIn('department_id', $departments->pluck('id'))->where('period', self::PERIOD)
@@ -98,7 +97,7 @@ class BudgetController extends Controller
             'has_treasurer' => $this->hasTreasurer($churchId),
             'can_self_fund' => $canPublish || $this->selfManagement($church),
             'period' => self::PERIOD, 'periods' => [['value' => self::PERIOD, 'label' => 'Continuous']],
-            'can_view_all' => $all, 'can_publish' => $canPublish, 'writable_department_id' => $user->isAdmin() ? $user->department_id : null,
+            'can_view_all' => $all, 'can_publish' => $canPublish && app(\App\Services\ModuleAccess::class)->write($user,'budget'), 'writable_department_id' => $user->hasCapability('budget.manage') && app(\App\Services\ModuleAccess::class)->write($user,'budget') ? $user->department_id : null,
             'departments' => $departments->map(function ($department) use ($budgets, $plans) {
                 $budget = $budgets->get($department->id);
                 if ($budget) {

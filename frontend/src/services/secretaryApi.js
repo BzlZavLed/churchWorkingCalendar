@@ -1,6 +1,14 @@
 import { apiClient } from './authApi'
 
 export const secretaryApi = {
+  async createDepartment(payload) {
+    const { data } = await apiClient.post('/secretary/departments', payload)
+    return data
+  },
+  async createUser(payload) {
+    const { data } = await apiClient.post('/secretary/users', payload)
+    return data
+  },
   async listDepartments() {
     const { data } = await apiClient.get('/secretary/departments')
     return data

@@ -3,12 +3,13 @@
     class="app-shell"
     :class="{
       'app-shell--sidebar-collapsed': shouldShowIconsOnly,
+      'app-shell--kiosk': isGreetingKiosk,
       'app-shell--greeting-focus': isGreetingFocusMode,
       'app-shell--greeting-sidebar-visible': isGreetingFocusMode && isSidebarOpen,
     }"
   >
     <button
-      v-if="isGreetingFocusMode"
+      v-if="isGreetingFocusMode && !isGreetingKiosk"
       class="greeting-menu-button"
       type="button"
       :aria-label="toggleSidebarLabel"
@@ -22,7 +23,7 @@
       </svg>
     </button>
 
-    <aside
+    <aside v-show="!isGreetingKiosk"
       class="app-sidebar"
       :class="{
         'app-sidebar--compact': shouldShowIconsOnly,
@@ -161,6 +162,8 @@ const iconPaths = {
   meetingPoints: 'M5 5h14v4H5zM5 11h8v8H5zM15 13h4M15 17h4',
   logout: 'M15 16l4-4-4-4M19 12H9M12 19H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6',
   greeting: 'M12 21c4.97-4.1 8-7.75 8-11.5A4.5 4.5 0 0 0 15.5 5c-1.54 0-2.84.72-3.5 1.84A4.15 4.15 0 0 0 8.5 5 4.5 4.5 0 0 0 4 9.5C4 13.25 7.03 16.9 12 21Z',
+  roles: 'M12 3 4 6v6c0 4 8 9 8 9s8-5 8-9V6l-8-3Zm-3 9 2 2 4-4',
+  members: 'M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4v2',
   greetingList: 'M6 7h12M6 12h12M6 17h12M4 7h.01M4 12h.01M4 17h.01',
 }
 
@@ -170,21 +173,11 @@ const navItems = computed(() => {
   }
 
   const role = authStore.user?.role
-  const isGreetingUser = !authStore.isPlatformAdmin && authStore.user?.role !== 'secretary' && Boolean(authStore.user?.department?.is_greeting)
-
-  if (isGreetingUser) {
-    return [
-      { to: '/greeting', label: t.value.greeting, icon: iconPaths.greeting },
-      { to: '/meeting-points', label: t.value.meetingPoints, icon: iconPaths.meetingPoints },
-      { to: '/budget', label: locale.value === 'es' ? 'Presupuesto' : 'Budget', icon: iconPaths.budget },
-      { to: '/greeting/contacts', label: t.value.greetingContacts, icon: iconPaths.greetingList },
-    ]
-  }
-
   if (role === 'superadmin') {
     return [
       { to: '/calendar', label: t.value.calendar, icon: iconPaths.calendar },
       { to: '/objectives', label: t.value.objectives, icon: iconPaths.objectives },
+      { to: '/superadmin/roles', label: locale.value === 'es' ? 'Roles y permisos' : 'Roles and permissions', icon: iconPaths.roles },
       { to: '/superadmin/churches', label: t.value.churches, icon: iconPaths.churches },
       { to: '/superadmin/departments', label: t.value.departments, icon: iconPaths.departments },
       { to: '/superadmin/calendars', label: t.value.calendarManager, icon: iconPaths.calendarManager },
@@ -194,33 +187,9 @@ const navItems = computed(() => {
     ]
   }
 
-  const items = [
-    { to: '/calendar', label: t.value.calendar, icon: iconPaths.calendar },
-    { to: '/reports', label: t.value.reports, icon: iconPaths.reports },
-  ]
-
-  items.push({ to: '/budget', label: locale.value === 'es' ? 'Presupuesto' : 'Budget', icon: iconPaths.budget })
-
-  if (['admin', 'member'].includes(role)) {
-    items.push({ to: '/meeting-points', label: t.value.meetingPoints, icon: iconPaths.meetingPoints })
-  }
-
-  items.push({ to: '/objectives', label: t.value.objectives, icon: iconPaths.objectives })
-
-  if (['admin', 'secretary'].includes(role || '')) {
-    items.push({ to: '/inventory', label: t.value.inventory, icon: iconPaths.inventory })
-    items.push({ to: '/greeting/contacts', label: t.value.greetingContacts, icon: iconPaths.greetingList })
-  }
-
-  if (role === 'secretary') {
-    items.push(
-      { to: '/secretary/meetings', label: t.value.meetings, icon: iconPaths.meetings },
-      { to: '/secretary/departments', label: t.value.departments, icon: iconPaths.departments },
-      { to: '/secretary/users', label: t.value.users, icon: iconPaths.users },
-    )
-  }
-
-  if (authStore.isPlatformAdmin) items.unshift({ to: '/superadmin/churches', label: t.value.churches, icon: iconPaths.churches })
+  const icons = {calendar:'calendar',reports:'reports',objectives:'objectives',budget:'budget',inventory:'inventory',meetings:'meetings',meeting_points:'meetingPoints',visitors:'greetingList',greeting:'greeting',members:'members',departments:'departments',users:'users'}
+  const items = Object.entries(authStore.accessModules).filter(([key])=>authStore.canAccess(key)).map(([key,module])=>({to:module.path,label:locale.value==='es'?module.es:module.en,icon:iconPaths[icons[key]]}))
+  if (authStore.isPlatformAdmin) items.unshift({ to: '/superadmin/churches', label: t.value.churches, icon: iconPaths.churches },{to:'/superadmin/roles',label:locale.value==='es'?'Roles y permisos':'Roles and permissions',icon:iconPaths.roles})
   return items
 })
 
@@ -262,6 +231,9 @@ const roleLabel = computed(() => {
   }
   return t.value.roleLabels?.[role] || role
 })
+
+const isGreetingKiosk = computed(() => route.path === '/greeting' && uiStore.greetingKiosk)
+watch(isGreetingKiosk, () => closeSidebar())
 
 const isGreetingFocusMode = computed(() => !authStore.isPlatformAdmin && authStore.user?.role !== 'secretary' && Boolean(authStore.user?.department?.is_greeting))
 
@@ -452,6 +424,9 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.app-shell.app-shell--kiosk { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+.app-shell--kiosk .app-main { width: 100%; max-width: none; margin: 0; padding: 0; }
+
 .app-shell--greeting-focus {
   grid-template-columns: minmax(0, 1fr);
 }

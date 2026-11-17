@@ -5,6 +5,19 @@
       <h1>{{ t.title }}</h1>
       <p>{{ locale === 'es' ? 'Administra los usuarios, sus roles y su departamento.' : 'Manage users, their roles and department.' }}</p>
     </header>
+    <details v-write="'users.manage'" v-if="authStore.can('users.manage')" class="management-surface management-create mb-3">
+      <summary>{{ locale === 'es' ? 'Crear usuario' : 'Create user' }}</summary>
+      <form class="row g-3 mt-1" @submit.prevent="createUser">
+        <label class="col-12 col-md-6">{{ t.name }}<input v-model="createForm.name" class="form-control" required maxlength="255" autocomplete="name" /></label>
+        <label class="col-12 col-md-6">{{ t.email }}<input v-model="createForm.email" class="form-control" type="email" required maxlength="255" autocomplete="off" /></label>
+        <label class="col-12 col-md-6">{{ t.password }}<input v-model="createForm.password" class="form-control" type="password" required minlength="8" autocomplete="new-password" /></label>
+        <label class="col-12 col-md-6">{{ t.role }}<select v-model="createForm.role" class="form-select"><option v-for="role in ['admin', 'member', 'secretary', 'pastor']" :key="role" :value="role">{{ roleLabels[role] }}</option></select></label>
+        <label class="col-12">{{ t.department }}<select v-model="createForm.department_id" class="form-select"><option value="">{{ common.select }}</option><option v-for="department in departments" :key="department.id" :value="department.id">{{ department.name }}</option></select></label>
+        <p v-if="createError" class="management-error col-12" role="alert">{{ createError }}</p>
+        <p v-if="createSuccess" class="text-success col-12" role="status">{{ locale === 'es' ? 'Usuario creado.' : 'User created.' }}</p>
+        <div class="col-12"><button class="btn btn-primary" :disabled="creating || loading">{{ creating ? (locale === 'es' ? 'Guardando…' : 'Saving…') : (locale === 'es' ? 'Crear usuario' : 'Create user') }}</button></div>
+      </form>
+    </details>
     <div class="management-summary"><article><span>{{ t.title }}</span><strong>{{ loading ? '—' : users.length }}</strong></article>
       <article><span>{{ locale === 'es' ? 'Con departamento' : 'Assigned to a department' }}</span><strong>{{ loading ? '—' : users.filter(user => user.department_id).length }}</strong></article>
       <article><span>{{ locale === 'es' ? 'Administradores' : 'Administrators' }}</span><strong>{{ loading ? '—' : users.filter(user => user.role === 'admin').length }}</strong></article></div>
@@ -41,20 +54,20 @@
 
               <td>
                 <div class="d-flex align-items-center gap-2">
-                  <input v-model="user.name" :aria-label="t.name" class="form-control" type="text" />
+                  <input v-model="user.name" :aria-label="t.name" class="form-control" type="text" :disabled="!authStore.can('users.manage')" />
                   <span v-if="user.id === currentUserId" class="badge bg-info text-dark">{{ common.loggedIn }}</span>
                 </div>
               </td>
-              <td><input v-model="user.email" :aria-label="t.email" class="form-control" type="email" /></td>
+              <td><input v-model="user.email" :aria-label="t.email" class="form-control" type="email" :disabled="!authStore.can('users.manage')" /></td>
               <td>
-                <select :aria-label="t.role" v-model="user.role" class="form-select">
+                <select :aria-label="t.role" v-model="user.role" class="form-select" :disabled="!authStore.can('users.manage')">
                   <option value="admin">{{ roleLabels.admin }}</option>
                   <option value="member">{{ roleLabels.member }}</option>
-                  <option value="secretary">{{ roleLabels.secretary }}</option>
+                  <option value="secretary">{{ roleLabels.secretary }}</option><option value="pastor">{{ roleLabels.pastor }}</option>
                 </select>
               </td>
               <td>
-                <select :aria-label="t.department" v-model="user.department_id" class="form-select">
+                <select :aria-label="t.department" v-model="user.department_id" class="form-select" :disabled="!authStore.can('users.manage')">
                   <option value="">{{ common.select }}</option>
                   <option v-for="department in departments" :key="department.id" :value="department.id">
                     {{ department.name }}
@@ -62,12 +75,12 @@
                 </select>
               </td>
               <td>
-                <button class="btn btn-sm btn-outline-primary" type="button" @click="openPasswordModal(user)">
+                <button v-write="'users.manage'" class="btn btn-sm btn-outline-primary" type="button" @click="openPasswordModal(user)">
                   {{ t.changePassword }}
                 </button>
               </td>
               <td class="text-end">
-                <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateUser(user)">{{ t.save }}</button>
+                <button v-write="'users.manage'" class="btn btn-sm btn-outline-secondary" type="button" @click="updateUser(user)">{{ t.save }}</button>
               </td>
             </tr>
           </tbody>
@@ -89,23 +102,23 @@
             </div>
             <div class="mb-2">
               <label class="form-label small mb-1">{{ t.email }}</label>
-              <input v-model="user.email" :aria-label="t.email" class="form-control" type="email" />
+              <input v-model="user.email" :aria-label="t.email" class="form-control" type="email" :disabled="!authStore.can('users.manage')" />
             </div>
             <div class="mb-2">
               <label class="form-label small mb-1">{{ t.name }}</label>
-              <input v-model="user.name" :aria-label="t.name" class="form-control" type="text" />
+              <input v-model="user.name" :aria-label="t.name" class="form-control" type="text" :disabled="!authStore.can('users.manage')" />
             </div>
             <div class="mb-2">
               <label class="form-label small mb-1">{{ t.role }}</label>
-              <select :aria-label="t.role" v-model="user.role" class="form-select">
+              <select :aria-label="t.role" v-model="user.role" class="form-select" :disabled="!authStore.can('users.manage')">
                 <option value="admin">{{ roleLabels.admin }}</option>
                 <option value="member">{{ roleLabels.member }}</option>
-                <option value="secretary">{{ roleLabels.secretary }}</option>
+                <option value="secretary">{{ roleLabels.secretary }}</option><option value="pastor">{{ roleLabels.pastor }}</option>
               </select>
             </div>
             <div class="mb-3">
               <label class="form-label small mb-1">{{ t.department }}</label>
-              <select :aria-label="t.department" v-model="user.department_id" class="form-select">
+              <select :aria-label="t.department" v-model="user.department_id" class="form-select" :disabled="!authStore.can('users.manage')">
                 <option value="">{{ common.select }}</option>
                 <option v-for="department in departments" :key="department.id" :value="department.id">
                   {{ department.name }}
@@ -113,12 +126,12 @@
               </select>
             </div>
             <div class="d-flex flex-wrap gap-2 mb-2">
-              <button class="btn btn-sm btn-outline-primary" type="button" @click="openPasswordModal(user)">
+              <button v-write="'users.manage'" class="btn btn-sm btn-outline-primary" type="button" @click="openPasswordModal(user)">
                 {{ t.changePassword }}
               </button>
             </div>
             <div class="d-flex flex-wrap gap-2">
-              <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateUser(user)">{{ t.save }}</button>
+              <button v-write="'users.manage'" class="btn btn-sm btn-outline-secondary" type="button" @click="updateUser(user)">{{ t.save }}</button>
             </div>
           </div>
         </div>
@@ -175,6 +188,7 @@
 <script setup>
 import '../../styles/clerk-management.css'
 import { computed, onMounted, reactive, ref } from 'vue'
+import { publicApi } from '../../services/publicApi'
 import { secretaryApi } from '../../services/secretaryApi'
 import { useAuthStore } from '../../stores/authStore'
 import { useUiStore } from '../../stores/uiStore'
@@ -186,6 +200,26 @@ const users = ref([])
 const loading = ref(false)
 const error = ref('')
 const filterText = ref('')
+const createForm = reactive({ name: '', email: '', password: '', role: 'member', department_id: '' })
+const creating = ref(false)
+const createError = ref('')
+const createSuccess = ref(false)
+const createUser = async () => {
+  if (creating.value) return
+  creating.value = true
+  createError.value = ''
+  createSuccess.value = false
+  try {
+    await secretaryApi.createUser({ ...createForm, department_id: createForm.department_id || null })
+    Object.assign(createForm, { name: '', email: '', password: '', role: 'member', department_id: '' })
+    await loadUsers()
+    createSuccess.value = true
+  } catch (err) {
+    createError.value = Object.values(err.response?.data?.errors || {}).flat().join(' ') || err.response?.data?.message || (locale.value === 'es' ? 'No se pudo crear el usuario.' : 'Unable to create user.')
+  } finally {
+    creating.value = false
+  }
+}
 const authStore = useAuthStore()
 const uiStore = useUiStore()
 const { locale } = storeToRefs(uiStore)
@@ -235,7 +269,7 @@ const loadUsers = async () => {
 
 const loadDepartments = async () => {
   try {
-    departments.value = await secretaryApi.listDepartments()
+    departments.value = await publicApi.listDepartments(authStore.user.church_id)
   } catch {
     departments.value = []
   }

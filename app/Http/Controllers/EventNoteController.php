@@ -26,7 +26,8 @@ class EventNoteController extends Controller
                 'user_id' => $user->id,
                 'note' => $data['note'],
                 'author_role' => $user->role,
-                'seen_note' => !$user->isSecretary() && !$user->isSuperAdmin(),
+                'author_is_reviewer' => $user->hasCapability('calendar.review'),
+                'seen_note' => !$user->hasCapability('calendar.review'),
             ]);
         });
 
@@ -72,7 +73,7 @@ class EventNoteController extends Controller
             ->whereHas('event', function ($query) use ($user) {
                 $query->where('department_id', $user->department_id);
             })
-            ->whereIn('author_role', ['secretary', 'superadmin'])
+            ->where('author_is_reviewer', true)
             ->orderByDesc('created_at')
             ->get();
 
@@ -123,6 +124,7 @@ class EventNoteController extends Controller
                 'user_id' => $user->id,
                 'note' => $reply,
                 'author_role' => $user->role,
+                'author_is_reviewer' => $user->hasCapability('calendar.review'),
                 'seen_note' => true,
                 'seen_at' => now(),
                 'seen_by_user_id' => $user->id,

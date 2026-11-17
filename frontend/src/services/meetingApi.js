@@ -26,8 +26,8 @@ export const meetingApi = {
     const { data } = await apiClient.post(`/meetings/${id}/start`)
     return data
   },
-  async adjournMeeting(id, locale = 'es') {
-    const { data } = await apiClient.post(`/meetings/${id}/adjourn`, { locale })
+  async adjournMeeting(id, locale = 'es', closingNotes = '') {
+    const { data } = await apiClient.post(`/meetings/${id}/adjourn`, { locale, closing_notes: closingNotes })
     return data
   },
   async listMeetingPoints(meetingId, params = {}) {
@@ -68,7 +68,7 @@ export const meetingApi = {
   },
   async downloadMeetingSummary(meetingId, locale = 'es') {
     const response = await apiClient.get(`/meetings/${meetingId}/summary.pdf`, {
-      params: { locale },
+      params: { locale, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
       responseType: 'blob',
     })
     return response.data

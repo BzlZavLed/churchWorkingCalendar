@@ -22,6 +22,8 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\Integrations\ClubCalendarController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('public/churches/{church}/visitor-logo', [\App\Http\Controllers\VisitorFormController::class, 'logo']);
+
 Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'registerWithInvite']);
     Route::post('login', [AuthController::class, 'login']);
@@ -38,9 +40,10 @@ Route::prefix('auth')->group(function () {
 });
 
 Route::prefix('public')->group(function () {
+    Route::get('churches/{church}/visit', [ChurchContactController::class, 'publicForm'])->middleware('throttle:60,1');
+    Route::post('churches/{church}/visit', [ChurchContactController::class, 'publicStore'])->middleware('throttle:10,1');
     Route::get('churches', [PublicCatalogController::class, 'churches']);
     Route::get('churches/{church}/departments', [PublicCatalogController::class, 'departments']);
-    Route::get('consent/search', [PublicChurchContactConsentController::class, 'search']);
     Route::get('consent/{token}', [PublicChurchContactConsentController::class, 'show']);
     Route::post('consent/{token}/revoke', [PublicChurchContactConsentController::class, 'revoke']);
     Route::get('churches/{church:slug}/events', [PublicEventFeedController::class, 'index']);
@@ -50,8 +53,18 @@ Route::prefix('public')->group(function () {
     Route::get('events.ics', [PublicEventFeedController::class, 'ics']);
 });
 
-Route::middleware(['auth:sanctum', 'superadmin.context'])->group(function () {
+Route::middleware(['auth:sanctum', 'superadmin.context', 'module.access'])->group(function () {
+    Route::get('access', [\App\Http\Controllers\ChurchRoleController::class, 'current']);
+    Route::get('reports/events', [EventController::class, 'index']);
+    Route::get('reports/objectives', [ObjectiveController::class, 'index']);
+    Route::post('reports/events/{event}/notes', [EventNoteController::class, 'store']);
     Route::get('events', [EventController::class, 'index']);
+    Route::post('conference-events', [\App\Http\Controllers\ConferenceEventController::class, 'store']);
+    Route::post('conference-events/publish-all', [\App\Http\Controllers\ConferenceEventController::class, 'publish']);
+    Route::post('conference-events/{event}/publish', [\App\Http\Controllers\ConferenceEventController::class, 'publish']);
+    Route::post('conference-events/import', [\App\Http\Controllers\ConferenceEventController::class, 'import']);
+    Route::patch('conference-events/{event}', [\App\Http\Controllers\ConferenceEventController::class, 'update']);
+    Route::delete('conference-events/{event}', [\App\Http\Controllers\ConferenceEventController::class, 'destroy']);
     Route::post('events/hold', [EventController::class, 'storeHold']);
     Route::post('events/{event}/extend', [EventController::class, 'extendHold']);
     Route::post('events/{event}/lock', [EventController::class, 'lockEvent']);
@@ -66,6 +79,7 @@ Route::middleware(['auth:sanctum', 'superadmin.context'])->group(function () {
     Route::get('notes/unseen', [EventNoteController::class, 'unseen']);
     Route::post('notes/{note}/seen', [EventNoteController::class, 'markSeen'])
         ->whereNumber('note');
+    Route::get('calendar/objectives', [ObjectiveController::class, 'index']);
     Route::get('calendar/export', [CalendarExportController::class, 'export']);
 
     Route::get('objectives', [ObjectiveController::class, 'index']);
@@ -111,7 +125,21 @@ Route::middleware(['auth:sanctum', 'superadmin.context'])->group(function () {
     Route::post('meeting-points/{point}/finalize', [MeetingPointController::class, 'finalize']);
     Route::post('meeting-points/{point}/notes', [MeetingPointNoteController::class, 'store']);
 
+    Route::get('members', [\App\Http\Controllers\ChurchMemberController::class, 'index']);
+    Route::post('members/template', [\App\Http\Controllers\ChurchMemberController::class, 'template']);
+    Route::get('members/template.csv', [\App\Http\Controllers\ChurchMemberController::class, 'download']);
+    Route::post('members/import', [\App\Http\Controllers\ChurchMemberController::class, 'import']);
+    Route::post('members', [\App\Http\Controllers\ChurchMemberController::class, 'save']);
+    Route::patch('members/{member}', [\App\Http\Controllers\ChurchMemberController::class, 'save']);
+
+    Route::patch('visitor-form/logo', [\App\Http\Controllers\VisitorFormController::class, 'alignLogo']);
+    Route::post('visitor-form/logo', [\App\Http\Controllers\VisitorFormController::class, 'updateLogo']);
+    Route::delete('visitor-form/logo', [\App\Http\Controllers\VisitorFormController::class, 'removeLogo']);
+    Route::get('visitor-form', [\App\Http\Controllers\VisitorFormController::class, 'show']);
+    Route::post('visitor-form', [\App\Http\Controllers\VisitorFormController::class, 'publish']);
+    Route::patch('church-contacts/{contact}', [ChurchContactController::class, 'update']);
     Route::get('church-contacts', [ChurchContactController::class, 'index']);
+    Route::patch('church-contacts/{contact}/consent', [ChurchContactController::class, 'restoreConsent']);
     Route::post('church-contacts', [ChurchContactController::class, 'store']);
 });
 
@@ -120,7 +148,7 @@ Route::middleware('integration.token')->prefix('integrations/clubs')->group(func
     Route::post('calendar', [ClubCalendarController::class, 'importCalendar']);
 });
 
-Route::middleware(['auth:sanctum', 'superadmin.context', 'admin'])->group(function () {
+Route::middleware(['auth:sanctum', 'superadmin.context', 'module.access', 'admin'])->group(function () {
     Route::get('admin/departments', [AdminUserController::class, 'listDepartments']);
     Route::get('admin/users', [AdminUserController::class, 'listUsers']);
     Route::post('admin/users', [AdminUserController::class, 'storeUser']);
@@ -128,7 +156,9 @@ Route::middleware(['auth:sanctum', 'superadmin.context', 'admin'])->group(functi
     Route::delete('admin/users/{user}', [AdminUserController::class, 'destroyUser']);
 });
 
-Route::middleware(['auth:sanctum', 'superadmin.context', 'secretary'])->group(function () {
+Route::middleware(['auth:sanctum', 'superadmin.context', 'module.access', 'secretary'])->group(function () {
+    Route::post('secretary/departments', [AdminUserController::class, 'storeDepartment']);
+    Route::post('secretary/users', [AdminUserController::class, 'storeUser']);
     Route::get('secretary/departments', [AdminUserController::class, 'listDepartmentsWithUsers']);
     Route::put('secretary/departments/{department}', [AdminUserController::class, 'updateDepartment']);
     Route::get('secretary/users', [AdminUserController::class, 'listUsers']);
@@ -136,6 +166,10 @@ Route::middleware(['auth:sanctum', 'superadmin.context', 'secretary'])->group(fu
 });
 
 Route::middleware(['auth:sanctum', 'superadmin'])->group(function () {
+    Route::get('superadmin/churches/{church}/roles', [\App\Http\Controllers\ChurchRoleController::class, 'index']);
+    Route::post('superadmin/churches/{church}/roles', [\App\Http\Controllers\ChurchRoleController::class, 'store']);
+    Route::put('superadmin/churches/{church}/roles/{role}', [\App\Http\Controllers\ChurchRoleController::class, 'update']);
+    Route::put('superadmin/churches/{church}/users/{user}/role', [\App\Http\Controllers\ChurchRoleController::class, 'assign']);
     Route::get('superadmin/churches', [SuperAdminController::class, 'index']);
     Route::post('superadmin/churches', [SuperAdminController::class, 'storeChurch']);
     Route::put('superadmin/churches/{church}', [SuperAdminController::class, 'update']);

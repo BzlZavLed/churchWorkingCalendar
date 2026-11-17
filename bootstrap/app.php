@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->appendToGroup('api', AuditLogMiddleware::class);
         $middleware->alias([
+            'module.access' => \App\Http\Middleware\EnsureModuleAccess::class,
             'superadmin.context' => \App\Http\Middleware\ApplySuperAdminContext::class,
             'admin' => EnsureAdmin::class,
             'secretary' => EnsureSecretary::class,

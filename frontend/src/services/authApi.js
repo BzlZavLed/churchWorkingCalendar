@@ -13,6 +13,8 @@ apiClient.interceptors.request.use((config) => {
     config.scopedView = true
     if (!context) return config
     config.headers['X-Church-Context'] = context.church.id
+    if (context.churchRole) config.headers['X-Church-Role-Context'] = context.churchRole.id
+    if (context.role === 'pastor') config.headers['X-Role-Context'] = 'pastor'
     if (context.department) config.headers['X-Department-Context'] = context.department.id
   }
   return config

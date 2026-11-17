@@ -6,7 +6,7 @@ use App\Support\DomainUpdate;
 
 class MeetingWorkflow
 {
-    public function canManage(User $user): bool { return $user->isSecretary() || $user->isSuperAdmin(); }
+    public function canManage(User $user): bool { return $user->hasCapability('meetings.manage') || $user->isSuperAdmin(); }
 
     public function syncDeadline(Meeting $meeting): void
     {
@@ -40,11 +40,13 @@ class MeetingWorkflow
     {
         $this->syncDeadline($meeting);
         $meeting->loadMissing(['opener:id,name', 'meetingNotes.author:id,name']);
-        if ($this->canManage($user)) return $meeting->toArray() + ['submission_deadline' => $meeting->deadlineAt()->toIso8601String()];
+        $calendarReviews = $meeting->points()->where('calendar_review', true)->get(['id', 'title', 'calendar_from', 'calendar_until', 'calendar_decisions']);
+        if ($this->canManage($user)) return $meeting->toArray() + ['calendar_reviews' => $calendarReviews, 'submission_deadline' => $meeting->deadlineAt()->toIso8601String()];
         $data = $meeting->only(['id', 'church_id', 'meeting_date', 'planned_start_at', 'start_at', 'end_at', 'location', 'agenda_closed_at', 'summary_public']);
         $data['submission_deadline'] = $meeting->deadlineAt()->toIso8601String();
         if ($meeting->end_at && $meeting->summary_public) {
-            $data += $meeting->only(['summary_text', 'summary_generated', 'opening_prayer', 'opening_remarks', 'attendance']);
+            $data['calendar_reviews'] = $calendarReviews;
+            $data += $meeting->only(['summary_text', 'summary_generated', 'opening_prayer', 'opening_remarks', 'opening_prayer_recorded_at', 'opening_remarks_recorded_at', 'closing_notes', 'attendance']);
         }
         return $data;
     }
@@ -59,6 +61,7 @@ class MeetingWorkflow
         foreach ($points as $source) {
             $copy = MeetingPoint::create([
                 'meeting_id' => $target->id, 'department_id' => $source->department_id,
+                'calendar_review' => $source->calendar_review, 'calendar_from' => $source->calendar_from, 'calendar_until' => $source->calendar_until,
                 'related_meeting_point_id' => $source->id, 'title' => $source->revision['title'] ?? $source->title, 'description' => $source->revision['description'] ?? $source->description,
                 'status' => ($source->final_status === 'postponed' || $source->revision) ? 'submitted' : 'needs_update',
                 'review_note' => $source->final_status === 'needs_update' ? $source->final_note : null,

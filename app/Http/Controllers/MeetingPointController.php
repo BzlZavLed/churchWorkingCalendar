@@ -45,7 +45,16 @@ class MeetingPointController extends Controller
     {
         $this->authorize('view', $meeting);
         $this->authorize('create', MeetingPoint::class);
-        $data = $request->validate(['title' => ['required', 'string', 'max:255'], 'description' => ['required', 'string']]);
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'], 'description' => ['required', 'string'],
+            'calendar_review' => ['sometimes', 'boolean'],
+            'calendar_from' => ['required_if:calendar_review,true', 'nullable', 'date_format:Y-m-d'],
+            'calendar_until' => ['required_if:calendar_review,true', 'nullable', 'date_format:Y-m-d', 'after_or_equal:calendar_from'],
+        ]);
+        abort_if(($data['calendar_review'] ?? false) && !$this->workflow->canManage($request->user()), 403);
+        if (!($data['calendar_review'] ?? false)) {
+            unset($data['calendar_from'], $data['calendar_until']);
+        }
         return DB::transaction(function () use ($meeting, $request, $data) {
             $meeting = Meeting::whereKey($meeting->id)->lockForUpdate()->firstOrFail();
             abort_unless($this->workflow->accepting($meeting), 422, 'Submission deadline has passed or agenda is closed.');
@@ -139,10 +148,10 @@ class MeetingPointController extends Controller
         return DB::transaction(function () use ($point, $request, $data) {
             $meeting = Meeting::whereKey($point->meeting_id)->lockForUpdate()->firstOrFail();
             $point = MeetingPoint::whereKey($point->id)->lockForUpdate()->firstOrFail();
-            abort_unless($meeting->start_at && !$meeting->end_at && $point->status === 'accepted' && !$point->final_status && $meeting->active_meeting_point_id === $point->id, 422, 'Activate an undecided accepted point during the live meeting first.');
+            abort_unless($meeting->start_at && !$meeting->end_at && $point->status === 'accepted' && !$point->final_status && ($data['final_status'] === 'postponed' || $meeting->active_meeting_point_id === $point->id), 422, 'Activate an undecided accepted point during the live meeting first.');
             $point->update(['final_status' => $data['final_status'], 'final_note' => $data['final_note'] ?? null, 'finalized_by' => $request->user()->id, 'finalized_at' => now(), 'updated_by' => $request->user()->id]);
             $point->recordHistory($data['final_status'], $request->user(), $data['final_note'] ?? null);
-            $meeting->update(['active_meeting_point_id' => null]);
+            if ($meeting->active_meeting_point_id === $point->id) $meeting->update(['active_meeting_point_id' => null]);
             DomainUpdate::forMeetingPoint('finalized', $point, $request->user());
             return response()->json($point->load('department'));
         });

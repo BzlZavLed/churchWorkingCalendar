@@ -58,6 +58,7 @@ class AdminUserController extends Controller
 
     public function storeUser(Request $request)
     {
+        abort_unless($request->user()->hasCapability('users.manage') || $request->user()->isSuperAdmin(),403,'Only church administration can manage users.');
         $churchId = $request->user()?->church_id;
         if (!$churchId) {
             abort(403, 'Church required.');
@@ -67,9 +68,14 @@ class AdminUserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
-            'role' => ['required', 'in:admin,member,secretary'],
+            'role' => ['required', 'in:admin,member,secretary,pastor'],
             'department_id' => ['nullable', 'exists:departments,id'],
         ]);
+
+        if (($data['role'] ?? null) === 'pastor' || (isset($user) && $user->isPastor())) {
+            abort_unless($request->user()->hasCapability('users.manage') || $request->user()->isSuperAdmin(), 403);
+            if (($data['role'] ?? ($user->role ?? null)) === 'pastor') $data['department_id'] = null;
+        }
 
         if (!empty($data['department_id'])) {
             $department = Department::find($data['department_id']);
@@ -94,6 +100,7 @@ class AdminUserController extends Controller
 
     public function updateUser(Request $request, User $user)
     {
+        abort_unless($request->user()->hasCapability('users.manage') || $request->user()->isSuperAdmin(),403,'Only church administration can manage users.');
         $churchId = $request->user()?->church_id;
         if (!$churchId) {
             abort(403, 'Church required.');
@@ -107,9 +114,14 @@ class AdminUserController extends Controller
             'name' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'password' => ['nullable', 'string', 'min:8'],
-            'role' => ['sometimes', 'in:admin,member,secretary'],
+            'role' => ['sometimes', 'in:admin,member,secretary,pastor'],
             'department_id' => ['nullable', 'exists:departments,id'],
         ]);
+
+        if (($data['role'] ?? null) === 'pastor' || (isset($user) && $user->isPastor())) {
+            abort_unless($request->user()->hasCapability('users.manage') || $request->user()->isSuperAdmin(), 403);
+            if (($data['role'] ?? ($user->role ?? null)) === 'pastor') $data['department_id'] = null;
+        }
 
         if (!empty($data['department_id'])) {
             $department = Department::find($data['department_id']);
@@ -126,13 +138,46 @@ class AdminUserController extends Controller
             unset($data['password']);
         }
 
+        if (isset($data['role']) && $data['role'] !== $user->role) {
+            abort_if($user->church_role_id && !$request->user()->isSuperAdmin(), 403, 'Custom role changes require the superadmin role manager.');
+            $data['church_role_id'] = null;
+        }
         $user->update($data);
 
         return response()->json($user);
     }
 
+    public function storeDepartment(Request $request)
+    {
+        abort_unless($request->user()->hasCapability('departments.manage'),403);
+        $churchId = $request->user()?->church_id;
+        abort_unless($churchId, 403, 'Church required.');
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'color' => ['nullable', 'string', 'max:255'],
+            'user_name' => ['nullable', 'string', 'max:255'],
+            'is_treasury' => ['nullable', 'boolean'],
+            'is_club' => ['nullable', 'boolean'],
+            'is_greeting' => ['nullable', 'boolean'],
+        ]);
+
+        $department = Department::create([
+            'church_id' => $churchId,
+            'name' => $data['name'],
+            'color' => $data['color'] ?? null,
+            'user_name' => $data['user_name'] ?? null,
+            'is_treasury' => $data['is_treasury'] ?? false,
+            'is_club' => $data['is_club'] ?? false,
+            'is_greeting' => $data['is_greeting'] ?? false,
+        ]);
+
+        return response()->json($department, 201);
+    }
+
     public function updateDepartment(Request $request, Department $department)
     {
+        abort_unless($request->user()->hasCapability('departments.manage'),403);
         $churchId = $request->user()?->church_id;
         if (!$churchId) {
             abort(403, 'Church required.');
@@ -165,6 +210,8 @@ class AdminUserController extends Controller
 
     public function destroyUser(Request $request, User $user)
     {
+        abort_unless($request->user()->hasCapability('users.manage') || $request->user()->isSuperAdmin(),403,'Only church administration can manage users.');
+        if ($user->isPastor()) abort_unless($request->user()->hasCapability('users.manage') || $request->user()->isSuperAdmin(), 403);
         $churchId = $request->user()?->church_id;
         if (!$churchId) {
             abort(403, 'Church required.');

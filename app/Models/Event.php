@@ -14,6 +14,8 @@ class Event extends Model
     use HasFactory;
 
     protected $fillable = [
+        'church_id',
+        'is_conference_event',
         'open_requested_at',
         'department_id',
         'objective_id',
@@ -44,6 +46,7 @@ class Event extends Model
     ];
 
     protected $casts = [
+        'is_conference_event' => 'boolean',
         'open_requested_at' => 'datetime',
         'start_at' => 'datetime',
         'end_at' => 'datetime',
@@ -91,7 +94,7 @@ class Event extends Model
         if ($note !== null && trim($note) !== '') {
             $this->notes()->create([
                 'user_id' => $actor->id, 'note' => trim($note), 'kind' => $action,
-                'event_history_id' => $history->id, 'author_role' => $actor->role,
+                'event_history_id' => $history->id, 'author_role' => $actor->role, 'author_is_reviewer' => $actor->hasCapability('calendar.review'),
                 'seen_note' => false,
             ]);
         }
@@ -138,6 +141,17 @@ class Event extends Model
         return $this->belongsTo(User::class, 'reviewed_by');
     }
 
+    public function scopeForChurch(Builder $query, int $churchId): Builder
+    {
+        return $query->where(fn ($q) => $q->where('church_id', $churchId)
+            ->orWhereHas('department', fn ($d) => $d->where('church_id', $churchId)));
+    }
+
+    public function churchId(): ?int
+    {
+        return $this->church_id ?? $this->department?->church_id;
+    }
+
     public function scopeOverlapping(Builder $query, CarbonInterface $startAt, CarbonInterface $endAt): Builder
     {
         return $query->where('start_at', '<', $endAt)
@@ -161,7 +175,7 @@ class Event extends Model
         $query = static::query()->overlapping($startAt, $endAt)->activeBlocking();
 
         if ($churchId !== null) {
-            $query->whereHas('department', fn ($q) => $q->where('church_id', $churchId));
+            $query->forChurch($churchId);
         }
 
         if ($ignoreId !== null) {

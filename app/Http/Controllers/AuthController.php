@@ -33,9 +33,9 @@ class AuthController extends Controller
                 ]);
             }
 
-            if ($invitation->role === User::ROLE_SECRETARY) {
+            if (in_array($invitation->role, [User::ROLE_SECRETARY, User::ROLE_PASTOR], true)) {
                 throw ValidationException::withMessages([
-                    'invite_code' => ['Secretary accounts must be created by superadmin.'],
+                    'invite_code' => ['Clerk and pastor accounts must be created by church administration.'],
                 ]);
             }
 
@@ -80,7 +80,7 @@ class AuthController extends Controller
             $token = $user->createToken('auth')->plainTextToken;
 
             return [
-                'user' => $user->load('department'),
+                'user' => $user->load(['department', 'church']),
                 'token' => $token,
             ];
         });
@@ -106,7 +106,7 @@ class AuthController extends Controller
         $token = $user->createToken('auth')->plainTextToken;
 
         return response()->json([
-            'user' => $user->load('department'),
+            'user' => $user->load(['department', 'church']),
             'token' => $token,
         ]);
     }
@@ -174,7 +174,7 @@ class AuthController extends Controller
     public function me(Request $request)
     {
         return response()->json([
-            'user' => $request->user()->load('department'),
+            'user' => $request->user()->load(['department', 'church']),
         ]);
     }
 }
