@@ -10,8 +10,7 @@
           {{ t.latestInvite }} <strong>{{ inviteCode }}</strong>
         </p>
 
-        <form class="bg-white border rounded p-4 mb-4" @submit.prevent="createChurch">
-          <h2 class="h5 mb-3">{{ t.createTitle }}</h2>
+        <FormSection class="bg-white border rounded p-3 mb-4" :title="t.createTitle"><form @submit.prevent="createChurch">
           <div class="mb-3">
             <label class="form-label">
               {{ t.name }}
@@ -71,7 +70,7 @@
             </label>
           </div>
           <button class="btn btn-primary" type="submit">{{ t.create }}</button>
-        </form>
+        </form></FormSection>
 
         <div v-if="loading">{{ t.loading }}</div>
         <p v-if="error" class="text-danger">{{ error }}</p>
@@ -247,6 +246,7 @@
 </template>
 
 <script setup>
+import FormSection from "../FormSection.vue"
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { superAdminApi } from '../../services/superAdminApi'
 import { useUiStore } from '../../stores/uiStore'

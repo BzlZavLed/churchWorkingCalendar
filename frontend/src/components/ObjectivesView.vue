@@ -1,9 +1,9 @@
 <template>
   <section class="container py-4 objectives-page">
     <header class="objectives-heading">
-      <div><p class="eyebrow">{{ auth.user?.church?.name }}<span v-if="auth.user?.department"> · {{ auth.user.department.name }}</span></p><h1>{{ t.title }}</h1><p>{{ tr('Define lo que quieres lograr y conecta cada objetivo con sus eventos.', 'Define what you want to achieve and connect each objective to its events.') }}</p></div>
-      <button v-if="canManage" class="btn btn-primary" @click="openEditor()">+ {{ tr('Nuevo objetivo', 'New objective') }}</button>
-      <span v-else class="readonly-badge">{{ tr('Solo consulta', 'Read only') }}</span>
+      <div><p class="eyebrow">{{ auth.user?.church?.name }}<span v-if="auth.user?.department"> · {{ auth.user.department.name }}</span></p><div class="creation-heading"><h1>{{ t.title }}</h1><button v-if="canManage" class="creation-plus" type="button" :aria-label="tr('Nuevo objetivo', 'New objective')" :title="tr('Nuevo objetivo', 'New objective')" @click="openEditor()"><span aria-hidden="true">+</span></button></div><p>{{ tr('Define lo que quieres lograr y conecta cada objetivo con sus eventos.', 'Define what you want to achieve and connect each objective to its events.') }}</p></div>
+
+      <span v-if="!canManage" class="readonly-badge">{{ tr('Solo consulta', 'Read only') }}</span>
     </header>
     <p v-if="error" class="notice error" role="alert">{{ error }}</p>
     <div class="summary">
@@ -12,7 +12,7 @@
       <article><span>{{ tr('Objetivos sin eventos', 'Objectives without events') }}</span><strong>{{ loading ? '—' : filtered.filter(o => !o.events_count).length }}</strong></article>
     </div>
     <div class="surface filters">
-      <label class="search">{{ tr('Buscar', 'Search') }}<input v-model="search" class="form-control" type="search" :placeholder="tr('Nombre, descripción o indicador de evaluación', 'Name, description or evaluation metric')" /></label>
+      <label class="search"><span class="visually-hidden">{{ tr('Buscar', 'Search') }}</span><input v-model="search" class="form-control" type="search" :placeholder="tr('Nombre, descripción o indicador de evaluación', 'Name, description or evaluation metric')" /></label>
       <label v-if="isSuperAdmin">{{ t.fields.church }}<select v-model="churchFilter" class="form-select"><option value="">{{ tr('Todas las iglesias', 'All churches') }}</option><option v-for="church in churches" :key="church.id" :value="String(church.id)">{{ church.name }}</option></select></label>
       <label v-if="canViewAll">{{ t.fields.department }}<select v-model="departmentFilter" class="form-select"><option value="">{{ tr('Todos los departamentos', 'All departments') }}</option><option v-for="department in filterDepartments" :key="department.id" :value="String(department.id)">{{ department.name }}</option></select></label>
       <label>{{ tr('Ordenar', 'Sort') }}<select v-model="sort" class="form-select"><option value="name">{{ tr('Nombre', 'Name') }}</option><option value="department">{{ t.fields.department }}</option><option value="events">{{ tr('Más eventos', 'Most events') }}</option></select></label>

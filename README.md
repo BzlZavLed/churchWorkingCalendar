@@ -228,3 +228,7 @@ La transición de procesos en papel a un sistema digital es necesaria para respo
 ### 6) Reporte y seguimiento
 - Se puede generar lista de eventos aprobados por departamento/objetivo.
 - Al final del ciclo, se puede imprimir el listado de eventos.
+
+### Committee report upload limits
+
+Committee reports allow files up to 20 MB. The application’s `php artisan serve` command sets a 20 MB file limit and a 25 MB request limit. Restart the development server after updating this command. `public/.user.ini` provides the same limits for PHP-FPM/CGI deployments that support per-directory configuration. For other deployments, set `upload_max_filesize=20M` and `post_max_size=25M` in PHP configuration and allow at least 25 MB in the reverse proxy (for example, Nginx `client_max_body_size 25m`).

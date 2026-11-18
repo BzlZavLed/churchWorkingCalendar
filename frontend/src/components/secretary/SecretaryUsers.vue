@@ -5,8 +5,7 @@
       <h1>{{ t.title }}</h1>
       <p>{{ locale === 'es' ? 'Administra los usuarios, sus roles y su departamento.' : 'Manage users, their roles and department.' }}</p>
     </header>
-    <details v-write="'users.manage'" v-if="authStore.can('users.manage')" class="management-surface management-create mb-3">
-      <summary>{{ locale === 'es' ? 'Crear usuario' : 'Create user' }}</summary>
+    <FormSection :busy="creating" v-write="'users.manage'" v-if="authStore.can('users.manage')" class="management-surface management-create mb-3" :title="locale === 'es' ? 'Crear usuario' : 'Create user'">
       <form class="row g-3 mt-1" @submit.prevent="createUser">
         <label class="col-12 col-md-6">{{ t.name }}<input v-model="createForm.name" class="form-control" required maxlength="255" autocomplete="name" /></label>
         <label class="col-12 col-md-6">{{ t.email }}<input v-model="createForm.email" class="form-control" type="email" required maxlength="255" autocomplete="off" /></label>
@@ -17,7 +16,7 @@
         <p v-if="createSuccess" class="text-success col-12" role="status">{{ locale === 'es' ? 'Usuario creado.' : 'User created.' }}</p>
         <div class="col-12"><button class="btn btn-primary" :disabled="creating || loading">{{ creating ? (locale === 'es' ? 'Guardando…' : 'Saving…') : (locale === 'es' ? 'Crear usuario' : 'Create user') }}</button></div>
       </form>
-    </details>
+    </FormSection>
     <div class="management-summary"><article><span>{{ t.title }}</span><strong>{{ loading ? '—' : users.length }}</strong></article>
       <article><span>{{ locale === 'es' ? 'Con departamento' : 'Assigned to a department' }}</span><strong>{{ loading ? '—' : users.filter(user => user.department_id).length }}</strong></article>
       <article><span>{{ locale === 'es' ? 'Administradores' : 'Administrators' }}</span><strong>{{ loading ? '—' : users.filter(user => user.role === 'admin').length }}</strong></article></div>
@@ -30,7 +29,7 @@
       <div class="row g-2 align-items-center m-0 management-toolbar">
         <div class="col-12 col-md-6">
           <label class="form-label mb-0 w-100">
-            <span class="d-block small mb-1">{{ t.search }}</span>
+            <span class="visually-hidden">{{ t.search }}</span>
             <input v-model="filterText" class="form-control" type="search" :placeholder="t.searchPlaceholder" />
           </label>
         </div>
@@ -186,6 +185,7 @@
 </template>
 
 <script setup>
+import FormSection from "../FormSection.vue"
 import '../../styles/clerk-management.css'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { publicApi } from '../../services/publicApi'

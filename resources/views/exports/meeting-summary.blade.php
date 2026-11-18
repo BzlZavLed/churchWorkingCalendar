@@ -17,7 +17,7 @@
     </style>
   </head>
   <body>
-    <h1>{{ $locale === 'en' ? 'Meeting Summary' : 'Resumen de Junta' }}</h1>
+    <h1>{{ $locale === 'en' ? 'Meeting Summary' : 'Resumen de Junta' }} #{{ $meeting->minutes_number }}</h1>
 
     <div class="section meta">
       <div class="muted">{{ $locale === 'en' ? 'Time zone' : 'Zona horaria' }}: {{ $timezone }}</div>
@@ -49,39 +49,23 @@
         <div class="point">
           <h3>{{ $point->title }}</h3>
           <div class="muted">{{ $point->department?->name ?? ($locale === 'en' ? 'Clerk' : 'Secretaría') }}</div>
-          <div class="note">{{ $point->description }}</div>
+
           <div class="note"><span class="label">{{ $locale === 'en' ? 'Status' : 'Estado' }}:</span> {{ ($locale === 'en' ? ['approved' => 'Accepted', 'denied' => 'Rejected', 'postponed' => 'Deferred to next meeting', 'needs_update' => 'Updates requested', 'informative' => 'Informative'] : ['approved' => 'Aceptado', 'denied' => 'Rechazado', 'postponed' => 'Próxima junta', 'needs_update' => 'Actualización solicitada', 'informative' => 'Informativo'])[$point->final_status] ?? $point->final_status }}</div>
-          @if($point->review_note)
-            <div class="note"><span class="label">{{ $locale === 'en' ? 'Review note' : 'Nota de revision' }}:</span> {{ $point->review_note }}</div>
-          @endif
           @if($point->calendar_review)
             <h3>{{ $locale === 'en' ? 'Calendar review' : 'Revisión del calendario' }}</h3>
             @forelse($point->calendar_decisions ?? [] as $decision)
               <p><strong>{{ $decision['title'] }}</strong> — {{ $decision['department'] }}<br>
                 {{ \Carbon\Carbon::parse($decision['start_at'])->setTimezone($timezone)->format('Y-m-d H:i') }} —
                 {{ ['approved'=>($locale === 'en' ? 'Accepted':'Aceptado'),'denied'=>($locale === 'en' ? 'Rejected':'Rechazado'),'changes_requested'=>($locale === 'en' ? 'Changes requested':'Cambios solicitados')][$decision['status']] ?? $decision['status'] }}<br>
-                {{ $decision['note'] ?? '' }}<br><span class="muted">{{ \Carbon\Carbon::parse($decision['at'])->setTimezone($timezone)->format('Y-m-d H:i') }} · {{ $decision['actor'] }}</span>
+                <span class="muted">{{ \Carbon\Carbon::parse($decision['at'])->setTimezone($timezone)->format('Y-m-d H:i') }} · {{ $decision['actor'] }}</span>
               </p>
             @empty
               <p>{{ $locale === 'en' ? 'No event decisions recorded.' : 'Sin decisiones de eventos registradas.' }}</p>
             @endforelse
           @endif
-          @if($point->final_note)
-            <div class="note">
-              <span class="label">{{ $locale === 'en' ? 'Point note' : 'Nota del punto' }}:</span>
-              {{ $point->final_note }}
-              @if($point->finalized_at)
-                ({{ $point->finalized_at?->copy()->setTimezone($timezone)->format('Y-m-d H:i') }})
-              @endif
-            </div>
-          @endif
+          <div class="muted">{{ $point->finalized_at?->copy()->setTimezone($timezone)->format('Y-m-d H:i') }}</div>
         </div>
       @endforeach
-    </div>
-
-    <div class="section">
-      <h2>{{ $locale === 'en' ? 'General Summary' : 'Resumen general' }}</h2>
-      <div class="note">{!! nl2br(e($meeting->summary_text ?: $meeting->summary_generated)) !!}</div>
     </div>
 
     @if($meeting->closing_notes)
@@ -91,22 +75,5 @@
         <div>{!! nl2br(e($meeting->closing_notes)) !!}</div>
       </div>
     @endif
-    <div class="section">
-      <h2>{{ $locale === 'en' ? 'General Notes' : 'Notas generales' }}</h2>
-      @if($meeting->meetingNotes->count())
-        <ul>
-          @foreach($meeting->meetingNotes->sortBy('created_at') as $note)
-            <li>
-              {{ $note->created_at?->copy()->setTimezone($timezone)->format('Y-m-d H:i') }} - {{ $note->note }}
-              @if($note->author)
-                ({{ $note->author->name }})
-              @endif
-            </li>
-          @endforeach
-        </ul>
-      @else
-        <div class="note">{{ $locale === 'en' ? 'No general notes.' : 'Sin notas generales.' }}</div>
-      @endif
-    </div>
   </body>
 </html>

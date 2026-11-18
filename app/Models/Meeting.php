@@ -25,6 +25,7 @@ class Meeting extends Model
         'location',
         'agenda_closed_at',
         'summary_generated',
+        'minutes_number',
         'summary_text',
         'summary_public',
         'active_meeting_point_id',
@@ -45,6 +46,7 @@ class Meeting extends Model
         'end_at' => 'datetime',
         'agenda_closed_at' => 'datetime',
         'summary_public' => 'boolean',
+        'minutes_number' => 'integer',
     ];
 
     public function church(): BelongsTo

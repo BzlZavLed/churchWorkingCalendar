@@ -21,11 +21,10 @@
       </label>
     </div>
 
-    <details
+    <FormSection
       v-if="canCreate && selectedChurchId"
       class="management-surface management-create"
-    >
-      <summary>{{ t.createTitle }}</summary>
+     :title="t.createTitle">
       <form class="mt-3" @submit.prevent="createDepartment">
       <div class="row g-3">
         <div class="col-12 col-md-6">
@@ -65,7 +64,7 @@
       </div>
       <button class="btn btn-primary mt-3" type="submit">{{ t.create }}</button>
       </form>
-    </details>
+    </FormSection>
 
     <div v-if="loading" class="management-state" role="status">{{ t.loading }}</div>
     <p v-if="error" class="management-error" role="alert">{{ error }}</p>
@@ -220,6 +219,7 @@
 </template>
 
 <script setup>
+import FormSection from "../FormSection.vue"
 import '../../styles/clerk-management.css'
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { superAdminApi } from '../../services/superAdminApi'

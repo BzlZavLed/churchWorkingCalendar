@@ -148,6 +148,7 @@ let sidebarResizeObserver = null
 
 const t = computed(() => translations[locale.value].appLayout)
 const iconPaths = {
+  committees: 'M8 3h8v4H8zM12 7v5M4 12h16M4 12v4M12 12v4M20 12v4M2 16h4v5H2zM10 16h4v5h-4zM18 16h4v5h-4z',
   menu: 'M4 7h16M4 12h16M4 17h16',
   calendar: 'M7 3v3M17 3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a1 1 0 0 1 1-1Z',
   objectives: 'M12 3 21 8l-9 5-9-5 9-5Zm-7 8 7 4 7-4M5 15l7 4 7-4',
@@ -172,24 +173,17 @@ const navItems = computed(() => {
     return []
   }
 
-  const role = authStore.user?.role
-  if (role === 'superadmin') {
-    return [
-      { to: '/calendar', label: t.value.calendar, icon: iconPaths.calendar },
-      { to: '/objectives', label: t.value.objectives, icon: iconPaths.objectives },
-      { to: '/superadmin/roles', label: locale.value === 'es' ? 'Roles y permisos' : 'Roles and permissions', icon: iconPaths.roles },
-      { to: '/superadmin/churches', label: t.value.churches, icon: iconPaths.churches },
-      { to: '/superadmin/departments', label: t.value.departments, icon: iconPaths.departments },
-      { to: '/superadmin/calendars', label: t.value.calendarManager, icon: iconPaths.calendarManager },
-      { to: '/superadmin/meetings', label: t.value.meetings, icon: iconPaths.meetings },
-      { to: '/inventory', label: t.value.inventory, icon: iconPaths.inventory },
-      { to: '/superadmin/users', label: t.value.users, icon: iconPaths.users },
-    ]
-  }
-
-  const icons = {calendar:'calendar',reports:'reports',objectives:'objectives',budget:'budget',inventory:'inventory',meetings:'meetings',meeting_points:'meetingPoints',visitors:'greetingList',greeting:'greeting',members:'members',departments:'departments',users:'users'}
-  const items = Object.entries(authStore.accessModules).filter(([key])=>authStore.canAccess(key)).map(([key,module])=>({to:module.path,label:locale.value==='es'?module.es:module.en,icon:iconPaths[icons[key]]}))
-  if (authStore.isPlatformAdmin) items.unshift({ to: '/superadmin/churches', label: t.value.churches, icon: iconPaths.churches },{to:'/superadmin/roles',label:locale.value==='es'?'Roles y permisos':'Roles and permissions',icon:iconPaths.roles})
+  const icons = {committees:'committees',calendar:'calendar',reports:'reports',objectives:'objectives',budget:'budget',inventory:'inventory',meetings:'meetings',meeting_points:'meetingPoints',visitors:'greetingList',greeting:'greeting',members:'members',departments:'departments',users:'users'}
+  const items = Object.entries(authStore.accessModules).filter(([key])=>authStore.isPlatformAdmin || authStore.canAccess(key)).map(([key,module])=>({to:module.path,label:locale.value==='es'?module.es:module.en,icon:iconPaths[icons[key]]}))
+  if (authStore.isPlatformAdmin) items.unshift(
+    {to:'/superadmin/churches',label:t.value.churches,icon:iconPaths.churches},
+    {to:'/superadmin/roles',label:locale.value==='es'?'Roles y permisos':'Roles and permissions',icon:iconPaths.roles},
+    {to:'/superadmin/calendars',label:t.value.calendarManager,icon:iconPaths.calendarManager},
+    {to:'/superadmin/departments',label:locale.value==='es'?'Departamentos · plataforma':'Departments · platform',icon:iconPaths.departments},
+    {to:'/superadmin/users',label:locale.value==='es'?'Usuarios · plataforma':'Users · platform',icon:iconPaths.users},
+    {to:'/superadmin/meetings',label:locale.value==='es'?'Juntas · plataforma':'Meetings · platform',icon:iconPaths.meetings},
+  )
+  items.push({to:'/whatsapp-settings',label:locale.value==='es'?'Asistente WhatsApp':'WhatsApp assistant',icon:iconPaths.meetingPoints})
   return items
 })
 

@@ -21,12 +21,17 @@ import GreetingContactsView from '../components/GreetingContactsView.vue'
 import NoAccessView from '../components/NoAccessView.vue'
 import SuperAdminRoles from '../components/superadmin/SuperAdminRoles.vue'
 import { moduleForPath } from '../services/accessApi'
+import SuperAdminModuleContext from '../components/superadmin/SuperAdminModuleContext.vue'
+import CommitteesView from '../components/CommitteesView.vue'
 import MembersView from '../components/MembersView.vue'
 import VisitorFormBuilder from '../components/VisitorFormBuilder.vue'
 import PublicConsentView from '../components/PublicConsentView.vue'
 import { getDefaultRouteForUser } from '../stores/authStore'
 
 const routes = [
+  { path: '/whatsapp-settings', component: () => import('../components/WhatsAppSettings.vue'), meta: { requiresAuth: true } },
+  { path: '/superadmin/module-context', component: SuperAdminModuleContext, meta: { requiresAuth: true, superadminOnly: true } },
+  { path: '/committees', component: CommitteesView, meta: { requiresAuth: true } },
   { path: '/superadmin/roles', component: SuperAdminRoles, meta: { requiresAuth: true, superadminOnly: true } },
   { path: '/no-access', component: NoAccessView, meta: { requiresAuth: true } },
   { path: '/members', component: MembersView, meta: { requiresAuth: true, pastorOnly: true } },
@@ -86,6 +91,7 @@ router.beforeEach(async (to) => {
     try { await authStore.refreshAccess() } catch { return to.path === '/no-access' ? true : '/no-access' }
     if (to.meta.superadminOnly && !authStore.isPlatformAdmin) return authStore.firstAccessibleRoute()
     const module = moduleForPath(to.path)
+    if (module && authStore.isPlatformAdmin && (!authStore.adminContext || !authStore.canAccess(module))) return {path:'/superadmin/module-context',query:{module}}
     if (module && !authStore.canAccess(module)) return authStore.firstAccessibleRoute()
     if (to.path === '/greeting/form-builder' && !authStore.can('visitors.configure')) return '/greeting/contacts'
   }

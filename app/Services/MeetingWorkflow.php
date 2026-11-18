@@ -40,15 +40,24 @@ class MeetingWorkflow
     {
         $this->syncDeadline($meeting);
         $meeting->loadMissing(['opener:id,name', 'meetingNotes.author:id,name']);
-        $calendarReviews = $meeting->points()->where('calendar_review', true)->get(['id', 'title', 'calendar_from', 'calendar_until', 'calendar_decisions']);
-        if ($this->canManage($user)) return $meeting->toArray() + ['calendar_reviews' => $calendarReviews, 'submission_deadline' => $meeting->deadlineAt()->toIso8601String()];
-        $data = $meeting->only(['id', 'church_id', 'meeting_date', 'planned_start_at', 'start_at', 'end_at', 'location', 'agenda_closed_at', 'summary_public']);
+        if ($this->canManage($user)) return array_replace($meeting->toArray(), $meeting->end_at ? $this->minutesFor($meeting) : []) + ['submission_deadline' => $meeting->deadlineAt()->toIso8601String()];
+        $data = $meeting->only(['id', 'church_id', 'meeting_date', 'planned_start_at', 'start_at', 'end_at', 'location', 'agenda_closed_at', 'summary_public', 'minutes_number']);
         $data['submission_deadline'] = $meeting->deadlineAt()->toIso8601String();
         if ($meeting->end_at && $meeting->summary_public) {
-            $data['calendar_reviews'] = $calendarReviews;
-            $data += $meeting->only(['summary_text', 'summary_generated', 'opening_prayer', 'opening_remarks', 'opening_prayer_recorded_at', 'opening_remarks_recorded_at', 'closing_notes', 'attendance']);
+            $data += $this->minutesFor($meeting);
+            $data += $meeting->only(['opening_prayer', 'opening_remarks', 'opening_prayer_recorded_at', 'opening_remarks_recorded_at', 'closing_notes', 'attendance']);
         }
         return $data;
+    }
+
+    // Explicit allowlist keeps working notes and legacy free-text summaries out of minutes.
+    public function minutesFor(Meeting $meeting): array
+    {
+        $outcomes = $meeting->points()->where('status', 'accepted')->whereNotNull('final_status')->orderBy('agenda_order')->orderBy('id')->get(['id','title','final_status','finalized_at']);
+        $reviews = $meeting->points()->where('status','accepted')->where('calendar_review',true)->orderBy('agenda_order')->get(['id','title','calendar_decisions'])->map(function ($point) {
+            return ['id'=>$point->id,'title'=>$point->title,'calendar_decisions'=>array_map(fn($decision)=>array_intersect_key($decision,array_flip(['title','department','start_at','status','at','actor'])), $point->calendar_decisions ?? [])];
+        });
+        return ['outcomes'=>$outcomes,'calendar_reviews'=>$reviews,'summary_text'=>null,'summary_generated'=>null];
     }
 
     // Caller locks the church row, serializing creation/adjournment and preventing duplicate carryovers.

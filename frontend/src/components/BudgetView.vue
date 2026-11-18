@@ -53,8 +53,8 @@
         <form v-if="canWrite && data.can_self_fund" class="toolbar" @submit.prevent="start"><label>{{ tr('Saldo inicial', 'Starting balance') }}<input v-model="opening" class="form-control" type="number" min="0" max="999999999.99" step="0.01" required /></label><button class="btn btn-primary" :disabled="busy || loading">{{ tr('Guardar saldo inicial', 'Save starting balance') }}</button></form>
         <p v-else class="muted">{{ tr('Tesorería debe registrar el saldo inicial. Después podrás registrar gastos.', 'Treasury must set the starting balance. You can then record expenses.') }}</p>
       </section>
-      <section v-if="canWrite && selected?.budget" class="surface">
-        <h2>{{ tr('Registrar movimiento', 'Record a transaction') }}</h2>
+      <FormSection :busy="busy" v-if="canWrite && selected?.budget" :key="selected.id" class="surface" :title="tr('Registrar movimiento', 'Record a transaction')">
+
         <form class="entry-form" @submit.prevent="addEntry">
           <label>{{ tr('Tipo', 'Type') }}<select v-model="entry.kind" class="form-select"><option value="expense">{{ tr('Gasto', 'Expense') }}</option><option v-if="data.can_self_fund" value="income">{{ tr('Ingreso', 'Income') }}</option></select></label>
           <label>{{ tr('Fecha', 'Date') }}<input v-model="entry.occurred_on" type="date" class="form-control" required /></label>
@@ -81,7 +81,7 @@
           <button class="btn btn-primary" :disabled="busy || loading">{{ tr('Registrar', 'Record') }}</button>
         </form>
         <small class="muted">{{ tr('Registra cada ingreso una sola vez. Las asignaciones publicadas por tesorería aparecen automáticamente.', 'Record each income once. Published treasury allocations appear automatically.') }}</small>
-      </section>
+      </FormSection>
       <section v-if="data.can_publish" class="surface">
         <button class="section-toggle" :aria-expanded="publishOpen" @click="publishOpen = !publishOpen">{{ tr('Carga masiva de asignaciones · CSV', 'Bulk allocations · CSV') }} <span>{{ publishOpen ? '−' : '+' }}</span></button>
         <form v-if="publishOpen" @submit.prevent="publish">
@@ -128,6 +128,7 @@
 </template>
 
 <script setup>
+import FormSection from "./FormSection.vue"
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useAuthStore } from '../stores/authStore'
 import { useUiStore } from '../stores/uiStore'

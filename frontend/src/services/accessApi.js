@@ -7,6 +7,7 @@ export const accessApi = {
  async assign(church,id,data){return (await apiClient.put(`/superadmin/churches/${church}/users/${id}/role`,data)).data},
 }
 export const moduleForPath = path => {
+ if(path==='/committees')return 'committees'
  if(path==='/calendar')return 'calendar'
  if(path==='/reports')return 'reports'
  if(path==='/objectives')return 'objectives'

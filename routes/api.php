@@ -22,6 +22,8 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\Integrations\ClubCalendarController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('integrations/whatsapp/webhook', [\App\Http\Controllers\Integrations\WhatsAppWebhookController::class, 'verify'])->middleware('throttle:30,1');
+
 Route::get('public/churches/{church}/visitor-logo', [\App\Http\Controllers\VisitorFormController::class, 'logo']);
 
 Route::prefix('auth')->group(function () {
@@ -36,6 +38,8 @@ Route::prefix('auth')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
         Route::get('me', [AuthController::class, 'me']);
+        Route::get('whatsapp-preferences', [\App\Http\Controllers\WhatsAppPreferencesController::class, 'show']);
+        Route::patch('whatsapp-preferences', [\App\Http\Controllers\WhatsAppPreferencesController::class, 'update'])->middleware('throttle:10,1');
     });
 });
 
@@ -58,6 +62,12 @@ Route::middleware(['auth:sanctum', 'superadmin.context', 'module.access'])->grou
     Route::get('reports/events', [EventController::class, 'index']);
     Route::get('reports/objectives', [ObjectiveController::class, 'index']);
     Route::post('reports/events/{event}/notes', [EventNoteController::class, 'store']);
+    Route::post('committees/{committee}/reports', [\App\Http\Controllers\CommitteeReportController::class, 'store']);
+    Route::get('committees/{committee}/reports/{report}/preview', [\App\Http\Controllers\CommitteeReportController::class, 'preview']);
+    Route::get('committees/{committee}/reports/{report}/download', [\App\Http\Controllers\CommitteeReportController::class, 'download']);
+    Route::get('committees', [\App\Http\Controllers\CommitteeController::class, 'index']);
+    Route::post('committees', [\App\Http\Controllers\CommitteeController::class, 'save']);
+    Route::patch('committees/{committee}', [\App\Http\Controllers\CommitteeController::class, 'save']);
     Route::get('events', [EventController::class, 'index']);
     Route::post('conference-events', [\App\Http\Controllers\ConferenceEventController::class, 'store']);
     Route::post('conference-events/publish-all', [\App\Http\Controllers\ConferenceEventController::class, 'publish']);

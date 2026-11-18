@@ -13,11 +13,14 @@ class ModuleAccess {
   'visitors'=>['es'=>'Visitas y formulario','en'=>'Visitors and form','path'=>'/greeting/contacts'],
   'greeting'=>['es'=>'Bienvenida / Quiosco','en'=>'Greeting / Kiosk','path'=>'/greeting'],
   'members'=>['es'=>'Miembros','en'=>'Members','path'=>'/members'],
+  'committees'=>['es'=>'Comités','en'=>'Committees','path'=>'/committees'],
   'departments'=>['es'=>'Departamentos','en'=>'Departments','path'=>'/secretary/departments'],
   'users'=>['es'=>'Usuarios','en'=>'Users','path'=>'/secretary/users'],
  ];
  // These presets are the original workflows. Overrides belong only to a church role.
  public const CAPABILITIES = [
+  'committees.results'=>['module'=>'committees','es'=>'Cargar informes de resultados de comités','en'=>'Upload committee results reports','roles'=>['secretary']],
+  'committees.manage'=>['module'=>'committees','es'=>'Crear y actualizar comités','en'=>'Create and update committees','roles'=>['secretary']],
   'calendar.create'=>['module'=>'calendar','es'=>'Crear eventos departamentales','en'=>'Create department events','roles'=>['admin','member']],
   'calendar.edit'=>['module'=>'calendar','es'=>'Editar eventos departamentales','en'=>'Edit department events','roles'=>['admin','member']],
   'calendar.all_departments'=>['module'=>'calendar','es'=>'Crear y editar para cualquier departamento','en'=>'Create and edit for any department','roles'=>['admin']],
@@ -56,7 +59,7 @@ class ModuleAccess {
  public const BASES=['secretary','pastor','admin','member'];
  public function defaults(string $base, bool $greeter=false): array {
   $p=array_fill_keys(array_keys(self::MODULES),'none');
-  if($base==='secretary') return array_replace($p,['calendar'=>'edit','reports'=>'edit','objectives'=>'read','budget'=>'read','inventory'=>'read','meetings'=>'edit','visitors'=>'edit','greeting'=>'edit','departments'=>'edit','users'=>'edit']);
+  if($base==='secretary') return array_replace($p,['committees'=>'edit','calendar'=>'edit','reports'=>'edit','objectives'=>'read','budget'=>'read','inventory'=>'read','meetings'=>'edit','visitors'=>'edit','greeting'=>'edit','departments'=>'edit','users'=>'edit']);
   if($base==='pastor') return array_replace($p,['visitors'=>'edit','members'=>'edit']);
   if(in_array($base,['admin','member'],true)) {
    $p=array_replace($p,['calendar'=>'edit','reports'=>'edit','objectives'=>'edit','budget'=>$base==='admin'?'edit':'read','meeting_points'=>$base==='admin'?'edit':'read']);
@@ -82,6 +85,7 @@ class ModuleAccess {
  public function write(User $user,string $module): bool {return $this->level($user,$module)==='edit';}
  public function routeModule(string $path): ?string {
   $path=preg_replace('#^api/#','',trim($path,'/'));
+  if(preg_match('#^committees(/|$)#',$path))return 'committees';
   if(str_starts_with($path,'reports/'))return 'reports';
   if(preg_match('#^(events|conference-events|notes|calendar)(/|$)#',$path))return 'calendar';
   if(preg_match('#^objectives(/|$)#',$path))return 'objectives';

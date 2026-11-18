@@ -278,4 +278,43 @@ class MeetingWorkflowTest extends TestCase
         $this->assertSame('2026-12-08 03:30',$meeting->deadlineAt()->format('Y-m-d H:i'));
     }
 
+    public function test_minutes_number_is_church_scoped_stable_and_summary_excludes_working_comments(): void
+    {
+        [$church,$clerk,$admin,,$meeting]=$this->setupMeeting();
+        $id=$this->point($meeting,$admin,'Vote on equipment');
+        $this->accept($id,$clerk);
+        $point=\App\Models\MeetingPoint::findOrFail($id);
+        $point->update(['review_note'=>'INTERNAL_REVIEW']);
+        $meeting->meetingNotes()->create(['note'=>'INTERNAL_DISCUSSION','created_by'=>$clerk->id]);
+        $this->travelTo($meeting->planned_start_at);
+        $this->postJson("/api/meetings/{$meeting->id}/start")->assertOk();
+        $this->postJson("/api/meeting-points/$id/activate")->assertOk();
+        $this->postJson("/api/meeting-points/$id/finalize",['final_status'=>'approved','final_note'=>'INTERNAL_VOTE_NOTE'])->assertOk();
+        $this->postJson("/api/meetings/{$meeting->id}/adjourn")->assertOk()->assertJsonPath('minutes_number',1)->assertJsonPath('outcomes.0.final_status','approved');
+        $this->postJson("/api/meetings/{$meeting->id}/adjourn")->assertOk()->assertJsonPath('minutes_number',1);
+        $this->assertStringNotContainsString('INTERNAL_VOTE_NOTE',$meeting->fresh()->summary_generated);
+        $meeting->update(['summary_text'=>'LEGACY_PRIVATE_SUMMARY']);
+        $this->patchJson("/api/meetings/{$meeting->id}",['summary_text'=>'Working comments'])->assertUnprocessable();
+        $this->patchJson("/api/meetings/{$meeting->id}",['summary_public'=>true])->assertOk();
+        Sanctum::actingAs($admin);
+        $response=$this->getJson("/api/meetings/{$meeting->id}")->assertOk()->assertJsonPath('outcomes.0.title','Vote on equipment');
+        $html=view('exports.meeting-summary',['meeting'=>$meeting->fresh(),'locale'=>'en','timezone'=>'UTC'])->render();
+        foreach(['INTERNAL_REVIEW','INTERNAL_DISCUSSION','INTERNAL_VOTE_NOTE','LEGACY_PRIVATE_SUMMARY'] as $comment) {
+            $this->assertStringNotContainsString($comment,$html);
+            $this->assertStringNotContainsString($comment,$response->getContent());
+        }
+        $this->assertStringContainsString('Accepted',$html);
+        $this->assertStringContainsString('#1',$html);
+        $this->assertSame('INTERNAL_VOTE_NOTE',$point->fresh()->final_note);
+        Sanctum::actingAs($clerk);
+        $next=Meeting::create(['church_id'=>$church->id,'meeting_date'=>now()->toDateString(),'planned_start_at'=>now(),'start_at'=>now(),'created_by'=>$clerk->id,'updated_by'=>$clerk->id]);
+        $this->postJson("/api/meetings/{$next->id}/adjourn")->assertOk()->assertJsonPath('minutes_number',2);
+        $other=Church::create(['name'=>'Separate']);
+        $otherClerk=User::factory()->create(['role'=>'secretary','church_id'=>$other->id]);
+        $otherMeeting=Meeting::create(['church_id'=>$other->id,'meeting_date'=>now()->toDateString(),'planned_start_at'=>now(),'start_at'=>now(),'created_by'=>$otherClerk->id,'updated_by'=>$otherClerk->id]);
+        Sanctum::actingAs($otherClerk);
+        $this->postJson("/api/meetings/{$otherMeeting->id}/adjourn")->assertOk()->assertJsonPath('minutes_number',1);
+        $this->getJson("/api/meetings/{$meeting->id}")->assertForbidden();
+    }
+
 }

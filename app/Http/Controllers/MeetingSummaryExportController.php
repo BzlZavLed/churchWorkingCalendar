@@ -16,14 +16,14 @@ class MeetingSummaryExportController extends Controller
         $this->authorize('view', $meeting);
 
         $user = $request->user();
-        $canManage = $user->isSuperAdmin() || $user->isSecretary();
+        $canManage = app(\App\Services\MeetingWorkflow::class)->canManage($user);
 
         if (!$meeting->end_at || (!$canManage && !$meeting->summary_public)) {
             abort(403, 'Summary is not public.');
         }
 
         $data = $request->validate(['timezone' => ['sometimes', 'timezone'], 'locale' => ['sometimes', 'in:en,es']]);
-        $meeting->load(['church', 'points' => fn ($q) => $q->where('status', 'accepted')->with('department'), 'points.notes.author', 'opener', 'meetingNotes.author']);
+        $meeting->load(['church', 'points' => fn ($q) => $q->where('status', 'accepted')->whereNotNull('final_status')->with('department'), 'opener']);
 
         $pdf = Pdf::loadView('exports.meeting-summary', [
             'meeting' => $meeting,
@@ -31,7 +31,7 @@ class MeetingSummaryExportController extends Controller
             'timezone' => $data['timezone'] ?? 'UTC',
         ])->setPaper('letter', 'portrait');
 
-        $filename = "meeting-summary-{$meeting->id}.pdf";
+        $filename = "meeting-minutes-{$meeting->minutes_number}.pdf";
 
         return $pdf->download($filename);
     }

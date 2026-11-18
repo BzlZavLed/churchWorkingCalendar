@@ -1,5 +1,7 @@
 <template>
   <div class="meeting-overview">
+    <h3>{{ tr('Acta','Minutes') }} #{{ meeting.minutes_number || '—' }}</h3>
+    <section v-if="meeting.outcomes?.length"><h4>{{ tr('Resultados de votación','Vote outcomes') }}</h4><p v-for="point in meeting.outcomes" :key="point.id"><strong>{{ point.title }}</strong> · {{ outcomeLabel(point.final_status) }}<br /><small>{{ date(point.finalized_at) }}</small></p></section>
     <p><strong>{{ tr('Inicio', 'Started') }}:</strong> {{ date(meeting.start_at) }} · <strong>{{ tr('Cierre', 'Closed') }}:</strong> {{ date(meeting.end_at) }}</p>
     <p><strong>{{ tr('Oración inicial', 'Opening prayer') }}:</strong> {{ meeting.opening_prayer || '—' }} <small>{{ stamp(meeting.opening_prayer_recorded_at) }}</small></p>
     <p><strong>{{ tr('Observaciones iniciales', 'Opening remarks') }}:</strong> {{ meeting.opening_remarks || '—' }} <small>{{ stamp(meeting.opening_remarks_recorded_at) }}</small></p>
@@ -9,7 +11,7 @@
     <section v-for="review in meeting.calendar_reviews || []" :key="review.id" class="calendar-decisions">
       <strong>{{ review.title }} · {{ tr('Revisión del calendario','Calendar review') }}</strong>
       <p v-if="!review.calendar_decisions?.length">{{ tr('Sin decisiones de eventos registradas.','No event decisions recorded.') }}</p>
-      <p v-for="(decision,i) in review.calendar_decisions" :key="i"><strong>{{ decision.title }}</strong> · {{ decision.department }}<br />{{ date(decision.start_at) }} · {{ eventReviewLabel(decision.status,locale) }}<br /><span v-if="decision.note">{{ decision.note }}<br /></span><small>{{ date(decision.at) }} · {{ decision.actor }}</small></p>
+      <p v-for="(decision,i) in review.calendar_decisions" :key="i"><strong>{{ decision.title }}</strong> · {{ decision.department }}<br />{{ date(decision.start_at) }} · {{ eventReviewLabel(decision.status,locale) }}<br /><small>{{ date(decision.at) }} · {{ decision.actor }}</small></p>
     </section>
   </div>
 </template>
@@ -18,6 +20,7 @@ import {eventReviewLabel} from '../utils/eventWorkflow'
 const props = defineProps({ meeting: { type: Object, required: true }, locale: { type: String, default: 'es' } })
 const tr = (es,en) => props.locale === 'es' ? es : en
 const date = value => value ? new Intl.DateTimeFormat(props.locale === 'es' ? 'es-US' : 'en-US', {dateStyle:'medium',timeStyle:'short'}).format(new Date(value)) : '—'
+const outcomeLabel = value => ({approved:tr('Aceptado','Accepted'),denied:tr('Rechazado','Rejected'),needs_update:tr('Actualización solicitada','Updates requested'),postponed:tr('Próxima junta','Next meeting'),informative:tr('Informativo','Informative')})[value] || value
 const stamp = value => value ? date(value) : tr('Fecha de registro no disponible', 'Recording time unavailable')
 </script>
 <style scoped>

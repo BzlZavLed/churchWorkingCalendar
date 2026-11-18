@@ -4,8 +4,7 @@
       <h1 class="h3 m-0">{{ t.title }}</h1>
     </div>
 
-    <form class="bg-white border rounded p-4 mb-4" @submit.prevent="createUser">
-      <h2 class="h5 mb-3">{{ t.createTitle }}</h2>
+    <FormSection class="bg-white border rounded p-3 mb-4" :title="t.createTitle"><form @submit.prevent="createUser">
       <div class="row g-3">
         <div class="col-12 col-md-6">
           <label class="form-label">
@@ -48,7 +47,7 @@
         </div>
       </div>
       <button class="btn btn-primary mt-3" type="submit">{{ t.create }}</button>
-    </form>
+    </form></FormSection>
 
     <div v-if="loading">{{ t.loading }}</div>
     <p v-if="error" class="text-danger">{{ error }}</p>
@@ -58,7 +57,7 @@
       <div class="row g-2 align-items-center mb-3">
         <div class="col-12 col-md-6">
           <label class="form-label mb-0 w-100">
-            <span class="d-block small mb-1">{{ t.search }}</span>
+            <span class="visually-hidden">{{ t.search }}</span>
             <input v-model="filterText" class="form-control" type="search" :placeholder="t.searchPlaceholder" />
           </label>
         </div>
@@ -217,6 +216,7 @@
 </template>
 
 <script setup>
+import FormSection from "../FormSection.vue"
 import { computed, onMounted, reactive, ref } from 'vue'
 import { adminApi } from '../../services/adminApi'
 import { useAuthStore } from '../../stores/authStore'

@@ -8,3 +8,13 @@ body {
 }
 
 .module-write-hidden { display: none !important; }
+
+/* Consistent record creation controls across module headings. */
+.creation-heading{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.creation-heading h1,.creation-heading h2{margin:0!important}
+button.creation-plus{display:inline-flex;align-items:center;justify-content:center;flex:none;width:32px;min-height:32px;padding:0;border:0;border-radius:6px;background:transparent;color:#1f6f5c;font-size:24px;line-height:1}
+button.creation-plus:focus-visible{outline:3px solid #85b9a6;outline-offset:3px}
+button.creation-plus:disabled{opacity:.45}
+
+/* DataTables places its accessible label separately from the search input. */
+.dt-search>label{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}

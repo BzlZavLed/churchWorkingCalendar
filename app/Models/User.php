@@ -59,6 +59,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'whatsapp_assistant_enabled' => 'boolean',
             'password' => 'hashed',
         ];
     }

@@ -3,11 +3,11 @@
     <header class="inventory-heading">
       <div>
         <p class="inventory-eyebrow">{{ authStore.user?.church?.name || t.allChurches }}</p>
-        <h1>{{ t.title }}</h1>
+        <div class="creation-heading"><h1>{{ t.title }}</h1><button v-if="canEdit" class="creation-plus" type="button" :aria-label="t.newEntry" :title="t.newEntry" @click="openCreateModal"><span aria-hidden="true">+</span></button></div>
         <p>{{ locale === 'es' ? 'Consulta los bienes, cantidades y valores de tu equipo.' : 'Track your team’s items, quantities and values.' }}</p>
       </div>
       <span v-if="!canEdit" class="inventory-readonly">{{ locale === 'es' ? 'Consulta · Todos los departamentos' : 'Read only · All departments' }}</span>
-      <button v-if="canEdit" class="btn btn-primary w-auto" type="button" @click="openCreateModal">+ {{ t.newEntry }}</button>
+
     </header>
 
     <p v-if="error" class="inventory-error" role="alert">{{ error }}</p>
@@ -19,7 +19,7 @@
 
     <div class="inventory-surface">
       <div class="inventory-toolbar">
-        <label class="inventory-search">{{ t.search }}<input v-model="filterText" class="form-control" type="search" :placeholder="t.searchPlaceholder" /></label>
+        <label class="inventory-search"><span class="visually-hidden">{{ t.search }}</span><input v-model="filterText" class="form-control" type="search" :placeholder="t.searchPlaceholder" /></label>
         <label v-if="!authStore.user?.department_id">{{ t.fields.department }}<select v-model="departmentFilter" class="form-select"><option value="all">{{ locale === 'es' ? 'Todos los departamentos' : 'All departments' }}</option><option v-for="department in inventoryDepartments" :key="department.id" :value="String(department.id)">{{ department.name }}</option></select></label>
         <button class="btn btn-outline-secondary w-auto" type="button" :disabled="loading || !!error || !filteredItems.length" @click="exportCsv">{{ t.export }}</button>
       </div>

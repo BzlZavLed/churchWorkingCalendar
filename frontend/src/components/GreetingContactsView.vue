@@ -30,7 +30,7 @@
       <article><span>{{ locale === 'es' ? 'Autorizan correo' : 'Email consent' }}</span><strong>{{ loading ? '—' : contacts.filter(c => c.email && c.email_consent).length }}</strong></article>
     </div>
     <div class="visits-filters management-surface">
-      <label>{{ locale === 'es' ? 'Buscar visitas' : 'Search visitors' }}<input v-model="search" type="search" class="form-control" :placeholder="locale === 'es' ? 'Nombre, teléfono o correo' : 'Name, phone or email'" /></label>
+      <label><span class="visually-hidden">{{ locale === 'es' ? 'Buscar visitas' : 'Search visitors' }}</span><input v-model="search" type="search" class="form-control" :placeholder="locale === 'es' ? 'Nombre, teléfono o correo' : 'Name, phone or email'" /></label>
       <label>{{ locale === 'es' ? 'Tipo de visita' : 'Visitor type' }}<select v-model="visitorFilter" class="form-select"><option value="all">{{ locale === 'es' ? 'Todos' : 'All' }}</option><option value="visitor">{{ t.memberNo }}</option><option value="sda">{{ t.memberYes }}</option></select></label>
       <label>{{ locale === 'es' ? 'Permiso de contacto' : 'Contact permission' }}<select v-model="consentFilter" class="form-select"><option value="all">{{ locale === 'es' ? 'Todos' : 'All' }}</option><option value="sms">SMS</option><option value="email">{{ t.columns.email }}</option><option value="none">{{ locale === 'es' ? 'Sin autorización' : 'No permission' }}</option></select></label>
     </div>
@@ -56,7 +56,7 @@
           <span v-if="contact.address"><strong>{{ t.columns.address }}</strong>{{ contact.address }}</span>
           <details v-if="contact.visitor_form?.fields?.length" class="visitor-answers"><summary>{{ locale==='es'?'Respuestas originales':'Original answers' }} · {{ contact.visitor_form.version }}</summary><dl><template v-for="field in contact.visitor_form.fields.filter(f=>f.type!=='label')" :key="field.id"><dt>{{ field.label }}</dt><dd>{{ answer((contact.original_custom_answers ?? contact.custom_answers)?.[field.id]) }}</dd></template></dl></details>
         </div>
-        <div class="visits-preferences"><button v-if="auth.can('visitors.edit')" class="btn btn-sm btn-outline-primary" @click="editVisitor(contact)">{{ locale==='es'?'Editar preferencias y respuestas':'Edit preferences and answers' }}</button>
+        <div class="visits-preferences"><button v-if="auth.can('visitors.edit')" class="btn btn-sm btn-outline-primary" @click="editing?.id===contact.id ? editing=null : editVisitor(contact)" :aria-expanded="editing?.id===contact.id">{{ editing?.id===contact.id ? (locale==='es'?'Cancelar':'Cancel') : (locale==='es'?'Editar preferencias y respuestas':'Edit preferences and answers') }}</button>
           <div class="visits-permissions">
             <span class="visits-permission" :class="{ 'is-allowed': contact.phone && contact.sms_consent }">SMS · {{ contact.phone && contact.sms_consent ? t.consentYes : t.consentNo }}</span>
             <span class="visits-permission" :class="{ 'is-allowed': contact.email && contact.email_consent }">{{ t.columns.email }} · {{ contact.email && contact.email_consent ? t.consentYes : t.consentNo }}</span>

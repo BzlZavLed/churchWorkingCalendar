@@ -57,7 +57,7 @@ class MeetingController extends Controller
         $data = $request->validate([
             'meeting_date' => ['sometimes', 'date'], 'planned_start_at' => ['sometimes', 'date'],
             'location' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'summary_text' => ['sometimes', 'nullable', 'string'], 'summary_public' => ['sometimes', 'boolean'],
+            'summary_text' => ['prohibited'], 'summary_public' => ['sometimes', 'boolean'],
             'opening_prayer' => ['sometimes', 'nullable', 'string'], 'opening_remarks' => ['sometimes', 'nullable', 'string'],
             'attendance' => ['sometimes', 'array', 'max:500'],
             'attendance.*.name' => ['required', 'string', 'max:255'],
@@ -129,8 +129,9 @@ class MeetingController extends Controller
                 $labels = $request->input('locale') === 'en'
                     ? ['approved' => 'Accepted', 'denied' => 'Rejected', 'needs_update' => 'Updates requested', 'postponed' => 'Next meeting', 'informative' => 'Informative']
                     : ['approved' => 'Aceptado', 'denied' => 'Rechazado', 'needs_update' => 'Actualización solicitada', 'postponed' => 'Próxima junta', 'informative' => 'Informativo'];
-                $summary = $meeting->points()->where('status', 'accepted')->orderBy('agenda_order')->get()->map(fn ($p) => $p->title.' ('.($labels[$p->final_status] ?? $p->final_status).')'.($p->final_note ? ': '.$p->final_note : ''))->implode("\n");
-                $meeting->update(['end_at' => now(), 'active_meeting_point_id' => null, 'summary_generated' => $summary, 'closing_notes' => $request->input('closing_notes'), 'summary_public' => false, 'updated_by' => $request->user()->id]);
+                $summary = $meeting->points()->where('status', 'accepted')->orderBy('agenda_order')->get()->map(fn ($p) => $p->title.' ('.($labels[$p->final_status] ?? $p->final_status).')')->implode("\n");
+                $number = (int) Meeting::where('church_id', $meeting->church_id)->max('minutes_number') + 1;
+                $meeting->update(['minutes_number' => $number, 'end_at' => now(), 'active_meeting_point_id' => null, 'summary_generated' => $summary, 'closing_notes' => $request->input('closing_notes'), 'summary_public' => false, 'updated_by' => $request->user()->id]);
                 $next = Meeting::where('church_id', $meeting->church_id)->where('planned_start_at', '>', $meeting->planned_start_at)->whereNull('agenda_closed_at')->whereNull('start_at')->whereNull('end_at')->orderBy('planned_start_at')->first();
                 if ($next) $this->workflow->carryover($next, $request->user());
             }
