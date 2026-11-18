@@ -7,6 +7,7 @@ use Illuminate\Console\Command;
 class WhatsAppStatus extends Command
 {
     protected $signature = 'whatsapp:status';
+
     protected $description = 'Check WhatsApp pilot configuration without revealing credentials or making API calls';
 
     public function handle(): int
@@ -30,8 +31,10 @@ class WhatsAppStatus extends Command
             $rows[] = [$name, $present ? 'Configured' : 'Missing'];
         }
         $this->table(['Setting', 'Status'], $rows);
+        $this->line('Monthly AI / reply limits: '.config('whatsapp.monthly_ai_limit').' / '.config('whatsapp.monthly_replies_limit'));
+        $this->line('Daily per-user limit (each operation type): '.config('whatsapp.daily_user_limit'));
         $this->line('Enable flag: '.(config('whatsapp.enabled') ? 'ON' : 'OFF'));
-        $this->warn('Configuration check only: credentials are not validated. Chat workflows and phone enrollment are not yet connected.');
+        $this->warn('Configuration check only: credentials are not validated. No provider requests were made. Verify the database queue worker and perform a test-number smoke test before live use.');
 
         return $missing ? self::FAILURE : self::SUCCESS;
     }

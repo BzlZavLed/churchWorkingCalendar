@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'monthly_inbox_limit' => (int) env('WHATSAPP_MONTHLY_INBOX_LIMIT', 2000),
+    'monthly_ai_limit' => (int) env('WHATSAPP_MONTHLY_AI_LIMIT', 500),
+    'monthly_replies_limit' => (int) env('WHATSAPP_MONTHLY_REPLIES_LIMIT', 1000),
+    'daily_user_limit' => (int) env('WHATSAPP_DAILY_USER_LIMIT', 30),
     'enabled' => env('WHATSAPP_ENABLED', false),
     'church_id' => env('WHATSAPP_CHURCH_ID'),
     'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),

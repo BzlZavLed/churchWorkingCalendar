@@ -33,10 +33,12 @@
       <label><span class="visually-hidden">{{ locale === 'es' ? 'Buscar visitas' : 'Search visitors' }}</span><input v-model="search" type="search" class="form-control" :placeholder="locale === 'es' ? 'Nombre, teléfono o correo' : 'Name, phone or email'" /></label>
       <label>{{ locale === 'es' ? 'Tipo de visita' : 'Visitor type' }}<select v-model="visitorFilter" class="form-select"><option value="all">{{ locale === 'es' ? 'Todos' : 'All' }}</option><option value="visitor">{{ t.memberNo }}</option><option value="sda">{{ t.memberYes }}</option></select></label>
       <label>{{ locale === 'es' ? 'Permiso de contacto' : 'Contact permission' }}<select v-model="consentFilter" class="form-select"><option value="all">{{ locale === 'es' ? 'Todos' : 'All' }}</option><option value="sms">SMS</option><option value="email">{{ t.columns.email }}</option><option value="none">{{ locale === 'es' ? 'Sin autorización' : 'No permission' }}</option></select></label>
+      <label>{{ locale === 'es' ? 'Desde (UTC)' : 'From (UTC)' }}<input v-model="dateFrom" type="date" class="form-control" /></label>
+      <label>{{ locale === 'es' ? 'Hasta (UTC)' : 'To (UTC)' }}<input v-model="dateTo" type="date" class="form-control" /></label>
     </div>
     <div class="visits-results-bar">
       <span role="status">{{ filteredContacts.length }} / {{ contacts.length }} {{ locale === 'es' ? 'registros' : 'records' }}</span>
-      <button v-if="search || visitorFilter !== 'all' || consentFilter !== 'all'" class="btn btn-sm btn-outline-secondary" @click="search = ''; visitorFilter = 'all'; consentFilter = 'all'">{{ locale === 'es' ? 'Limpiar filtros' : 'Clear filters' }}</button>
+      <button v-if="search || dateFrom || dateTo || visitorFilter !== 'all' || consentFilter !== 'all'" class="btn btn-sm btn-outline-secondary" @click="dateFrom = ''; dateTo = ''; search = ''; visitorFilter = 'all'; consentFilter = 'all'">{{ locale === 'es' ? 'Limpiar filtros' : 'Clear filters' }}</button>
     </div>
     <div v-if="loading" class="management-state" role="status">{{ t.loading }}</div>
     <p v-else-if="error" class="management-error" role="alert">{{ error }}</p>
@@ -113,6 +115,7 @@ import '../styles/clerk-management.css'
 import '../styles/visits.css'
 import VisitorCustomFields from './VisitorCustomFields.vue'
 import QRCode from 'qrcode'
+import { useRoute } from 'vue-router'
 import jsPDF from 'jspdf'
 import { useAuthStore } from '../stores/authStore'
 import { computed, onMounted, onUnmounted, watch, ref, nextTick } from 'vue'
@@ -193,6 +196,9 @@ const restoreConsent = async () => {
     savingConsent.value = false
   }
 }
+const route = useRoute()
+const validDate = value => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : ''
+const dateFrom = ref(validDate(route.query.from)), dateTo = ref(validDate(route.query.to))
 const search = ref('')
 const contacts = ref([])
 const visitorForm = ref({fields:[]})
@@ -226,7 +232,8 @@ const filteredContacts = computed(() => contacts.value.filter(c => {
   const sms = !!(c.phone && c.sms_consent)
   const email = !!(c.email && c.email_consent)
   const matchesConsent = consentFilter.value === 'all' || (consentFilter.value === 'sms' ? sms : consentFilter.value === 'email' ? email : !sms && !email)
-  return matchesSearch && matchesType && matchesConsent
+  const date = new Date(c.created_at).toISOString().slice(0,10)
+  return matchesSearch && matchesType && matchesConsent && (!dateFrom.value || date >= dateFrom.value) && (!dateTo.value || date <= dateTo.value)
 }))
 const loading = ref(false)
 const error = ref('')

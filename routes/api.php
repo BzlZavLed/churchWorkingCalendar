@@ -22,6 +22,7 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\Integrations\ClubCalendarController;
 use Illuminate\Support\Facades\Route;
 
+Route::post('integrations/whatsapp/webhook', [\App\Http\Controllers\Integrations\WhatsAppWebhookController::class, 'receive']);
 Route::get('integrations/whatsapp/webhook', [\App\Http\Controllers\Integrations\WhatsAppWebhookController::class, 'verify'])->middleware('throttle:30,1');
 
 Route::get('public/churches/{church}/visitor-logo', [\App\Http\Controllers\VisitorFormController::class, 'logo']);
@@ -38,6 +39,8 @@ Route::prefix('auth')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
         Route::get('me', [AuthController::class, 'me']);
+        Route::post('whatsapp-link', [\App\Http\Controllers\WhatsAppPreferencesController::class, 'link'])->middleware('throttle:5,1');
+        Route::delete('whatsapp-link', [\App\Http\Controllers\WhatsAppPreferencesController::class, 'unlink']);
         Route::get('whatsapp-preferences', [\App\Http\Controllers\WhatsAppPreferencesController::class, 'show']);
         Route::patch('whatsapp-preferences', [\App\Http\Controllers\WhatsAppPreferencesController::class, 'update'])->middleware('throttle:10,1');
     });

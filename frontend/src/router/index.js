@@ -80,7 +80,7 @@ router.beforeEach(async (to) => {
   const isContactsAllowed = ['admin', 'secretary', 'superadmin', 'pastor'].includes(authStore.user?.role || '') || isGreetingUser
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    return '/login'
+    return { path: '/login', query: to.path === '/greeting/contacts' ? { redirect: to.fullPath } : {} }
   }
 
   if (to.meta.guestOnly && authStore.isAuthenticated) {

@@ -17,7 +17,9 @@ class AuditLogger
 
     public function log(Request $request, string $action, ?string $entityType = null, ?string $entityId = null, array $metadata = []): void
     {
-        $payload = $this->sanitizePayload($request->input());
+        $payload = $request->is('api/integrations/whatsapp/webhook')
+            ? ['redacted' => 'WhatsApp webhook: content stored only in encrypted inbox']
+            : $this->sanitizePayload($request->input());
         $metadata = array_merge([
             'payload' => $payload,
             'viewing_context' => $request->attributes->get('viewing_context'),

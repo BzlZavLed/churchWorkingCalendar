@@ -196,7 +196,7 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { getDefaultRouteForUser, useAuthStore } from '../stores/authStore'
 import { authApi } from '../services/authApi'
 import { webauthnApi } from '../services/webauthnApi'
@@ -213,6 +213,12 @@ const authStore = useAuthStore()
 const uiStore = useUiStore()
 const { locale } = storeToRefs(uiStore)
 const router = useRouter()
+const route = useRoute()
+const postLoginRoute = () => {
+  const target = route.query.redirect
+  return typeof target === 'string' && /^\/greeting\/contacts(?:\?|$)/.test(target)
+    ? target : getDefaultRouteForUser(authStore.user)
+}
 const error = ref('')
 const notice = ref('')
 const showRecovery = ref(false)
@@ -247,7 +253,7 @@ const submit = async () => {
   faceIdNotice.value = ''
   try {
     await authStore.login(form, rememberMe.value)
-    await router.push(getDefaultRouteForUser(authStore.user))
+    await router.push(postLoginRoute())
   } catch (err) {
     error.value = t.value.errorLogin
   }
@@ -292,7 +298,7 @@ const startFaceIdLogin = async () => {
     }
     const session = await webauthnApi.authenticateVerify(verifyPayload)
     authStore.setSession(session, rememberMe.value)
-    await router.push(getDefaultRouteForUser(authStore.user))
+    await router.push(postLoginRoute())
   } catch (err) {
     if (err?.response?.data?.status === 'no_credentials') {
       faceIdNotice.value = t.value.faceIdRegisterPrompt
@@ -348,7 +354,7 @@ const registerFaceId = async () => {
     const session = await webauthnApi.registerVerify(payload)
     authStore.setSession(session, rememberMe.value)
     closeFaceIdSetup()
-    await router.push(getDefaultRouteForUser(authStore.user))
+    await router.push(postLoginRoute())
   } catch (err) {
     faceIdError.value = t.value.faceIdError
   } finally {
