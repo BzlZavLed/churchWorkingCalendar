@@ -54,6 +54,7 @@ export const translations = {
       register: 'Registrarse',
       success: 'Contrasena actualizada. Por favor ingresa.',
       errorLogin: 'No se pudo iniciar sesion.',
+      errorCredentials: 'Revisa tu correo y contraseña. No coinciden con una cuenta de este sistema.',
       errorReset: 'No se pudo restablecer la contrasena.',
     },
     register: {
@@ -993,6 +994,7 @@ export const translations = {
       register: 'Register',
       success: 'Password updated. Please log in.',
       errorLogin: 'Login failed.',
+      errorCredentials: 'Check your email and password. They do not match an account in this system.',
       errorReset: 'Password reset failed.',
     },
     register: {

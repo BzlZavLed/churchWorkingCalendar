@@ -136,3 +136,9 @@ Superadmin → Configuración → Ver acciones del asistente WhatsApp opens the 
 The personal WhatsApp settings page includes a date-filtered history in the browser's time zone, with 30 messages per page. Access is restricted to the authenticated user and their current church; work-context selection does not grant another user's conversation access. New admitted incoming messages and attempted provider replies are stored encrypted for 30 days; linking codes are redacted. The daily `whatsapp:prune` schedule removes expired history. Old message text was deleted and is not backfilled. Meta acceptance is labeled as sent, not delivered or read. Messages rejected before inbox admission and replies suppressed before sending are not archived.
 
 Deploy the new migration before restarting the WhatsApp queue worker.
+
+### Clerk settings
+
+Clerks can open Configuración (`/secretary/settings`) to view their church's assigned limits and usage, and enable/disable WhatsApp or AI for their church. Assigned limits remain read-only. These church switches are additional gates: they cannot override superadmin or server shutdowns. Disabling WhatsApp invalidates queued work and clears pending drafts/link codes while preserving linked numbers. The superadmin settings page indicates when clerk switches are off. Shared-provider billing remains superadmin-only.
+
+The assistant action reference is also available to clerks through Settings and the personal WhatsApp page. It is documentation, not a tool-creation form. Deploy the clerk-switch migration before restarting the queue.

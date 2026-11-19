@@ -5,6 +5,40 @@ use App\Services\ChurchIntegrations;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 class ChurchIntegrationController extends Controller {
+ private function clerkChurch(Request $request): Church {
+  abort_unless($request->user()?->isSecretary() && $request->user()->church_id,403);
+  return Church::findOrFail($request->user()->church_id);
+ }
+ public function clerkShow(Request $request) {
+  $church=$this->clerkChurch($request);
+  $data=$this->show($request,$church);
+  foreach($data['usage'] as &$entry) { unset($entry['global_used'],$entry['global_limit']); }
+  unset($entry);
+  $data['church_name']=$church->name;
+  $data['admin_whatsapp_enabled']=$data['whatsapp_enabled'];
+  $data['admin_ai_enabled']=$data['ai_enabled'];
+  $data['whatsapp_enabled']=(bool)$church->clerk_whatsapp_enabled;
+  $data['ai_enabled']=(bool)$church->clerk_ai_enabled;
+  return $data;
+ }
+ public function clerkUpdate(Request $request) {
+  $church=$this->clerkChurch($request);
+  $data=$request->validate(['whatsapp_enabled'=>'required|boolean','ai_enabled'=>'required|boolean',
+   'limits'=>'prohibited','whatsapp_ai_limit'=>'prohibited','whatsapp_replies_limit'=>'prohibited',
+   'whatsapp_inbox_limit'=>'prohibited','whatsapp_daily_limit'=>'prohibited','birthday_ai_limit'=>'prohibited',
+   'church_id'=>'prohibited','admin_whatsapp_enabled'=>'prohibited','admin_ai_enabled'=>'prohibited']);
+  DB::transaction(function()use($church,$data){
+   $church=Church::whereKey($church->id)->lockForUpdate()->firstOrFail();
+   if($church->clerk_whatsapp_enabled && !$data['whatsapp_enabled']) {
+    $ids=WhatsAppAccount::whereHas('user',fn($q)=>$q->where('church_id',$church->id))->pluck('id');
+    WhatsAppAccount::whereIn('id',$ids)->increment('generation');
+    WhatsAppAccount::whereIn('id',$ids)->update(['state'=>null,'link_hash'=>null,'link_expires_at'=>null]);
+    WhatsAppMessage::whereIn('account_id',$ids)->where('status','pending')->update(['status'=>'ignored','body'=>null]);
+   }
+   $church->forceFill(['clerk_whatsapp_enabled'=>$data['whatsapp_enabled'],'clerk_ai_enabled'=>$data['ai_enabled']])->save();
+  });
+  return $this->clerkShow($request);
+ }
  public function show(Request $request,Church $church) {
   $input=$request->validate(['month'=>['sometimes','date_format:Y-m']]);$month=$input['month']??now()->format('Y-m');
   $service=app(ChurchIntegrations::class);$limits=[];$usage=[];
@@ -16,6 +50,7 @@ class ChurchIntegrationController extends Controller {
   $limits['birthday_ai_limit']=$service->limit($church->id,'birthday_ai_limit',(int)config('assistant.birthday_monthly_limit'));
   $usage['birthdays']=['used'=>(int)DB::table('whatsapp_usage')->where('bucket',"birthdays:month:{$church->id}:$month")->value('used')];
   return ['church_id'=>$church->id,'whatsapp_enabled'=>(bool)$church->whatsapp_enabled,'ai_enabled'=>(bool)$church->ai_enabled,'limits'=>$limits,'usage'=>$usage,'month'=>$month,
+   'clerk_whatsapp_enabled'=>(bool)$church->clerk_whatsapp_enabled,'clerk_ai_enabled'=>(bool)$church->clerk_ai_enabled,
    'global_enabled'=>(bool)config('whatsapp.enabled'),'pilot'=>(string)$church->id===(string)config('whatsapp.church_id'),
    'openai_configured'=>(bool)(config('assistant.openai_api_key')&&config('assistant.openai_model')),'model'=>config('assistant.openai_model'),
    'tokens'=>DB::table('integration_usage')->where('church_id',$church->id)->where('month',$month)->get(['feature','input_tokens','output_tokens','responses']),

@@ -185,6 +185,11 @@ Route::middleware(['auth:sanctum', 'superadmin.context', 'module.access', 'secre
     Route::put('secretary/users/{user}', [AdminUserController::class, 'updateUser']);
 });
 
+Route::middleware(['auth:sanctum', 'superadmin.context'])->group(function () {
+    Route::get('secretary/integrations', [\App\Http\Controllers\ChurchIntegrationController::class, 'clerkShow']);
+    Route::put('secretary/integrations', [\App\Http\Controllers\ChurchIntegrationController::class, 'clerkUpdate'])->middleware('throttle:20,1');
+});
+
 Route::middleware(['auth:sanctum', 'superadmin'])->group(function () {
     Route::get('superadmin/churches/{church}/integrations/providers', [\App\Http\Controllers\ChurchIntegrationController::class, 'providers'])->middleware('throttle:20,1');
     Route::get('superadmin/churches/{church}/integrations', [\App\Http\Controllers\ChurchIntegrationController::class, 'show']);

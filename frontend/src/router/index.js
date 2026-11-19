@@ -31,6 +31,8 @@ import { getDefaultRouteForUser } from '../stores/authStore'
 
 const routes = [
   { path: '/superadmin/whatsapp-tools', component: () => import('../components/superadmin/WhatsAppTools.vue'), meta: { requiresAuth: true, superadminOnly: true } },
+  { path: '/secretary/settings', component: () => import('../components/secretary/SecretaryIntegrationSettings.vue'), meta: { requiresAuth: true, integrationManager: true } },
+  { path: '/whatsapp-tools', component: () => import('../components/superadmin/WhatsAppTools.vue'), meta: { requiresAuth: true, integrationManager: true } },
   { path: '/whatsapp-settings', component: () => import('../components/WhatsAppSettings.vue'), meta: { requiresAuth: true } },
   { path: '/superadmin/module-context', component: SuperAdminModuleContext, meta: { requiresAuth: true, superadminOnly: true } },
   { path: '/committees', component: CommitteesView, meta: { requiresAuth: true } },
@@ -92,6 +94,7 @@ router.beforeEach(async (to) => {
 
   if (authStore.isAuthenticated && to.meta.requiresAuth) {
     try { await authStore.refreshAccess() } catch { return to.path === '/no-access' ? true : '/no-access' }
+    if (to.meta.integrationManager && !authStore.isSecretary && !authStore.isPlatformAdmin) return authStore.firstAccessibleRoute()
     if (to.meta.superadminOnly && !authStore.isPlatformAdmin) return authStore.firstAccessibleRoute()
     const module = moduleForPath(to.path)
     if (module && authStore.isPlatformAdmin && (!authStore.adminContext || !authStore.canAccess(module))) return {path:'/superadmin/module-context',query:{module}}

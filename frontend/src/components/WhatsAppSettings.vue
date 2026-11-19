@@ -26,20 +26,23 @@
    <details class="mt-3"><summary>{{ tr('Qué puedes hacer por WhatsApp','What you can do via WhatsApp') }}</summary><p class="small mt-2">{{ tr('Prepara eventos o consulta visitas según tus permisos. CONFIRMAR envía un evento a revisión; EXTENDER renueva la reserva; BAJA desactiva el asistente. El uso está sujeto a los límites de la iglesia.','Prepare events or query visitors according to your permissions. CONFIRMAR submits an event for review; EXTENDER renews its reservation; BAJA disables the assistant. Church usage limits apply.') }}</p></details>
    <p v-if="notice" class="text-success" role="status">{{ notice }}</p>
   </section>
+  <router-link v-if="auth.isSecretary || auth.isPlatformAdmin" to="/whatsapp-tools" class="btn btn-outline-secondary mt-3">{{ tr('Guía y ejemplos de WhatsApp','WhatsApp guide and examples') }}</router-link>
   <WhatsAppHistory />
 </section>
 </template>
 <script setup>
+import {useAuthStore} from '../stores/authStore'
 import WhatsAppHistory from './WhatsAppHistory.vue'
 import {ref,onMounted} from 'vue'
 import {apiClient} from '../services/authApi'
 import {useUiStore} from '../stores/uiStore'
 import '../styles/clerk-management.css'
+const auth=useAuthStore()
 const ui=useUiStore(),tr=(es,en)=>ui.locale==='es'?es:en
 const blockReason=ref(null)
 const reasonText = reason => {
  const messages = {
-  church_disabled: ['WhatsApp está desactivado para tu iglesia por el superadministrador.', 'WhatsApp is disabled for your church by the superadmin.'],
+  church_disabled: ['WhatsApp está desactivado para tu iglesia por la administración.', 'WhatsApp is disabled for your church by church administration.'],
   account_without_church: ['Esta es tu cuenta personal de superadministrador, sin iglesia asignada. La vista de trabajo no cambia la cuenta vinculada a WhatsApp. Inicia sesión con la cuenta del pastor o del departamento de la iglesia piloto.', 'This is your personal superadmin account, with no assigned church. Working context does not change the account linked to WhatsApp. Sign in with the pilot church’s pastor or department account.'],
   pilot_not_configured: ['Falta configurar la iglesia piloto en el servidor (WHATSAPP_CHURCH_ID).', 'The pilot church is not configured on this server (WHATSAPP_CHURCH_ID).'],
   church_not_in_pilot: ['Tu cuenta pertenece a una iglesia que no participa en este piloto.', 'Your account belongs to a church outside this pilot.'],

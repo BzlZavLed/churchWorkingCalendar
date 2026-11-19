@@ -255,7 +255,7 @@ const submit = async () => {
     await authStore.login(form, rememberMe.value)
     await router.push(postLoginRoute())
   } catch (err) {
-    error.value = t.value.errorLogin
+    error.value = err?.response?.status === 422 ? t.value.errorCredentials : t.value.errorLogin
   }
 }
 

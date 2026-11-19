@@ -231,6 +231,7 @@ const navItems = computed(() => {
     {to:'/superadmin/settings',label:locale.value==='es'?'Configuración':'Settings',icon:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1 1-3Z'},
     {to:'/superadmin/roles',label:locale.value==='es'?'Roles y permisos':'Roles and permissions',icon:iconPaths.roles},
   )
+  if (authStore.isSecretary) items.unshift({to:'/secretary/settings',label:locale.value==='es'?'Configuración':'Settings',icon:iconPaths.roles})
   items.push({to:'/whatsapp-settings',label:locale.value==='es'?'Asistente WhatsApp':'WhatsApp assistant',icon:iconPaths.meetingPoints})
   return items
 })
