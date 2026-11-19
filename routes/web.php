@@ -35,4 +35,4 @@ HTML;
     }
 
     return File::get($path);
-})->where('any', '.*');
+})->where('any', '(?!api(?:/|$)).*');

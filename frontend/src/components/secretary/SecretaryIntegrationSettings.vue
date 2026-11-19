@@ -27,8 +27,8 @@
     <p>{{ tr('Los límites mostrados son los actuales. Los totales de facturación de las cuentas compartidas solo están disponibles para superadmin.','Shown limits are current. Shared-account billing totals are available only to superadmin.') }}</p>
    </section>
   </template>
-  <WhatsAppDiagnostics v-if="settings && !loading" />
-  <WhatsAppHistory v-if="settings && !loading" church-wide />
+  <WhatsAppDiagnostics />
+  <WhatsAppHistory church-wide />
  </section>
 </template>
 <script setup>
@@ -42,8 +42,13 @@ const ui=useUiStore(),tr=(es,en)=>ui.locale==='es'?es:en
 const settings=ref(null),draft=reactive({whatsapp_enabled:false,ai_enabled:false}),loading=ref(false),saving=ref(false),error=ref(''),saved=ref(false),month=ref(new Date().toISOString().slice(0,7))
 let version=0
 const labels=computed(()=>({whatsapp_ai_limit:tr('IA WhatsApp / mes','WhatsApp AI / month'),whatsapp_replies_limit:tr('Respuestas / mes','Replies / month'),whatsapp_inbox_limit:tr('Mensajes recibidos / mes','Incoming messages / month'),whatsapp_daily_limit:tr('Por usuario / día / operación','Per user / day / operation'),birthday_ai_limit:tr('IA cumpleaños / mes','Birthday AI / month')}))
-function apply(data){settings.value=data;Object.assign(draft,{whatsapp_enabled:data.whatsapp_enabled,ai_enabled:data.ai_enabled})}
-async function load(){if(!month.value)return;const current=++version;loading.value=true;error.value='';try{const {data}=await apiClient.get('/secretary/integrations',{params:{month:month.value}});if(current===version)apply(data)}catch{if(current===version)error.value=tr('No se pudo cargar la configuración.','Unable to load settings.')}finally{if(current===version)loading.value=false}}
+function apply(data){
+ const limitKeys=Object.keys(labels.value)
+ const valid=data && typeof data==='object' && limitKeys.every(key=>Number.isFinite(data.limits?.[key])) && ['ai','replies','inbox','birthdays'].every(key=>Number.isFinite(data.usage?.[key]?.used)) && typeof data.whatsapp_enabled==='boolean' && typeof data.ai_enabled==='boolean'
+ if(!valid){settings.value=null;throw new Error('Invalid integration settings response')}
+ settings.value=data;Object.assign(draft,{whatsapp_enabled:data.whatsapp_enabled,ai_enabled:data.ai_enabled})
+}
+async function load(){if(!month.value)return;const current=++version;loading.value=true;error.value='';try{const {data}=await apiClient.get('/secretary/integrations',{params:{month:month.value}});if(current===version)apply(data)}catch{if(current===version)error.value=tr('No se pudo cargar la configuración. Verifica que el servidor esté actualizado y que se haya limpiado la caché de rutas.','Unable to load settings. Verify that the server is updated and its route cache has been cleared.')}finally{if(current===version)loading.value=false}}
 async function save(){saving.value=true;error.value='';saved.value=false;try{const {data}=await apiClient.put('/secretary/integrations',draft,{params:{month:month.value}});apply(data);saved.value=true}catch{error.value=tr('No se pudo guardar la configuración.','Unable to save settings.')}finally{saving.value=false}}
 onMounted(load);onUnmounted(()=>version++)
 </script>

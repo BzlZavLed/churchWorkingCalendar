@@ -9,6 +9,10 @@ use Tests\TestCase;
 class ClerkIntegrationSettingsTest extends TestCase
 {
  use RefreshDatabase;
+ public function test_unknown_api_route_does_not_return_spa_html(): void {
+  $this->get('/api/nonexistent-integration-route', ['Accept'=>'application/json'])->assertNotFound();
+ }
+
  public function test_clerk_reads_assigned_limits_and_controls_only_own_switches(): void {
   $church=Church::create(['name'=>'Own']);$other=Church::create(['name'=>'Other']);
   $church->forceFill(['whatsapp_ai_limit'=>12])->save();
