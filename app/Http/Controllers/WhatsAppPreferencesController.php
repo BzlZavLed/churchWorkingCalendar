@@ -25,18 +25,40 @@ class WhatsAppPreferencesController extends Controller
 
     public function history(Request $request)
     {
-        $data = $request->validate(['date' => ['required', 'date_format:Y-m-d'], 'timezone' => ['required', 'timezone'], 'page' => ['sometimes', 'integer', 'min:1']]);
+        return $this->interactionHistory($request, false);
+    }
+
+    public function churchHistory(Request $request)
+    {
+        abort_unless($request->user()?->isSecretary() && $request->user()->church_id, 403);
+        return $this->interactionHistory($request, true);
+    }
+
+    private function interactionHistory(Request $request, bool $churchWide)
+    {
+        $data = $request->validate(['date' => ['required', 'date_format:Y-m-d'], 'timezone' => ['required', 'timezone'], 'page' => ['sometimes', 'integer', 'min:1'], 'department_id' => ['nullable', 'integer', 'min:1']]);
         $start = \Carbon\CarbonImmutable::parse($data['date'], $data['timezone'])->startOfDay();
-        $rows = \App\Models\WhatsAppInteraction::where('user_id', $request->user()->id)
+        $rows = \App\Models\WhatsAppInteraction::with(['message:id,status', 'user:id,name,department_id,church_id', 'user.department:id,name'])
+            ->when(!$churchWide, fn($q) => $q->where('user_id', $request->user()->id))
             ->where('church_id', $request->user()->church_id)
+            ->when($churchWide && !empty($data['department_id']), fn($q) => $q->whereHas('user', fn($u) => $u->where('church_id', $request->user()->church_id)->where('department_id', $data['department_id'])))
             ->where('created_at', '>=', now()->subDays(30))
             ->where('created_at', '>=', $start->utc())->where('created_at', '<', $start->addDay()->utc())
             ->orderByDesc('id')->paginate(30);
-        $rows->getCollection()->transform(function ($row) {
-            $status = $row->message_id ? \App\Models\WhatsAppMessage::whereKey($row->message_id)->value('status') : null;
-            return ['id' => $row->id, 'direction' => $row->direction, 'content' => $row->content, 'status' => $status ?? $row->status, 'created_at' => $row->created_at];
+        $rows->getCollection()->transform(function ($row) use ($request) {
+            $sameChurch = $row->user?->church_id === $request->user()->church_id;
+            return ['id' => $row->id, 'direction' => $row->direction, 'content' => $row->content,
+                'status' => $row->message?->status ?? $row->status, 'created_at' => $row->created_at,
+                'user_name' => $sameChurch ? $row->user?->name : null,
+                'department_name' => $sameChurch ? $row->user?->department?->name : null];
         });
-        return $rows;
+        $result = $rows->toArray();
+        if ($churchWide) {
+            $result['departments'] = \App\Models\Department::where('church_id', $request->user()->church_id)->orderBy('name')->get(['id', 'name']);
+            $result['whatsapp_active'] = (bool)config('whatsapp.enabled') && (string)config('whatsapp.church_id') === (string)$request->user()->church_id
+                && app(\App\Services\ChurchIntegrations::class)->whatsapp($request->user()->church_id);
+        }
+        return response()->json($result)->header('Cache-Control', 'no-store');
     }
 
     public function update(Request $request)

@@ -27,7 +27,7 @@
    <p v-if="notice" class="text-success" role="status">{{ notice }}</p>
   </section>
   <router-link v-if="auth.isSecretary || auth.isPlatformAdmin" to="/whatsapp-tools" class="btn btn-outline-secondary mt-3">{{ tr('Guía y ejemplos de WhatsApp','WhatsApp guide and examples') }}</router-link>
-  <WhatsAppHistory />
+  <WhatsAppHistory :church-wide="auth.isSecretary" />
 </section>
 </template>
 <script setup>

@@ -27,9 +27,13 @@
     <p>{{ tr('Los límites mostrados son los actuales. Los totales de facturación de las cuentas compartidas solo están disponibles para superadmin.','Shown limits are current. Shared-account billing totals are available only to superadmin.') }}</p>
    </section>
   </template>
+  <WhatsAppDiagnostics v-if="settings && !loading" />
+  <WhatsAppHistory v-if="settings && !loading" church-wide />
  </section>
 </template>
 <script setup>
+import WhatsAppDiagnostics from '../WhatsAppDiagnostics.vue'
+import WhatsAppHistory from '../WhatsAppHistory.vue'
 import {ref,reactive,computed,onMounted,onUnmounted} from 'vue'
 import {apiClient} from '../../services/authApi'
 import {useUiStore} from '../../stores/uiStore'

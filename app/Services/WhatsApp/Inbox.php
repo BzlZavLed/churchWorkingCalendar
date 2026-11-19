@@ -52,6 +52,8 @@ class Inbox
                 return;
             }
             if (! app(Access::class)->consume($account, 'inbox')) {
+                $message = WhatsAppMessage::firstOrCreate(['provider_id' => $id], ['account_id' => $account->id, 'generation' => $account->generation, 'status' => 'inbox_limit', 'body' => null]);
+                if ($message->wasRecentlyCreated) app(InteractionHistory::class)->record($account, 'incoming', '[Límite de mensajes recibidos alcanzado]', 'inbox_limit', $message->id);
                 return;
             }
             $message = WhatsAppMessage::firstOrCreate(['provider_id' => $id], ['account_id' => $account->id, 'generation' => $account->generation, 'body' => $text]);

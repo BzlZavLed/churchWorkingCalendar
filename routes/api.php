@@ -186,6 +186,9 @@ Route::middleware(['auth:sanctum', 'superadmin.context', 'module.access', 'secre
 });
 
 Route::middleware(['auth:sanctum', 'superadmin.context'])->group(function () {
+    Route::get('secretary/whatsapp-diagnostics', [\App\Http\Controllers\ChurchIntegrationController::class, 'diagnostics'])->middleware('throttle:30,1');
+    Route::post('secretary/whatsapp-diagnostics/check', [\App\Http\Controllers\ChurchIntegrationController::class, 'checkProviders'])->middleware('throttle:3,1');
+    Route::get('secretary/whatsapp-history', [\App\Http\Controllers\WhatsAppPreferencesController::class, 'churchHistory'])->middleware('throttle:60,1');
     Route::get('secretary/integrations', [\App\Http\Controllers\ChurchIntegrationController::class, 'clerkShow']);
     Route::put('secretary/integrations', [\App\Http\Controllers\ChurchIntegrationController::class, 'clerkUpdate'])->middleware('throttle:20,1');
 });

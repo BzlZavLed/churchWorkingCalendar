@@ -142,3 +142,17 @@ Deploy the new migration before restarting the WhatsApp queue worker.
 Clerks can open Configuración (`/secretary/settings`) to view their church's assigned limits and usage, and enable/disable WhatsApp or AI for their church. Assigned limits remain read-only. These church switches are additional gates: they cannot override superadmin or server shutdowns. Disabling WhatsApp invalidates queued work and clears pending drafts/link codes while preserving linked numbers. The superadmin settings page indicates when clerk switches are off. Shared-provider billing remains superadmin-only.
 
 The assistant action reference is also available to clerks through Settings and the personal WhatsApp page. It is documentation, not a tool-creation form. Deploy the clerk-switch migration before restarting the queue.
+
+### Clerk church-wide interaction history
+
+Clerk Settings and the clerk WhatsApp page now show the entire church's interaction history, with local-day and current-department filters. Department accounts retain access to their own interactions only. Superadmin can use clerk work context to view the selected church. Historical rows stay scoped to the church where they were recorded.
+
+New reply attempts record configuration failures, expired service windows, exhausted reply limits, and sanitized numeric Meta errors (no raw provider errors). Inbound messages exceeding the inbox quota record a content-free limit notice. Messages Meta never delivers, unknown/unlinked numbers, and messages rejected while the integration is disabled do not appear as accepted conversations. A persistent pending status means the WhatsApp queue worker needs investigation. An empty history alone does not establish a provider failure.
+
+### Clerk diagnostics
+
+Clerk Settings includes a church-scoped diagnostic panel with configuration presence (never values), activation gates, queue backlog warnings and the latest 20 received requests. Processing failures and reply failures are recorded separately using safe error codes. Historical requests retain their original status but cannot recover previously unsaved failure details. Last processing activity is evidence of past work, not a worker health check.
+
+The optional provider access check performs cached, rate-limited GET requests for the configured Meta phone number and OpenAI model. It neither sends messages nor generates AI responses. Successful access does not establish available credit, recipient eligibility or delivery. No raw provider errors or tokens are returned. Incoming messages never delivered by Meta cannot appear in the panel.
+
+Deploy migration `2026_11_19_200000_add_whatsapp_message_diagnostics.php` before restarting the queue worker. Deploy the updated frontend assets with the backend. New requests will then retain processing and reply diagnostic codes.

@@ -9,6 +9,13 @@ class ChurchIntegrationController extends Controller {
   abort_unless($request->user()?->isSecretary() && $request->user()->church_id,403);
   return Church::findOrFail($request->user()->church_id);
  }
+ public function diagnostics(Request $request) {
+  return response()->json(app(\App\Services\WhatsApp\Diagnostics::class)->snapshot($this->clerkChurch($request)))->header('Cache-Control','no-store');
+ }
+ public function checkProviders(Request $request) {
+  $this->clerkChurch($request);
+  return response()->json(app(\App\Services\WhatsApp\Diagnostics::class)->checkProviders())->header('Cache-Control','no-store');
+ }
  public function clerkShow(Request $request) {
   $church=$this->clerkChurch($request);
   $data=$this->show($request,$church);
