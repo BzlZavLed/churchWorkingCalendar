@@ -30,6 +30,7 @@ import PublicConsentView from '../components/PublicConsentView.vue'
 import { getDefaultRouteForUser } from '../stores/authStore'
 
 const routes = [
+  { path: '/superadmin/whatsapp-tools', component: () => import('../components/superadmin/WhatsAppTools.vue'), meta: { requiresAuth: true, superadminOnly: true } },
   { path: '/whatsapp-settings', component: () => import('../components/WhatsAppSettings.vue'), meta: { requiresAuth: true } },
   { path: '/superadmin/module-context', component: SuperAdminModuleContext, meta: { requiresAuth: true, superadminOnly: true } },
   { path: '/committees', component: CommitteesView, meta: { requiresAuth: true } },

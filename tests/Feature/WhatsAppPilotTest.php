@@ -36,6 +36,39 @@ class WhatsAppPilotTest extends TestCase
         return WhatsAppAccount::create(['user_id' => $user->id, 'sender' => '15555550101', 'sender_hash' => WhatsAppAccount::senderHash('15555550101'), 'last_received_at' => now()]);
     }
 
+    public function test_clerk_conference_draft_asks_for_missing_end_and_confirms_without_publishing(): void
+    {
+        $a = $this->setupPilot();
+        $a->user->update(['role' => 'secretary', 'department_id' => null]);
+        $partial = ['intent' => 'event', 'event_type' => 'conference', 'title' => 'Capacitación de aventureros', 'location' => '606 Martin Road', 'start_at' => '2026-11-25T15:00:00-05:00', 'end_at' => null, 'reply' => '¿A qué hora termina?'];
+        $this->mock(Interpreter::class, function ($mock) use ($partial) {
+            $mock->shouldReceive('parse')->once()->andReturn($partial);
+            $mock->shouldReceive('parse')->once()->andReturn(['intent' => 'event', 'event_type' => null, 'end_at' => '2026-11-25T17:00:00-05:00']);
+        });
+        $conversation = app(Conversation::class);
+        $this->assertStringContainsString('Falta:', $conversation->reply($a, 'crea evento de conferencia'));
+        $this->assertDatabaseCount('events', 0);
+        $this->assertStringContainsString('CONFIRMAR', $conversation->reply($a->fresh(), 'termina a las cinco'));
+        $this->assertDatabaseCount('events', 0);
+        $this->assertStringContainsString('No está publicado', $conversation->reply($a->fresh(), 'CONFIRMAR'));
+        $event = Event::firstOrFail();
+        $this->assertTrue($event->is_conference_event);
+        $this->assertFalse($event->publish_to_feed);
+        $this->assertNull($event->department_id);
+        $this->assertSame('locked', $event->status);
+        $this->assertStringContainsString('Capacitación', $conversation->reply($a->fresh(), 'ESTADO'));
+        $this->assertStringContainsString('No hay un borrador', $conversation->reply($a->fresh(), 'CONFIRMAR'));
+        $this->assertDatabaseCount('events', 1);
+    }
+
+    public function test_department_cannot_request_conference_creation(): void
+    {
+        $a = $this->setupPilot();
+        $this->mock(Interpreter::class, fn ($mock) => $mock->shouldReceive('parse')->once()->andReturn(['intent' => 'event', 'event_type' => 'conference']));
+        $this->assertStringContainsString('no tiene permiso', app(Conversation::class)->reply($a, 'crea evento de conferencia'));
+        $this->assertDatabaseCount('events', 0);
+    }
+
     private function incoming(string $body, string $id = 'msg1', string $sender = '15555550101', bool $valid = true)
     {
         $payload = json_encode(['object' => 'whatsapp_business_account', 'entry' => [['id' => '123', 'changes' => [['field' => 'messages', 'value' => ['metadata' => ['phone_number_id' => '456'], 'messages' => [['id' => $id, 'from' => $sender, 'type' => 'text', 'text' => ['body' => $body], 'timestamp' => (string) now()->timestamp]]]]]]]]);

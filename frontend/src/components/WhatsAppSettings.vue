@@ -26,9 +26,11 @@
    <details class="mt-3"><summary>{{ tr('Qué puedes hacer por WhatsApp','What you can do via WhatsApp') }}</summary><p class="small mt-2">{{ tr('Prepara eventos o consulta visitas según tus permisos. CONFIRMAR envía un evento a revisión; EXTENDER renueva la reserva; BAJA desactiva el asistente. El uso está sujeto a los límites de la iglesia.','Prepare events or query visitors according to your permissions. CONFIRMAR submits an event for review; EXTENDER renews its reservation; BAJA disables the assistant. Church usage limits apply.') }}</p></details>
    <p v-if="notice" class="text-success" role="status">{{ notice }}</p>
   </section>
- </section>
+  <WhatsAppHistory />
+</section>
 </template>
 <script setup>
+import WhatsAppHistory from './WhatsAppHistory.vue'
 import {ref,onMounted} from 'vue'
 import {apiClient} from '../services/authApi'
 import {useUiStore} from '../stores/uiStore'

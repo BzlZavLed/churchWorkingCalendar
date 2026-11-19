@@ -14,6 +14,7 @@ class PruneWhatsApp extends Command
 
     public function handle(): int
     {
+        \App\Models\WhatsAppInteraction::where('created_at', '<', now()->subDays(30))->delete();
         WhatsAppMessage::where('created_at', '<', now()->subDay())->update(['body' => null]);
         WhatsAppMessage::where('created_at', '<', now()->subDays(30))->delete();
         WhatsAppAccount::where('last_received_at', '<', now()->subDay())->update(['state' => null]);

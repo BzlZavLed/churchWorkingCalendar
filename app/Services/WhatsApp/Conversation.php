@@ -44,7 +44,11 @@ class Conversation
             return Objective::where('department_id', $user->department_id)->limit(30)->get()->map(fn ($o) => "{$o->id}: {$o->name}")->implode("\n") ?: 'Tu departamento aún no tiene objetivos. Registra uno en el sistema.';
         }
         if ($command === 'ESTADO') {
-            abort_unless(app(ModuleAccess::class)->read($user, 'calendar') && $user->department_id, 403);
+            abort_unless(app(ModuleAccess::class)->read($user, 'calendar'), 403);
+            if (!$user->department_id && $user->hasCapability('calendar.conference')) {
+                return Event::where('church_id', $user->church_id)->where('is_conference_event', true)->where('created_by', $user->id)->latest()->limit(10)->get()->map(fn ($e) => "#{$e->id} {$e->title}: {$e->status} · ".($e->publish_to_feed ? 'publicado' : 'sin publicar'))->implode("\n") ?: 'Sin eventos de conferencia registrados.';
+            }
+            abort_unless($user->department_id, 403);
 
             return Event::where('department_id', $user->department_id)->where('status', '!=', 'hold')->latest()->limit(10)->get()->map(fn ($e) => "#{$e->id} {$e->title}: {$e->review_status}")->implode("\n") ?: 'Sin eventos enviados.';
         }
@@ -73,6 +77,18 @@ class Conversation
                 if (! app(Access::class)->allowed($account)) {
                     abort(403);
                 }
+                if (($state['draft']['event_type'] ?? null) === 'conference') {
+                    $user = $account->user()->firstOrFail();
+                    abort_unless(app(ModuleAccess::class)->write($user, 'calendar') && $user->hasCapability('calendar.conference'), 403);
+                    $data = $this->validateDraft($state['draft'], true);
+                    $request = Request::create('/api/conference-events', 'POST', $data);
+                    $request->setUserResolver(fn () => $user);
+                    $response = app(\App\Http\Controllers\ConferenceEventController::class)->store($request);
+                    $id = $response->getData(true)['id'];
+                    $account->update(['state' => []]);
+                    return "Evento de conferencia #$id registrado. El horario queda bloqueado. No está publicado; puedes publicarlo desde el calendario después de consultar con el pastor.";
+                }
+                if (empty($state['draft'])) return 'No hay un borrador pendiente. Describe primero el evento.';
                 $data = $this->validateDraft($state['draft'] ?? []);
                 if ($id = $state['edit_id'] ?? null) {
                     $event = $this->ownEvent($account, $id);
@@ -108,12 +124,32 @@ class Conversation
         if (($parsed['intent'] ?? '') !== 'event') {
             return mb_substr($parsed['reply'] ?? 'Describe un evento o pide una lista de visitas por fecha.', 0, 1500);
         }
-        abort_unless($user->department_id && app(ModuleAccess::class)->write($user->fresh(), 'calendar'), 403);
+        $isConference = ($parsed['event_type'] ?? $state['draft']['event_type'] ?? 'department') === 'conference';
+        if (!$isConference && ($state['draft']['event_type'] ?? null) === 'conference') return 'Escribe CANCELAR antes de cambiar a un evento departamental.';
+        if ($isConference) {
+            if (!app(ModuleAccess::class)->write($user->fresh(), 'calendar') || !$user->fresh()->hasCapability('calendar.conference')) return 'Tu cuenta no tiene permiso para crear eventos de conferencia.';
+            if (isset($state['hold_id']) || isset($state['edit_id'])) return 'Escribe CANCELAR antes de preparar un evento de conferencia.';
+        } elseif (!$user->department_id || !app(ModuleAccess::class)->write($user->fresh(), 'calendar')) {
+            return 'Esta cuenta no puede crear eventos departamentales por WhatsApp. Si es un evento de conferencia, indícalo explícitamente.';
+        }
         $draft = $state['draft'] ?? [];
         foreach (['title', 'description', 'location', 'objective_id', 'start_at', 'end_at'] as $key) {
             if (isset($parsed[$key])) {
                 $draft[$key] = $parsed[$key];
             }
+        }
+        if ($isConference) {
+            $draft['event_type'] = 'conference';
+            unset($draft['objective_id']);
+            $account->update(['state' => ['draft' => $draft]]);
+            $missing = [];
+            foreach (['title' => 'título', 'start_at' => 'fecha y hora de inicio con zona horaria', 'end_at' => 'fecha y hora de fin con zona horaria'] as $key => $label) {
+                if (empty($draft[$key])) $missing[] = $label;
+            }
+            $summary = "Borrador de conferencia:\nTítulo: ".($draft['title'] ?? 'pendiente')."\nInicio: ".($draft['start_at'] ?? 'pendiente')."\nFin: ".($draft['end_at'] ?? 'pendiente')."\nLugar: ".($draft['location'] ?? 'pendiente');
+            if ($missing) return $summary."\nFalta: ".implode(', ', $missing).". ".($parsed['reply'] ?? '');
+            $this->validateDraft($draft, true);
+            return $summary."\nEscribe CONFIRMAR para guardar o CANCELAR. Al confirmar se bloqueará el horario y los eventos departamentales que coincidan recibirán una solicitud de cambios. No se publicará automáticamente.";
         }
         // Never change a submitted event until exact CONFIRMAR; holds are temporary.
         if (! isset($state['edit_id']) && ! empty($draft['start_at']) && ! empty($draft['end_at'])) {
@@ -150,9 +186,9 @@ class Conversation
         return Event::where('department_id', $user->department_id)->whereHas('department', fn ($q) => $q->where('church_id', $user->church_id))->findOrFail($id);
     }
 
-    private function validateDraft(array $draft): array
+    private function validateDraft(array $draft, bool $conference = false): array
     {
-        return Validator::make($draft, ['title' => 'required|string|max:255', 'objective_id' => 'required|integer', 'description' => 'nullable|string|max:4000', 'location' => 'nullable|string|max:255',
+        return Validator::make($draft, ['title' => 'required|string|max:255', 'objective_id' => $conference ? 'nullable|integer' : 'required|integer', 'description' => 'nullable|string|max:4000', 'location' => 'nullable|string|max:255',
             'start_at' => ['required', 'date', 'regex:/T.*(?:Z|[+-][0-9]{2}:[0-9]{2})$/'], 'end_at' => ['required', 'date', 'after:start_at', 'regex:/T.*(?:Z|[+-][0-9]{2}:[0-9]{2})$/']])->validate();
     }
 

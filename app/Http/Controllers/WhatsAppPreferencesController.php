@@ -23,6 +23,22 @@ class WhatsAppPreferencesController extends Controller
             'daily_limit' => (int) config('whatsapp.daily_user_limit')]);
     }
 
+    public function history(Request $request)
+    {
+        $data = $request->validate(['date' => ['required', 'date_format:Y-m-d'], 'timezone' => ['required', 'timezone'], 'page' => ['sometimes', 'integer', 'min:1']]);
+        $start = \Carbon\CarbonImmutable::parse($data['date'], $data['timezone'])->startOfDay();
+        $rows = \App\Models\WhatsAppInteraction::where('user_id', $request->user()->id)
+            ->where('church_id', $request->user()->church_id)
+            ->where('created_at', '>=', now()->subDays(30))
+            ->where('created_at', '>=', $start->utc())->where('created_at', '<', $start->addDay()->utc())
+            ->orderByDesc('id')->paginate(30);
+        $rows->getCollection()->transform(function ($row) {
+            $status = $row->message_id ? \App\Models\WhatsAppMessage::whereKey($row->message_id)->value('status') : null;
+            return ['id' => $row->id, 'direction' => $row->direction, 'content' => $row->content, 'status' => $status ?? $row->status, 'created_at' => $row->created_at];
+        });
+        return $rows;
+    }
+
     public function update(Request $request)
     {
         $data = $request->validate(['enabled' => ['required', 'boolean']]);

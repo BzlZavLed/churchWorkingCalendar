@@ -41,6 +41,7 @@ Route::prefix('auth')->group(function () {
         Route::get('me', [AuthController::class, 'me']);
         Route::post('whatsapp-link', [\App\Http\Controllers\WhatsAppPreferencesController::class, 'link'])->middleware('throttle:5,1');
         Route::delete('whatsapp-link', [\App\Http\Controllers\WhatsAppPreferencesController::class, 'unlink']);
+        Route::get('whatsapp-history', [\App\Http\Controllers\WhatsAppPreferencesController::class, 'history'])->middleware('throttle:60,1');
         Route::get('whatsapp-preferences', [\App\Http\Controllers\WhatsAppPreferencesController::class, 'show']);
         Route::patch('whatsapp-preferences', [\App\Http\Controllers\WhatsAppPreferencesController::class, 'update'])->middleware('throttle:10,1');
     });

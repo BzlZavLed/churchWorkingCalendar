@@ -24,14 +24,18 @@ class Transport
         if (! app(Access::class)->consume($account, 'replies')) {
             return false;
         }
+        $interaction = app(InteractionHistory::class)->record($account, 'outgoing', $text, 'sending');
         // No automatic retry: a timeout may mean Meta accepted the message already.
         try {
-            return Http::withToken(config('whatsapp.access_token'))->connectTimeout(5)->timeout(15)
+            $sent = Http::withToken(config('whatsapp.access_token'))->connectTimeout(5)->timeout(15)
                 ->post("https://graph.facebook.com/$version/$phone/messages", [
                     'messaging_product' => 'whatsapp', 'recipient_type' => 'individual', 'to' => $account->sender,
                     'type' => 'text', 'text' => ['preview_url' => false, 'body' => mb_substr($text, 0, 4000)],
                 ])->successful();
+            $interaction->update(['status' => $sent ? 'sent' : 'send_failed']);
+            return $sent;
         } catch (\Throwable) {
+            $interaction->update(['status' => 'send_unknown']);
             return false;
         }
     }

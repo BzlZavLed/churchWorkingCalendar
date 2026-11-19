@@ -1,6 +1,7 @@
 <template>
 <section class="container py-4 management-page integration-settings">
  <header class="management-heading"><div><p class="management-eyebrow">Superadmin</p><h1>{{ tr('Configuración','Settings') }}</h1><p>{{ tr('Controla WhatsApp, inteligencia artificial y límites por iglesia.','Control WhatsApp, AI and limits per church.') }}</p></div></header>
+ <router-link to="/superadmin/whatsapp-tools" class="btn btn-outline-secondary mb-3">{{ tr('Ver acciones del asistente WhatsApp','View WhatsApp assistant actions') }}</router-link>
  <label>{{ tr('Iglesia','Church') }}<select v-model="church" class="form-select" :disabled="saving"><option value="">{{ tr('Seleccionar iglesia','Select church') }}</option><option v-for="item in churches" :value="String(item.id)" :key="item.id">{{ item.name }}</option></select></label>
  <p v-if="error" class="alert alert-danger mt-3" role="alert">{{ error }}</p><p v-if="notice" class="alert alert-success mt-3" role="status">{{ notice }}</p><p v-if="loading" role="status">{{ tr('Cargando…','Loading…') }}</p>
  <form v-if="settings && !loading" class="management-surface integration-form" @submit.prevent="save">

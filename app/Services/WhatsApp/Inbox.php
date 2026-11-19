@@ -15,6 +15,7 @@ class Inbox
             if (WhatsAppMessage::where('provider_id', $id)->exists()) {
                 return;
             }
+            $originalText = $text;
             $hash = WhatsAppAccount::senderHash($sender);
             $account = WhatsAppAccount::where('sender_hash', $hash)->lockForUpdate()->first();
             if (!$account && app(\App\Services\ChurchIntegrations::class)->whatsapp((int)config('whatsapp.church_id'))) {
@@ -42,6 +43,7 @@ class Inbox
             }
             $account->update(['last_received_at' => max($account->last_received_at?->timestamp ?? 0, $sent)]);
             if (in_array(mb_strtoupper(trim($text)), ['STOP', 'BAJA', 'DESACTIVAR'], true)) {
+                app(InteractionHistory::class)->record($account, 'incoming', $text, 'disabled');
                 $account->increment('generation');
                 WhatsAppMessage::where('account_id', $account->id)->where('status', 'pending')->update(['status' => 'ignored', 'body' => null]);
                 $account->user->forceFill(['whatsapp_assistant_enabled' => false])->save();
@@ -54,6 +56,7 @@ class Inbox
             }
             $message = WhatsAppMessage::firstOrCreate(['provider_id' => $id], ['account_id' => $account->id, 'generation' => $account->generation, 'body' => $text]);
             if ($message->wasRecentlyCreated) {
+                app(InteractionHistory::class)->record($account, 'incoming', $originalText, 'received', $message->id);
                 ProcessWhatsAppMessage::dispatch($message->id, $account->id)->afterCommit();
             }
         });

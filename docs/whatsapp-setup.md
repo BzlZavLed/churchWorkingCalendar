@@ -128,3 +128,11 @@ Meta uses the existing WhatsApp access token, WABA and configured Graph API vers
 OpenAI organization usage and costs require an optional **server-only** `OPENAI_ADMIN_KEY`. The ordinary `OPENAI_API_KEY` is not used for these endpoints. Without the admin key, existing per-church response token tracking continues normally. Organization costs may include products beyond the model requests shown. Provider totals are shared-account totals and must not be attributed to individual churches. Never place either key in frontend configuration. After configuring a key, refresh Laravel's configuration cache.
 
 Provider GET calls do not generate AI responses or send WhatsApp messages. No tokens, raw errors or provider pagination URLs are returned to browsers.
+
+### Assistant reference and interaction history
+
+Superadmin → Configuración → Ver acciones del asistente WhatsApp opens the action reference at `/superadmin/whatsapp-tools`. It documents current commands, natural-language actions, permission requirements, confirmation steps and unsupported operations. This is documentation, not a dynamic tool editor.
+
+The personal WhatsApp settings page includes a date-filtered history in the browser's time zone, with 30 messages per page. Access is restricted to the authenticated user and their current church; work-context selection does not grant another user's conversation access. New admitted incoming messages and attempted provider replies are stored encrypted for 30 days; linking codes are redacted. The daily `whatsapp:prune` schedule removes expired history. Old message text was deleted and is not backfilled. Meta acceptance is labeled as sent, not delivered or read. Messages rejected before inbox admission and replies suppressed before sending are not archived.
+
+Deploy the new migration before restarting the WhatsApp queue worker.
