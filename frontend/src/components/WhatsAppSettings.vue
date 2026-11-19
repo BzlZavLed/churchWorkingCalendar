@@ -4,17 +4,26 @@
   <p v-if="error" class="alert alert-danger" role="alert">{{ error }}</p>
   <p v-if="loading" role="status">{{ tr('Cargando…','Loading…') }}</p>
   <section v-else class="management-surface p-3">
-   <p>{{ tr('Vincula tu WhatsApp para preparar eventos y consultar visitas según tus permisos. Las consultas de IA y respuestas están sujetas a límites de uso.','Link WhatsApp to prepare events and query visitors according to your permissions. AI queries and replies are subject to usage limits.') }}</p>
-   <label class="d-flex align-items-start gap-2"><input type="checkbox" :checked="enabled" :disabled="saving" @change="save($event.target.checked)" /><span>{{ tr('Permitir el asistente WhatsApp en mi cuenta','Allow the WhatsApp assistant for my account') }}</span></label>
-   <p class="small mt-3">{{ tr('Desactivado de forma predeterminada. El interruptor general y tus permisos siguen aplicando. Antes de usarlo será necesario verificar y vincular tu número.','Off by default. The system switch and your permissions still apply. Your number must be verified and linked before use.') }}</p>
-   <p class="mt-3" role="status">{{ systemEnabled ? tr('Piloto habilitado.','Pilot enabled.') : tr('El piloto está desactivado por el administrador. No se procesarán mensajes.','The pilot is disabled by the administrator. Messages will not be processed.') }}</p>
-   <p v-if="blockReason" class="alert alert-info" role="status">{{ reasonText(blockReason) }}</p>
-   <p v-if="registeredNumber && !linked" class="alert alert-info">{{ tr('Tu número registrado es','Your registered number is') }} {{ registeredNumber }}. {{ tr('Envía Hola al WhatsApp de la iglesia para activar la conexión, sin código.','Send Hello to the church WhatsApp to activate your connection without a code.') }}</p>
-   <p>{{ linked ? tr('Número vinculado','Number linked') : tr('Sin número vinculado','No linked number') }}</p>
-   <button v-if="linked" class="btn btn-outline-secondary" :disabled="saving" @click="unlink">{{ tr('Desvincular número','Unlink number') }}</button>
-   <button v-else class="btn btn-primary" :disabled="saving || !enabled || !systemEnabled || blockReason" @click="link">{{ tr('Generar código de vinculación','Generate linking code') }}</button>
-   <div v-if="command" class="alert alert-info mt-3"><p>{{ tr('Desde tu WhatsApp, envía este texto al número del piloto. Vence en diez minutos. No lo compartas.','From your WhatsApp, send this text to the pilot number. It expires in ten minutes. Do not share it.') }}</p><code class="text-break">{{ command }}</code></div>
-   <p class="small mt-3">{{ tr('CONFIRMAR envía el evento a revisión. EXTENDER renueva la reserva. BAJA desactiva el asistente sin llamadas de IA.','CONFIRMAR submits the event for review. EXTENDER renews the reservation. BAJA disables the assistant without an AI call.') }}</p>
+   <div class="wa-status"><span class="wa-status-dot" :class="{ 'wa-status-dot--ready': ready }"></span><strong>{{ ready ? tr('Listo para usar','Ready to use') : linked ? tr('Número vinculado · asistente inactivo','Number linked · assistant inactive') : tr('Pendiente de vinculación','Awaiting connection') }}</strong></div>
+   <label class="d-flex align-items-start gap-2 mt-3"><input type="checkbox" :checked="enabled" :disabled="saving" @change="save($event.target.checked)" /><span>{{ tr('Permitir el asistente WhatsApp en mi cuenta','Allow the WhatsApp assistant for my account') }}</span></label>
+   <p v-if="blockReason" class="alert alert-info mt-3" role="status">{{ reasonText(blockReason) }}</p>
+   <section v-if="registeredNumber && !linked" class="wa-connect">
+    <h2>{{ tr('Activa tu número registrado','Activate your registered number') }}</h2>
+    <p>{{ tr('Al crear tu cuenta se registró este WhatsApp:','This WhatsApp was registered when your account was created:') }} <strong>{{ registeredNumber }}</strong>.</p>
+    <p>{{ tr('Desde ese número, envía','From that number, send') }} <strong>Hola</strong> {{ tr('al WhatsApp de la iglesia','to the church WhatsApp') }}<template v-if="destinationNumber">: <strong>{{ destinationNumber }}</strong></template>.</p>
+    <p>{{ tr('No necesitas generar ni copiar un código. Después de recibir la respuesta, actualiza el estado aquí. Si el número registrado es incorrecto, pide al encargado de usuarios que lo cambie.','No code is needed. After receiving the reply, refresh your status here. If your registered number is incorrect, ask your user administrator to change it.') }}</p>
+    <a v-if="destinationNumber && !blockReason" class="btn btn-primary" :href="whatsappLink('Hola')" target="_blank" rel="noopener noreferrer">{{ tr('Enviar Hola por WhatsApp','Send Hola via WhatsApp') }}</a>
+   </section>
+   <section v-else-if="!linked" class="wa-connect">
+    <h2>{{ tr('Conecta tu WhatsApp','Connect your WhatsApp') }}</h2>
+    <p>{{ tr('No tienes un número registrado. Genera un código y envíalo desde tu WhatsApp','No number is registered. Generate a code and send it from your WhatsApp') }}<template v-if="destinationNumber"> {{ tr('al','to') }} <strong>{{ destinationNumber }}</strong></template>.</p>
+    <button class="btn btn-primary" :disabled="saving || !enabled || !systemEnabled || !!blockReason" @click="link">{{ tr('Generar código de vinculación','Generate linking code') }}</button>
+    <div v-if="command" class="alert alert-info mt-3"><p>{{ tr('Envía este texto completo. Vence en diez minutos; no lo compartas.','Send this complete text. It expires in ten minutes; do not share it.') }}</p><code class="text-break">{{ command }}</code><a v-if="destinationNumber" class="btn btn-outline-secondary mt-3" :href="whatsappLink(command)" target="_blank" rel="noopener noreferrer">{{ tr('Abrir WhatsApp','Open WhatsApp') }}</a></div>
+   </section>
+   <p v-else class="mt-3">{{ tr('Puedes escribir al asistente según los permisos de tu cuenta.','You can message the assistant according to your account permissions.') }} <strong v-if="destinationNumber">{{ destinationNumber }}</strong></p>
+   <p v-if="!destinationNumber" class="alert alert-warning mt-3">{{ tr('El administrador debe configurar el número de WhatsApp de la iglesia para mostrar aquí el destino.','The administrator must configure the church WhatsApp number so the destination can be shown here.') }}</p>
+   <div class="wa-actions"><button class="btn btn-outline-secondary" :disabled="saving" @click="refreshStatus">{{ tr('Actualizar estado','Refresh status') }}</button><button v-if="linked" class="btn btn-outline-secondary" :disabled="saving" @click="unlink">{{ tr('Desvincular número','Unlink number') }}</button></div>
+   <details class="mt-3"><summary>{{ tr('Qué puedes hacer por WhatsApp','What you can do via WhatsApp') }}</summary><p class="small mt-2">{{ tr('Prepara eventos o consulta visitas según tus permisos. CONFIRMAR envía un evento a revisión; EXTENDER renueva la reserva; BAJA desactiva el asistente. El uso está sujeto a los límites de la iglesia.','Prepare events or query visitors according to your permissions. CONFIRMAR submits an event for review; EXTENDER renews its reservation; BAJA disables the assistant. Church usage limits apply.') }}</p></details>
    <p v-if="notice" class="text-success" role="status">{{ notice }}</p>
   </section>
  </section>
@@ -38,13 +47,18 @@ const reasonText = reason => {
  };
  return messages[reason] ? tr(...messages[reason]) : tr('No se pudo vincular. Inténtalo de nuevo.', 'Unable to link. Try again.')
 }
-const registeredNumber=ref(null)
+const registeredNumber=ref(null),destinationNumber=ref(null),ready=ref(false)
+const whatsappLink=text=>`https://wa.me/${destinationNumber.value.replace(/\D/g,'')}?text=${encodeURIComponent(text)}`
 const linked=ref(false),systemEnabled=ref(false),command=ref('')
-function apply(data){registeredNumber.value=data.registered_number;blockReason.value=data.link_block_reason;enabled.value=data.enabled;linked.value=data.linked;systemEnabled.value=data.system_enabled}
+function apply(data){destinationNumber.value=data.destination_number;ready.value=data.ready;if(data.linked)command.value='';registeredNumber.value=data.registered_number;blockReason.value=data.link_block_reason;enabled.value=data.enabled;linked.value=data.linked;systemEnabled.value=data.system_enabled}
 const loading=ref(true),saving=ref(false),enabled=ref(false),error=ref(''),notice=ref('')
 onMounted(async()=>{try{const {data}=await apiClient.get('/auth/whatsapp-preferences');apply(data)}catch{error.value=tr('No se pudo cargar la preferencia.','Unable to load preference.')}finally{loading.value=false}})
+async function refreshStatus(){saving.value=true;error.value='';try{const {data}=await apiClient.get('/auth/whatsapp-preferences');apply(data)}catch{error.value=tr('No se pudo actualizar el estado.','Unable to refresh status.')}finally{saving.value=false}}
 async function save(value){saving.value=true;error.value='';notice.value='';try{const {data}=await apiClient.patch('/auth/whatsapp-preferences',{enabled:value});apply(data);command.value='';notice.value=tr('Preferencia guardada.','Preference saved.')}catch{error.value=tr('No se pudo guardar.','Unable to save.')}finally{saving.value=false}}
 async function link(){saving.value=true;error.value='';try{const {data}=await apiClient.post('/auth/whatsapp-link');command.value=data.command}catch(e){const reason=e.response?.status===429?'rate_limited':e.response?.data?.reason;error.value=reasonText(reason);if(e.response?.data?.reason)blockReason.value=reason}finally{saving.value=false}}
 async function unlink(){saving.value=true;try{const {data}=await apiClient.delete('/auth/whatsapp-link');apply(data);command.value=''}catch{error.value=tr('No se pudo desvincular.','Unable to unlink.')}finally{saving.value=false}}
 </script>
-<style scoped>input[type=checkbox]{flex:none;width:18px;height:18px;margin:2px 0 0}</style>
+<style scoped>input[type=checkbox]{flex:none;width:18px;height:18px;margin:2px 0 0}
+.wa-status{display:flex;align-items:center;gap:9px}.wa-status-dot{width:9px;height:9px;border-radius:50%;background:#a87522}.wa-status-dot--ready{background:#22856b}
+.wa-connect{margin:18px 0;padding:18px;border:1px solid #cbded5;border-radius:12px;background:#f2f7f4}.wa-connect h2{font-size:1rem}.wa-connect p{font-size:.875rem}.wa-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.wa-connect .btn{display:inline-block;width:auto}.wa-actions .btn{width:auto}
+</style>

@@ -11,6 +11,17 @@ class WhatsAppPreferencesTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_destination_is_normalized_and_missing_number_is_not_replaced_with_meta_id(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        config(['whatsapp.phone_number' => '+1 (555) 173-3579', 'whatsapp.phone_number_id' => '1424245080775999']);
+        $this->getJson('/api/auth/whatsapp-preferences')->assertOk()->assertJsonPath('destination_number', '+15551733579');
+        config(['whatsapp.phone_number' => null]);
+        $this->getJson('/api/auth/whatsapp-preferences')->assertOk()->assertJsonPath('destination_number', null);
+        config(['whatsapp.phone_number' => 'not-a-phone']);
+        $this->getJson('/api/auth/whatsapp-preferences')->assertOk()->assertJsonPath('destination_number', null);
+    }
+
     public function test_opt_in_is_off_by_default_and_only_changes_authenticated_account(): void
     {
         $this->getJson('/api/auth/whatsapp-preferences')->assertUnauthorized();

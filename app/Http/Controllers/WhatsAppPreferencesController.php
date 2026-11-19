@@ -11,7 +11,11 @@ class WhatsAppPreferencesController extends Controller
     {
         $account = WhatsAppAccount::where('user_id', $request->user()->id)->first();
 
-        return response()->json(['enabled' => (bool) $request->user()->whatsapp_assistant_enabled,
+        $destination = preg_replace('/[\s()+-]/', '', (string) config('whatsapp.phone_number'));
+        $destination = preg_match('/^[1-9][0-9]{7,14}$/', $destination) ? $destination : null;
+
+        return response()->json(['destination_number' => $destination ? '+'.$destination : null,
+            'enabled' => (bool) $request->user()->whatsapp_assistant_enabled,
             'system_enabled' => (bool) config('whatsapp.enabled'), 'linked' => (bool) $account?->sender_hash,
             'registered_number' => $account?->registered_sender ? '+'.$account->registered_sender : null,
             'ready' => $account ? app(\App\Services\WhatsApp\Access::class)->allowed($account) : false,

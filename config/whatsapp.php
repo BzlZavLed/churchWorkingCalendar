@@ -7,6 +7,7 @@ return [
     'daily_user_limit' => (int) env('WHATSAPP_DAILY_USER_LIMIT', 30),
     'enabled' => env('WHATSAPP_ENABLED', false),
     'church_id' => env('WHATSAPP_CHURCH_ID'),
+    'phone_number' => env('WHATSAPP_PHONE_NUMBER'),
     'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
     'business_account_id' => env('WHATSAPP_BUSINESS_ACCOUNT_ID'),
     'access_token' => env('WHATSAPP_ACCESS_TOKEN'),

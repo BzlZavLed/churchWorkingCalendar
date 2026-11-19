@@ -26,6 +26,7 @@ Backend `.env` only; never VITE variables, Git, or chat:
 ```
 WHATSAPP_ENABLED=false
 WHATSAPP_CHURCH_ID=<actual Pacto de Amor database ID>
+WHATSAPP_PHONE_NUMBER=+15551733579 # Current pilot destination; replace when changing the sender
 WHATSAPP_PHONE_NUMBER_ID=<Meta test sender phone number ID>
 WHATSAPP_BUSINESS_ACCOUNT_ID=<Meta WABA ID>
 WHATSAPP_ACCESS_TOKEN=<private access token>
