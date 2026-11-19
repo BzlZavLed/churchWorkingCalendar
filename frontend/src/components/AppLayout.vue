@@ -31,8 +31,8 @@
         'app-sidebar--greeting-hidden': isGreetingFocusMode && !isSidebarOpen,
       }"
     >
+      <div v-if="!isGreetingFocusMode" class="sidebar-controls" :class="{ 'sidebar-controls--compact': shouldShowIconsOnly }">
       <button
-        v-if="!isGreetingFocusMode"
         class="app-burger"
         type="button"
         :aria-label="toggleSidebarLabel"
@@ -45,6 +45,19 @@
           <path :d="toggleIconPath" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9" />
         </svg>
       </button>
+      <label
+        v-if="!isCompactSidebarState && !isGreetingFocusMode"
+        class="sidebar-pin"
+        :class="{ 'sidebar-pin--compact': shouldShowIconsOnly }"
+        :title="sidebarPinHint"
+      >
+        <input type="checkbox" :checked="sidebarPinned" @change="setSidebarPinned($event.target.checked)" :aria-label="sidebarPinHint" />
+        <svg v-if="shouldShowIconsOnly" viewBox="0 0 24 24" class="nav-icon" aria-hidden="true">
+          <path d="M9 3h6l-1 6 4 4v2H6v-2l4-4-1-6Zm3 12v6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+        </svg>
+        <span v-else>{{ locale === 'es' ? 'Fijar estado del menú' : 'Keep sidebar state' }}</span>
+      </label>
+      </div>
       <div
         v-show="!isCompactSidebarState || isSidebarOpen"
         ref="sidebarInnerRef"
@@ -138,7 +151,32 @@ const { locale } = storeToRefs(uiStore)
 const router = useRouter()
 const route = useRoute()
 const isSidebarOpen = ref(false)
-const desktopSidebarMode = ref(null)
+const sidebarPreferenceKey = 'churchadmin.sidebar.fixed-state'
+const readSidebarPreference = () => {
+  try {
+    const saved = localStorage.getItem(sidebarPreferenceKey)
+    return ['expanded', 'collapsed'].includes(saved) ? saved : null
+  } catch { return null }
+}
+const savedSidebarMode = readSidebarPreference()
+const desktopSidebarMode = ref(savedSidebarMode)
+const sidebarPinned = ref(Boolean(savedSidebarMode))
+const sidebarPinHint = computed(() => locale.value === 'es'
+  ? 'Fijar abierto o cerrado. Usa la flecha para elegir el estado; desmarca para volver al comportamiento automático.'
+  : 'Keep open or closed. Use the arrow to choose the state; uncheck to restore automatic behavior.')
+const saveSidebarPreference = () => {
+  try {
+    if (sidebarPinned.value) localStorage.setItem(sidebarPreferenceKey, desktopSidebarMode.value)
+    else localStorage.removeItem(sidebarPreferenceKey)
+  } catch { /* Navigation still works when browser storage is unavailable. */ }
+}
+const setSidebarPinned = (pinned) => {
+  const currentMode = shouldShowIconsOnly.value ? 'collapsed' : 'expanded'
+  sidebarPinned.value = pinned
+  desktopSidebarMode.value = pinned ? currentMode : null
+  saveSidebarPreference()
+  updateAutoIconOnly()
+}
 const autoIconOnly = ref(false)
 const isCompactSidebarState = ref(false)
 const sidebarInnerRef = ref(null)
@@ -190,6 +228,7 @@ const navItems = computed(() => {
     }))
   if (authStore.isPlatformAdmin) items.unshift(
     {to:'/superadmin/churches',label:t.value.churches,icon:iconPaths.churches},
+    {to:'/superadmin/settings',label:locale.value==='es'?'Configuración':'Settings',icon:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1 1-3Z'},
     {to:'/superadmin/roles',label:locale.value==='es'?'Roles y permisos':'Roles and permissions',icon:iconPaths.roles},
   )
   items.push({to:'/whatsapp-settings',label:locale.value==='es'?'Asistente WhatsApp':'WhatsApp assistant',icon:iconPaths.meetingPoints})
@@ -315,6 +354,7 @@ const toggleSidebar = () => {
   }
 
   desktopSidebarMode.value = shouldShowIconsOnly.value ? 'expanded' : 'collapsed'
+  saveSidebarPreference()
   closeSidebar()
   updateAutoIconOnly()
 }

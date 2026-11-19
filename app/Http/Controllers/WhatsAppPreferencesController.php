@@ -13,6 +13,7 @@ class WhatsAppPreferencesController extends Controller
 
         return response()->json(['enabled' => (bool) $request->user()->whatsapp_assistant_enabled,
             'system_enabled' => (bool) config('whatsapp.enabled'), 'linked' => (bool) $account?->sender_hash,
+            'registered_number' => $account?->registered_sender ? '+'.$account->registered_sender : null,
             'ready' => $account ? app(\App\Services\WhatsApp\Access::class)->allowed($account) : false,
             'link_block_reason' => $this->linkBlockReason($request),
             'daily_limit' => (int) config('whatsapp.daily_user_limit')]);
@@ -55,6 +56,7 @@ class WhatsAppPreferencesController extends Controller
         if (! $user->church_id) {
             return 'account_without_church';
         }
+        if (!app(\App\Services\ChurchIntegrations::class)->whatsapp($user->church_id)) return 'church_disabled';
         if (! config('whatsapp.church_id')) {
             return 'pilot_not_configured';
         }
@@ -83,7 +85,7 @@ class WhatsAppPreferencesController extends Controller
     {
         $this->discardPending($request);
         // Keep the account ID and dedupe records; revoke queued work and old codes.
-        WhatsAppAccount::where('user_id', $request->user()->id)->update(['sender_hash' => null, 'sender' => null, 'state' => null, 'link_hash' => null, 'link_expires_at' => null]);
+        WhatsAppAccount::where('user_id', $request->user()->id)->update(['identity_hash'=>null,'registered_sender'=>null,'sender_hash' => null, 'sender' => null, 'state' => null, 'link_hash' => null, 'link_expires_at' => null]);
 
         return $this->show($request);
     }

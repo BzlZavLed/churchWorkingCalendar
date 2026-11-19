@@ -19,6 +19,7 @@ import MeetingPointsView from '../components/MeetingPointsView.vue'
 import GreetingIntakeView from '../components/GreetingIntakeView.vue'
 import GreetingContactsView from '../components/GreetingContactsView.vue'
 import NoAccessView from '../components/NoAccessView.vue'
+import SuperAdminSettings from '../components/superadmin/SuperAdminSettings.vue'
 import SuperAdminRoles from '../components/superadmin/SuperAdminRoles.vue'
 import { moduleForPath } from '../services/accessApi'
 import SuperAdminModuleContext from '../components/superadmin/SuperAdminModuleContext.vue'
@@ -34,6 +35,7 @@ const routes = [
   { path: '/committees', component: CommitteesView, meta: { requiresAuth: true } },
   { path: '/superadmin/roles', component: SuperAdminRoles, meta: { requiresAuth: true, superadminOnly: true } },
   { path: '/no-access', component: NoAccessView, meta: { requiresAuth: true } },
+  { path: '/superadmin/settings', component: SuperAdminSettings, meta: { requiresAuth: true, superadminOnly: true } },
   { path: '/members', component: MembersView, meta: { requiresAuth: true } },
   { path: '/greeting/form-builder', component: VisitorFormBuilder, meta: { requiresAuth: true, pastorOnly: true } },
   { path: '/visit/:churchId', component: GreetingIntakeView, meta: { noLayout: true } },
@@ -65,6 +67,7 @@ const routes = [
 
 const router = createRouter({
   history: createWebHistory(),
+  scrollBehavior() { return { left: 0, top: 0 } },
   routes,
 })
 

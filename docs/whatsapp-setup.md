@@ -104,3 +104,26 @@ Known server: `/var/www/churchAdmin`, Homebrew Nginx / PHP 8.4 / PostgreSQL 16, 
 Check `storage/logs/com.churchadmin.whatsapp.log`, inbox status counts, and `php artisan queue:failed` without sharing private log contents. The app deliberately does not log provider response bodies. Test configuration failures locally with fake providers rather than repeatedly sending billable requests.
 
 API references used: [OpenAI structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs), [Meta incoming messages](https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/reference/messages), and [Meta message API](https://developers.facebook.com/documentation/business-messaging/whatsapp/reference/whatsapp-business-phone-number/message-api).
+
+
+## Church controls and clerk-managed enrollment
+
+Superadmin → Configuración selects a church and controls WhatsApp and OpenAI independently. Existing behavior is preserved on upgrade (church switches default on); the global WhatsApp environment switch, configured pilot church, user opt-in, and workflow permissions still apply. Enabling another church in this screen does not expand the single-number pilot or provision credentials. All provider credentials remain in the server environment.
+
+The clerk or superadmin can set an E.164 WhatsApp number (for example `+12025550123`) and enable the assistant when creating or editing a user. The number remains pending until a signature-verified inbound message arrives from that exact number. The first message activates the assigned account and returns help without an AI call. Changing the number revokes the previous binding and pending work. Numbers are uniquely reserved across accounts. Disabling an account's assistant or a church blocks processing; the church switch also invalidates queued work. Manual code linking remains available. No WhatsApp invitations are sent automatically.
+
+Monthly limits count reserved operations, including failed requests. Church limits cannot exceed environment caps. WhatsApp's global monthly caps still apply to all usage. Birthday AI has its own church-month and per-user-day caps. Periods are UTC. Disabling AI blocks WhatsApp AI parsing and birthday generation, while non-AI WhatsApp commands remain available if WhatsApp is enabled.
+
+The usage dialog shows current limits and monthly request counts. New OpenAI responses that include `usage` contribute input/output token totals by church and feature. Token tracking starts with this release; historical or external provider usage is not reconstructed, and this is not a billing statement. Existing pilot global WhatsApp counters are copied to the configured church on migration. No access tokens or API secrets are exposed in this interface.
+
+Deploy with `php artisan migrate --force`, then `php artisan queue:restart` so existing workers load the new checks.
+
+### Provider usage reports
+
+Superadmin → Configuración → Ver uso y límites now loads provider reports separately from the immediate church counters. Results (including errors) are cached for 30 minutes and refreshed while the modal remains open. Reports use UTC month boundaries, and never enforce limits based on delayed billing data.
+
+Meta uses the existing WhatsApp access token, WABA and configured Graph API version to read pricing analytics. The token must have analytics access. Reported volume/cost covers the entire WABA, not just the selected church; cost is shown in the account's billing currency. Missing configuration, permissions and incomplete responses are displayed as unavailable, not as zero spend.
+
+OpenAI organization usage and costs require an optional **server-only** `OPENAI_ADMIN_KEY`. The ordinary `OPENAI_API_KEY` is not used for these endpoints. Without the admin key, existing per-church response token tracking continues normally. Organization costs may include products beyond the model requests shown. Provider totals are shared-account totals and must not be attributed to individual churches. Never place either key in frontend configuration. After configuring a key, refresh Laravel's configuration cache.
+
+Provider GET calls do not generate AI responses or send WhatsApp messages. No tokens, raw errors or provider pagination URLs are returned to browsers.

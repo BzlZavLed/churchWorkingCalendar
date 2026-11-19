@@ -12,6 +12,7 @@
         <label class="col-12 col-md-6">{{ t.password }}<input v-model="createForm.password" class="form-control" type="password" required minlength="8" autocomplete="new-password" /></label>
         <label class="col-12 col-md-6">{{ t.role }}<select v-model="createForm.role" class="form-select"><option v-for="role in ['admin', 'member', 'secretary', 'pastor']" :key="role" :value="role">{{ roleLabels[role] }}</option></select></label>
         <label class="col-12">{{ t.department }}<select v-model="createForm.department_id" class="form-select"><option value="">{{ common.select }}</option><option v-for="department in departments" :key="department.id" :value="department.id">{{ department.name }}</option></select></label>
+        <WhatsAppUserFields :form="createForm" class="col-12" />
         <p v-if="createError" class="management-error col-12" role="alert">{{ createError }}</p>
         <p v-if="createSuccess" class="text-success col-12" role="status">{{ locale === 'es' ? 'Usuario creado.' : 'User created.' }}</p>
         <div class="col-12"><button class="btn btn-primary" :disabled="creating || loading">{{ creating ? (locale === 'es' ? 'Guardando…' : 'Saving…') : (locale === 'es' ? 'Crear usuario' : 'Create user') }}</button></div>
@@ -53,7 +54,7 @@
 
               <td>
                 <div class="d-flex align-items-center gap-2">
-                  <input v-model="user.name" :aria-label="t.name" class="form-control" type="text" :disabled="!authStore.can('users.manage')" />
+                  <input v-model="user.name" :aria-label="t.name" class="form-control" type="text" :disabled="!authStore.can('users.manage')" /><WhatsAppUserFields :form="user" />
                   <span v-if="user.id === currentUserId" class="badge bg-info text-dark">{{ common.loggedIn }}</span>
                 </div>
               </td>
@@ -105,7 +106,7 @@
             </div>
             <div class="mb-2">
               <label class="form-label small mb-1">{{ t.name }}</label>
-              <input v-model="user.name" :aria-label="t.name" class="form-control" type="text" :disabled="!authStore.can('users.manage')" />
+              <input v-model="user.name" :aria-label="t.name" class="form-control" type="text" :disabled="!authStore.can('users.manage')" /><WhatsAppUserFields :form="user" />
             </div>
             <div class="mb-2">
               <label class="form-label small mb-1">{{ t.role }}</label>
@@ -185,6 +186,7 @@
 </template>
 
 <script setup>
+import WhatsAppUserFields from '../WhatsAppUserFields.vue'
 import FormSection from "../FormSection.vue"
 import '../../styles/clerk-management.css'
 import { computed, onMounted, reactive, ref } from 'vue'
@@ -200,7 +202,7 @@ const users = ref([])
 const loading = ref(false)
 const error = ref('')
 const filterText = ref('')
-const createForm = reactive({ name: '', email: '', password: '', role: 'member', department_id: '' })
+const createForm = reactive({ name: '', email: '', password: '', whatsapp_phone: '', whatsapp_assistant_enabled: false, role: 'member', department_id: '' })
 const creating = ref(false)
 const createError = ref('')
 const createSuccess = ref(false)
@@ -211,7 +213,7 @@ const createUser = async () => {
   createSuccess.value = false
   try {
     await secretaryApi.createUser({ ...createForm, department_id: createForm.department_id || null })
-    Object.assign(createForm, { name: '', email: '', password: '', role: 'member', department_id: '' })
+    Object.assign(createForm, { name: '', email: '', password: '', whatsapp_phone: '', whatsapp_assistant_enabled: false, role: 'member', department_id: '' })
     await loadUsers()
     createSuccess.value = true
   } catch (err) {
@@ -283,9 +285,11 @@ const updateUser = async (user) => {
       email: user.email,
       role: user.role,
       department_id: user.department_id || null,
+      whatsapp_phone: user.whatsapp_phone || null,
+      whatsapp_assistant_enabled: !!user.whatsapp_assistant_enabled,
     })
-  } catch {
-    error.value = t.value.updateError
+  } catch (e) {
+    error.value = Object.values(e.response?.data?.errors||{}).flat().join(' ') || t.value.updateError
   }
 }
 

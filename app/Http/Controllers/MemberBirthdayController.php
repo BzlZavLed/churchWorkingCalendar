@@ -29,11 +29,11 @@ class MemberBirthdayController extends Controller
         abort_unless($request->user()->hasCapability('members.manage'), 403);
         $roster = $this->roster($request);
         abort_unless(count($roster['members']), 422, 'No birthdays in this period.');
-        abort_unless($roster['ai_available'], 422, 'Configure OPENAI_API_KEY and OPENAI_MODEL before generating with AI.');
+        abort_unless($roster['ai_available'], 422, 'AI is disabled for this church or is not configured on the server.');
         // Hard caps, reserved before the call. Failures also count; no network retry.
         $permitted = DB::transaction(function () use ($request) {
             $limits = [
-                'birthdays:month:'.$request->user()->church_id.':'.now()->format('Y-m') => (int) config('assistant.birthday_monthly_limit', 100),
+                'birthdays:month:'.$request->user()->church_id.':'.now()->format('Y-m') => app(\App\Services\ChurchIntegrations::class)->limit($request->user()->church_id,'birthday_ai_limit',(int)config('assistant.birthday_monthly_limit',100)),
                 'birthdays:day:'.$request->user()->id.':'.now()->format('Y-m-d') => (int) config('assistant.birthday_daily_limit', 10),
             ];
             foreach ($limits as $bucket => $limit) {
@@ -56,6 +56,7 @@ class MemberBirthdayController extends Controller
                 'instructions' => 'Write a warm, joyful, playful birthday greeting for a church WhatsApp group. Vary your wording. Use 2-3 tasteful emojis, no age jokes, invented personal facts, names, dates or Bible quotations. Output only the greeting, at most 90 words. The application appends the actual birthday names separately.',
                 'input' => json_encode(['language' => $locale === 'es' ? 'Spanish' : 'English', 'people_count' => count($roster['members'])]),
             ]);
+            if($response->successful() && is_array($response->json('usage'))) app(\App\Services\ChurchIntegrations::class)->record($request->user()->church_id,'birthdays',$response->json('usage'));
             abort_unless($response->successful() && $response->json('status') === 'completed', 502, 'AI generation is unavailable. Try again later or write your own greeting.');
             $greeting = '';
             foreach ($response->json('output', []) as $item) {

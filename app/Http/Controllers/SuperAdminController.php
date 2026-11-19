@@ -241,10 +241,20 @@ class SuperAdminController extends Controller
             ->orderBy('name')
             ->get();
 
-        return response()->json($users);
+        return response()->json($users->load('whatsappAccount')->map(fn($u)=>array_merge($u->makeHidden('whatsappAccount')->toArray(),app(\App\Services\WhatsApp\Provisioning::class)->fields($u))));
     }
 
-    public function storeUser(Request $request, Church $church)
+    public function storeUser(Request $request, Church $church) {
+        return \Illuminate\Support\Facades\DB::transaction(function() use ($request, $church) {
+            $response=$this->performstoreUser($request, $church);
+            if($response->getStatusCode()>=400) return $response;
+            $saved=User::findOrFail($response->getData()->id);
+            app(\App\Services\WhatsApp\Provisioning::class)->apply($request,$saved);
+            return response()->json(array_merge($saved->toArray(),app(\App\Services\WhatsApp\Provisioning::class)->fields($saved)),$response->getStatusCode());
+        });
+    }
+
+    private function performstoreUser(Request $request, Church $church)
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -287,7 +297,17 @@ class SuperAdminController extends Controller
         return response()->json($user, 201);
     }
 
-    public function updateUser(Request $request, Church $church, User $user)
+    public function updateUser(Request $request, Church $church, User $user) {
+        return \Illuminate\Support\Facades\DB::transaction(function() use ($request, $church, $user) {
+            $response=$this->performupdateUser($request, $church, $user);
+            if($response->getStatusCode()>=400) return $response;
+            $saved=User::findOrFail($response->getData()->id);
+            app(\App\Services\WhatsApp\Provisioning::class)->apply($request,$saved);
+            return response()->json(array_merge($saved->toArray(),app(\App\Services\WhatsApp\Provisioning::class)->fields($saved)),$response->getStatusCode());
+        });
+    }
+
+    private function performupdateUser(Request $request, Church $church, User $user)
     {
         if ($user->church_id !== $church->id) {
             abort(404);

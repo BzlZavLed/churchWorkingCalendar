@@ -1682,3 +1682,41 @@ body.sidebar-open { overflow: hidden; }
   .calendar-page .calendar-export-row { width: 100%; }
   .calendar-page .calendar-feed-link { white-space: normal; text-align: left; }
 }
+
+/* Keep long desktop navigation inside its own viewport, independent of content. */
+@media (min-width: 1121px) {
+ .app-sidebar { position: sticky; top: 0; align-self: start; height: 100dvh; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+ .app-sidebar > .app-burger { flex-shrink: 0; }
+ .app-sidebar-inner { position: static; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; flex: 1; }
+}
+
+/* Sidebar state preference stays reachable even when navigation is collapsed. */
+.sidebar-pin {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  flex-shrink: 0; padding: 8px 10px; margin: 0 8px 8px;
+  border: 1px solid rgba(255, 255, 255, .25); border-radius: 8px;
+  color: #fff; font-size: .75rem; cursor: pointer;
+}
+.sidebar-pin:hover { background: rgba(255, 255, 255, .1); }
+.sidebar-pin input { width: 15px; height: 15px; margin: 0; flex-shrink: 0; accent-color: #bde5d9; }
+.sidebar-pin:focus-within { outline: 2px solid #fff; outline-offset: 2px; }
+.sidebar-pin--compact { gap: 5px; padding: 8px 4px; }
+.sidebar-pin--compact .nav-icon { width: 16px; height: 16px; }
+.app-sidebar-inner { scrollbar-width: thin; scrollbar-color: #8cc5b7 transparent; }
+.app-sidebar-inner::-webkit-scrollbar { width: 7px; }
+.app-sidebar-inner::-webkit-scrollbar-track { background: rgba(0, 0, 0, .06); border-radius: 8px; }
+.app-sidebar-inner::-webkit-scrollbar-thumb { background: #8cc5b7; border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+.app-sidebar-inner::-webkit-scrollbar-thumb:hover { background-color: #c1e4db; }
+
+/* Keep the toggle and saved-state preference together in one toolbar. */
+.sidebar-controls { display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-bottom: 12px; min-width: 0; }
+.sidebar-controls .app-burger { flex: 0 0 36px; width: 36px; height: 36px; margin-bottom: 0; }
+.sidebar-controls .sidebar-pin { margin: 0; padding: 8px 6px; gap: 6px; min-width: 0; white-space: nowrap; font-size: .6875rem; }
+.sidebar-controls--compact { gap: 4px; }
+.sidebar-controls--compact .app-burger { flex-basis: 28px; width: 28px; }
+.sidebar-controls--compact .sidebar-pin { padding: 8px 3px; }
+.sidebar-controls--compact .sidebar-pin .nav-icon { display: none; }
+@media (max-width: 1120px) {
+ .app-sidebar:not(.app-sidebar--open) .sidebar-controls { margin-bottom: 0; }
+ .app-sidebar--open .sidebar-controls .app-burger { margin-bottom: 0; }
+}

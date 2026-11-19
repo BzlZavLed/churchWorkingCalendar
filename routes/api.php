@@ -185,6 +185,9 @@ Route::middleware(['auth:sanctum', 'superadmin.context', 'module.access', 'secre
 });
 
 Route::middleware(['auth:sanctum', 'superadmin'])->group(function () {
+    Route::get('superadmin/churches/{church}/integrations/providers', [\App\Http\Controllers\ChurchIntegrationController::class, 'providers'])->middleware('throttle:20,1');
+    Route::get('superadmin/churches/{church}/integrations', [\App\Http\Controllers\ChurchIntegrationController::class, 'show']);
+    Route::put('superadmin/churches/{church}/integrations', [\App\Http\Controllers\ChurchIntegrationController::class, 'update']);
     Route::get('superadmin/churches/{church}/roles', [\App\Http\Controllers\ChurchRoleController::class, 'index']);
     Route::post('superadmin/churches/{church}/roles', [\App\Http\Controllers\ChurchRoleController::class, 'store']);
     Route::put('superadmin/churches/{church}/roles/{role}', [\App\Http\Controllers\ChurchRoleController::class, 'update']);

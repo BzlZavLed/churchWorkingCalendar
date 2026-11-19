@@ -32,6 +32,7 @@ class Interpreter
             'input' => $input,
             'text' => ['format' => ['type' => 'json_schema', 'name' => 'church_request', 'strict' => true, 'schema' => $schema]],
         ]);
+        if($response->successful() && is_array($response->json('usage'))) app(\App\Services\ChurchIntegrations::class)->record($account->user->church_id,'whatsapp',$response->json('usage'));
         if (! $response->successful() || $response->json('status') !== 'completed') {
             throw new \RuntimeException('Assistant unavailable');
         }

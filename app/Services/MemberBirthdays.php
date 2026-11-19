@@ -52,6 +52,6 @@ class MemberBirthdays
         usort($members, fn ($a, $b) => [$a['birthday'], $a['name']] <=> [$b['birthday'], $b['name']]);
 
         return ['fields' => $fields, 'field_id' => $field, 'from' => $start->toDateString(), 'to' => $end->toDateString(), 'members' => $members, 'missing_dates' => $missing,
-            'ai_available' => (bool) (config('assistant.openai_api_key') && config('assistant.openai_model'))];
+            'ai_available' => (bool) (app(ChurchIntegrations::class)->ai($church) && config('assistant.openai_api_key') && config('assistant.openai_model'))];
     }
 }

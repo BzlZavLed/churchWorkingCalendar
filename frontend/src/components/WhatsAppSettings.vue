@@ -9,6 +9,7 @@
    <p class="small mt-3">{{ tr('Desactivado de forma predeterminada. El interruptor general y tus permisos siguen aplicando. Antes de usarlo será necesario verificar y vincular tu número.','Off by default. The system switch and your permissions still apply. Your number must be verified and linked before use.') }}</p>
    <p class="mt-3" role="status">{{ systemEnabled ? tr('Piloto habilitado.','Pilot enabled.') : tr('El piloto está desactivado por el administrador. No se procesarán mensajes.','The pilot is disabled by the administrator. Messages will not be processed.') }}</p>
    <p v-if="blockReason" class="alert alert-info" role="status">{{ reasonText(blockReason) }}</p>
+   <p v-if="registeredNumber && !linked" class="alert alert-info">{{ tr('Tu número registrado es','Your registered number is') }} {{ registeredNumber }}. {{ tr('Envía Hola al WhatsApp de la iglesia para activar la conexión, sin código.','Send Hello to the church WhatsApp to activate your connection without a code.') }}</p>
    <p>{{ linked ? tr('Número vinculado','Number linked') : tr('Sin número vinculado','No linked number') }}</p>
    <button v-if="linked" class="btn btn-outline-secondary" :disabled="saving" @click="unlink">{{ tr('Desvincular número','Unlink number') }}</button>
    <button v-else class="btn btn-primary" :disabled="saving || !enabled || !systemEnabled || blockReason" @click="link">{{ tr('Generar código de vinculación','Generate linking code') }}</button>
@@ -27,6 +28,7 @@ const ui=useUiStore(),tr=(es,en)=>ui.locale==='es'?es:en
 const blockReason=ref(null)
 const reasonText = reason => {
  const messages = {
+  church_disabled: ['WhatsApp está desactivado para tu iglesia por el superadministrador.', 'WhatsApp is disabled for your church by the superadmin.'],
   account_without_church: ['Esta es tu cuenta personal de superadministrador, sin iglesia asignada. La vista de trabajo no cambia la cuenta vinculada a WhatsApp. Inicia sesión con la cuenta del pastor o del departamento de la iglesia piloto.', 'This is your personal superadmin account, with no assigned church. Working context does not change the account linked to WhatsApp. Sign in with the pilot church’s pastor or department account.'],
   pilot_not_configured: ['Falta configurar la iglesia piloto en el servidor (WHATSAPP_CHURCH_ID).', 'The pilot church is not configured on this server (WHATSAPP_CHURCH_ID).'],
   church_not_in_pilot: ['Tu cuenta pertenece a una iglesia que no participa en este piloto.', 'Your account belongs to a church outside this pilot.'],
@@ -36,8 +38,9 @@ const reasonText = reason => {
  };
  return messages[reason] ? tr(...messages[reason]) : tr('No se pudo vincular. Inténtalo de nuevo.', 'Unable to link. Try again.')
 }
+const registeredNumber=ref(null)
 const linked=ref(false),systemEnabled=ref(false),command=ref('')
-function apply(data){blockReason.value=data.link_block_reason;enabled.value=data.enabled;linked.value=data.linked;systemEnabled.value=data.system_enabled}
+function apply(data){registeredNumber.value=data.registered_number;blockReason.value=data.link_block_reason;enabled.value=data.enabled;linked.value=data.linked;systemEnabled.value=data.system_enabled}
 const loading=ref(true),saving=ref(false),enabled=ref(false),error=ref(''),notice=ref('')
 onMounted(async()=>{try{const {data}=await apiClient.get('/auth/whatsapp-preferences');apply(data)}catch{error.value=tr('No se pudo cargar la preferencia.','Unable to load preference.')}finally{loading.value=false}})
 async function save(value){saving.value=true;error.value='';notice.value='';try{const {data}=await apiClient.patch('/auth/whatsapp-preferences',{enabled:value});apply(data);command.value='';notice.value=tr('Preferencia guardada.','Preference saved.')}catch{error.value=tr('No se pudo guardar.','Unable to save.')}finally{saving.value=false}}

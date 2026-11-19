@@ -64,6 +64,8 @@ class User extends Authenticatable
         ];
     }
 
+    public function whatsappAccount() { return $this->hasOne(\App\Models\WhatsAppAccount::class); }
+
     public function isAdmin(): bool
     {
         return $this->role === self::ROLE_ADMIN;

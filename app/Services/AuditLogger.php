@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 class AuditLogger
 {
     private const SENSITIVE_KEYS = [
+        'whatsapp_phone',
         'password',
         'password_confirmation',
         'token',

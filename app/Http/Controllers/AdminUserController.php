@@ -37,7 +37,7 @@ class AdminUserController extends Controller
             ->orderBy('name')
             ->get();
 
-        return response()->json($users);
+        return response()->json($users->load('whatsappAccount')->map(fn($u)=>array_merge($u->makeHidden('whatsappAccount')->toArray(),app(\App\Services\WhatsApp\Provisioning::class)->fields($u))));
     }
 
     public function listDepartmentsWithUsers(Request $request)
@@ -56,7 +56,17 @@ class AdminUserController extends Controller
         return response()->json($departments);
     }
 
-    public function storeUser(Request $request)
+    public function storeUser(Request $request) {
+        return \Illuminate\Support\Facades\DB::transaction(function() use ($request) {
+            $response=$this->performstoreUser($request);
+            if($response->getStatusCode()>=400) return $response;
+            $saved=User::findOrFail($response->getData()->id);
+            app(\App\Services\WhatsApp\Provisioning::class)->apply($request,$saved);
+            return response()->json(array_merge($saved->toArray(),app(\App\Services\WhatsApp\Provisioning::class)->fields($saved)),$response->getStatusCode());
+        });
+    }
+
+    private function performstoreUser(Request $request)
     {
         abort_unless($request->user()->hasCapability('users.manage') || $request->user()->isSuperAdmin(),403,'Only church administration can manage users.');
         $churchId = $request->user()?->church_id;
@@ -98,7 +108,17 @@ class AdminUserController extends Controller
         return response()->json($user, 201);
     }
 
-    public function updateUser(Request $request, User $user)
+    public function updateUser(Request $request, User $user) {
+        return \Illuminate\Support\Facades\DB::transaction(function() use ($request, $user) {
+            $response=$this->performupdateUser($request, $user);
+            if($response->getStatusCode()>=400) return $response;
+            $saved=User::findOrFail($response->getData()->id);
+            app(\App\Services\WhatsApp\Provisioning::class)->apply($request,$saved);
+            return response()->json(array_merge($saved->toArray(),app(\App\Services\WhatsApp\Provisioning::class)->fields($saved)),$response->getStatusCode());
+        });
+    }
+
+    private function performupdateUser(Request $request, User $user)
     {
         abort_unless($request->user()->hasCapability('users.manage') || $request->user()->isSuperAdmin(),403,'Only church administration can manage users.');
         $churchId = $request->user()?->church_id;

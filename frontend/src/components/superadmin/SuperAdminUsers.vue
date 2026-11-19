@@ -59,6 +59,7 @@
           </label>
         </div>
       </div>
+      <WhatsAppUserFields :form="createForm" class="col-12" />
       <button class="btn btn-primary mt-3" type="submit">{{ t.create }}</button>
     </form></FormSection>
 
@@ -94,7 +95,7 @@
               <td>{{ user.id }}</td>
               <td>
                 <div class="d-flex align-items-center gap-2">
-                  <input v-model="user.name" class="form-control" type="text" />
+                  <input v-model="user.name" class="form-control" type="text" /><WhatsAppUserFields :form="user" />
                   <span v-if="user.id === currentUserId" class="badge bg-info text-dark">{{ common.loggedIn }}</span>
                 </div>
               </td>
@@ -149,7 +150,7 @@
             </div>
             <div class="mb-2">
               <label class="form-label small mb-1">{{ t.name }}</label>
-              <input v-model="user.name" class="form-control" type="text" />
+              <input v-model="user.name" class="form-control" type="text" /><WhatsAppUserFields :form="user" />
             </div>
             <div class="mb-2">
               <label class="form-label small mb-1">{{ t.role }}</label>
@@ -244,6 +245,7 @@
 </template>
 
 <script setup>
+import WhatsAppUserFields from '../WhatsAppUserFields.vue'
 import FormSection from "../FormSection.vue"
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
@@ -280,6 +282,7 @@ const common = computed(() => translations[locale.value].common)
 const roleLabels = computed(() => translations[locale.value].appLayout.roleLabels)
 const confirmTitle = computed(() => t.value.confirmTitle || t.value.delete)
 const createForm = reactive({
+  whatsapp_phone: '', whatsapp_assistant_enabled: false,
   name: '',
   email: '',
   password: '',
@@ -364,12 +367,14 @@ const createUser = async () => {
     createForm.name = ''
     createForm.email = ''
     createForm.password = ''
+    createForm.whatsapp_phone = ''
+    createForm.whatsapp_assistant_enabled = false
     createForm.role = 'member'
     createForm.department_id = ''
     await loadUsers()
     showSuccessToast()
-  } catch {
-    error.value = t.value.createError
+  } catch (e) {
+    error.value = Object.values(e.response?.data?.errors||{}).flat().join(' ') || t.value.createError
   }
 }
 
@@ -384,10 +389,12 @@ const updateUser = async (user) => {
       email: user.email,
       role: user.role,
       department_id: user.department_id || null,
+      whatsapp_phone: user.whatsapp_phone || null,
+      whatsapp_assistant_enabled: !!user.whatsapp_assistant_enabled,
     })
     showSuccessToast()
-  } catch {
-    error.value = t.value.updateError
+  } catch (e) {
+    error.value = Object.values(e.response?.data?.errors||{}).flat().join(' ') || t.value.updateError
   }
 }
 

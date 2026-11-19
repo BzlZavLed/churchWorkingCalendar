@@ -12,9 +12,9 @@ class WhatsAppAccount extends Model
 
     protected $guarded = [];
 
-    protected $hidden = ['sender', 'sender_hash', 'link_hash', 'state'];
+    protected $hidden = ['registered_sender', 'identity_hash', 'sender', 'sender_hash', 'link_hash', 'state'];
 
-    protected $casts = ['generation' => 'integer', 'sender' => 'encrypted', 'state' => 'encrypted:array', 'link_expires_at' => 'datetime', 'last_received_at' => 'datetime'];
+    protected $casts = ['registered_sender'=>'encrypted', 'generation' => 'integer', 'sender' => 'encrypted', 'state' => 'encrypted:array', 'link_expires_at' => 'datetime', 'last_received_at' => 'datetime'];
 
     public function user()
     {
