@@ -44,6 +44,7 @@ const routes = [
   { path: '/objectives', component: ObjectivesView, meta: { requiresAuth: true } },
   { path: '/reports', component: ReportsView, meta: { requiresAuth: true } },
   { path: '/meeting-points', component: MeetingPointsView, meta: { requiresAuth: true } },
+  { path: '/greeting/attendance', component: GreetingIntakeView, meta: { requiresAuth: true, greetingOnly: true } },
   { path: '/greeting', component: GreetingIntakeView, meta: { requiresAuth: true, greetingOnly: true } },
   { path: '/greeting/contacts', component: GreetingContactsView, meta: { requiresAuth: true, contactsAllowed: true } },
   { path: '/consent/:token?', component: PublicConsentView, meta: { guestOnly: false, noLayout: true } },

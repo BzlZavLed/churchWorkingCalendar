@@ -15,7 +15,7 @@ export const moduleForPath = path => {
  if(path==='/inventory')return 'inventory'
  if(path==='/secretary/meetings')return 'meetings'
  if(path==='/meeting-points')return 'meeting_points'
- if(path==='/greeting')return 'greeting'
+ if(['/greeting','/greeting/attendance'].includes(path))return 'greeting'
  if(path.startsWith('/greeting/'))return 'visitors'
  if(path==='/members')return 'members'
  if(path==='/secretary/departments')return 'departments'

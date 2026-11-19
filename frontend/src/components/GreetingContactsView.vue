@@ -23,6 +23,7 @@
     <nav v-if="canGreet" class="visits-tabs" :aria-label="locale === 'es' ? 'Vistas de visitas' : 'Visitor views'">
       <RouterLink to="/greeting/contacts" aria-current="page">{{ locale === 'es' ? 'Visitas' : 'Visitors' }}</RouterLink>
       <RouterLink to="/greeting">{{ locale === 'es' ? 'Bienvenida · Registrar visita' : 'Welcome · Register visitor' }}</RouterLink>
+      <RouterLink to="/greeting/attendance">{{ locale === 'es' ? 'Asistencia' : 'Attendance' }}</RouterLink>
     </nav>
     <div class="management-summary">
       <article><span>{{ locale === 'es' ? 'Registros' : 'Records' }}</span><strong>{{ loading ? '—' : contacts.length }}</strong></article>

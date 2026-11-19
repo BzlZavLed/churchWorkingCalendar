@@ -62,6 +62,7 @@ Route::prefix('public')->group(function () {
 
 Route::middleware(['auth:sanctum', 'superadmin.context', 'module.access'])->group(function () {
     Route::get('access', [\App\Http\Controllers\ChurchRoleController::class, 'current']);
+    Route::get('reports/attendance', [\App\Http\Controllers\AttendanceReportController::class, 'index']);
     Route::get('reports/events', [EventController::class, 'index']);
     Route::get('reports/objectives', [ObjectiveController::class, 'index']);
     Route::post('reports/events/{event}/notes', [EventNoteController::class, 'store']);
@@ -138,6 +139,9 @@ Route::middleware(['auth:sanctum', 'superadmin.context', 'module.access'])->grou
     Route::post('meeting-points/{point}/finalize', [MeetingPointController::class, 'finalize']);
     Route::post('meeting-points/{point}/notes', [MeetingPointNoteController::class, 'store']);
 
+    Route::get('attendance/surnames', [\App\Http\Controllers\MemberAttendanceController::class, 'surnames'])->middleware('throttle:120,1');
+    Route::get('attendance/family', [\App\Http\Controllers\MemberAttendanceController::class, 'family']);
+    Route::post('attendance', [\App\Http\Controllers\MemberAttendanceController::class, 'save']);
     Route::get('members/birthdays', [\App\Http\Controllers\MemberBirthdayController::class, 'index']);
     Route::post('members/birthdays/message', [\App\Http\Controllers\MemberBirthdayController::class, 'generate'])->middleware('throttle:5,1');
     Route::get('members', [\App\Http\Controllers\ChurchMemberController::class, 'index']);

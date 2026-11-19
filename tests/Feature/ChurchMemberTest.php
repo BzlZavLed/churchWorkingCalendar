@@ -71,16 +71,16 @@ class ChurchMemberTest extends TestCase {
     public function test_csv_template_preview_atomic_import_duplicates_and_stale_templates(): void {
         $this->setupPastor(); $checkbox=$this->field('checkbox');$dob=$this->field('dob');$template=$this->template([$checkbox,$dob]);
         $download=$this->get('/api/members/template.csv')->assertOk()->streamedContent();
-        $this->assertStringStartsWith("\xEF\xBB\xBFName,Email,Phone,",$download);
+        $this->assertStringStartsWith("\xEF\xBB\xBFNombre,\"Primer apellido\",\"Segundo apellido\",Email,Phone,",$download);
         $this->assertStringNotContainsString('member_template',$download);
         $this->assertStringNotContainsString('[',$download);
-        $rows=[['Member One','one@example.test','+1 5551234','yes','1990-01-02'],['Member Two','two@example.test','001234567','no','']];
+        $rows=[['Member','One','','one@example.test','+1 5551234','yes','1990-01-02'],['Member','Two','','two@example.test','001234567','no','']];
         $this->postJson('/api/members/import',['file'=>$this->csv($template,$rows),'preview'=>true])->assertOk()->assertJsonPath('count',2);
         $this->assertDatabaseCount('church_members',0);
-        $bad=$rows; $bad[1][1]='bad-email';
+        $bad=$rows; $bad[1][3]='bad-email';
         $this->postJson('/api/members/import',['file'=>$this->csv($template,$bad),'preview'=>false])->assertUnprocessable()->assertJsonValidationErrors('row_3');
         $this->assertDatabaseCount('church_members',0);
-        $duplicates=$rows; $duplicates[1][1]='ONE@example.test';
+        $duplicates=$rows; $duplicates[1][3]='ONE@example.test';
         $this->postJson('/api/members/import',['file'=>$this->csv($template,$duplicates),'preview'=>false])->assertUnprocessable();
         $this->postJson('/api/members/import',['file'=>$this->csv($template,$rows),'preview'=>false])->assertOk()->assertJsonPath('created',2);
         $this->assertDatabaseCount('church_members',2);

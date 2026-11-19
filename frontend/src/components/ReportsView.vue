@@ -4,9 +4,9 @@
       <div>
         <p class="reports-eyebrow">{{ authStore.user?.church?.name || (locale === 'es' ? 'Administración de iglesia' : 'Church administration') }}</p>
         <h1>{{ t.title }}</h1>
-        <p class="reports-intro">{{ locale === 'es' ? 'Consulta el avance de los eventos, sus objetivos y las conversaciones de tu equipo.' : 'Review event progress, objectives, and your team’s conversations.' }}</p>
+        <p class="reports-intro">{{ locale === 'es' ? 'Consulta el avance de los eventos, sus objetivos, las conversaciones y la asistencia de miembros.' : 'Review event progress, objectives, team conversations, and member attendance.' }}</p>
       </div>
-      <div class="reports-scope">
+      <div v-if="activeTab !== 'attendance'" class="reports-scope">
         <span>{{ locale === 'es' ? 'Eventos del año' : 'Event year' }}</span>
         <strong>{{ reportYear }}</strong>
         <span>{{ canChooseDepartment ? (locale === 'es' ? 'Todos los departamentos disponibles' : 'All available departments') : authStore.user?.department?.name }}</span>
@@ -40,9 +40,11 @@
       >
         {{ t.tabs.events }}
       </button>
+      <button v-if="authStore.canAccess('members')" type="button" class="report-tab" :class="{ active: activeTab === 'attendance' }" :aria-pressed="activeTab === 'attendance'" @click="activeTab = 'attendance'">{{ locale === 'es' ? 'Asistencia' : 'Attendance' }}</button>
     </div>
 
-    <div class="report-summary" aria-live="polite">
+    <AttendanceReport v-if="activeTab === 'attendance'" />
+    <div v-if="activeTab !== 'attendance'" class="report-summary" aria-live="polite">
       <div v-for="stat in reportStats" :key="stat.label" class="report-stat">
         <span>{{ stat.label }}</span><strong>{{ reportLoading ? '…' : reportReady ? stat.value : '—' }}</strong>
       </div>
@@ -233,7 +235,7 @@
       </div>
     </div>
 
-    <div v-else class="report-surface">
+    <div v-else-if="activeTab === 'events'" class="report-surface">
       <div class="report-filters row g-3">
         <div class="col-12 col-md-6">
           <label v-if="canChooseDepartment" class="form-label">
@@ -374,6 +376,7 @@
 </template>
 
 <script setup>
+import AttendanceReport from './AttendanceReport.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '../stores/authStore'
@@ -1052,7 +1055,7 @@ const compareEvents = (a, b, key, dir) => {
 .reports-intro { max-width: 560px; margin: 0; line-height: 1.6; }
 .reports-scope { display: grid; gap: 3px; flex-shrink: 0; padding-left: 18px; border-left: 2px solid #c8d9d0; color: var(--muted); font-size: 12px; }
 .reports-scope strong { color: #264d3e; font-size: 18px; font-weight: 500; }
-.reports-tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--border); }
+.reports-tabs { display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--border); }
 .report-tab { width: auto; border-radius: 6px 6px 0 0; padding: 10px 18px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #617069; font-weight: 500; }
 .report-tab.active { color: #205b48; border-bottom-color: var(--dominant); background: #e6eee8; }
 .report-tab:hover { background: #eaf0ec; }

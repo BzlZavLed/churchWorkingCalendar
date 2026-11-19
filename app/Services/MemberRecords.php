@@ -10,7 +10,7 @@ class MemberRecords {
     }
     public function validate(MemberTemplate $template, array $input): array {
         $base = Validator::make($input, [
-            'name'=>['required','string','max:255'], 'email'=>['required','email','max:255'],
+            'name'=>['required_without:given_name','nullable','string','max:255'], 'given_name'=>['sometimes','required','string','max:80'], 'first_surname'=>['required_with:given_name','nullable','string','max:80'], 'second_surname'=>['nullable','string','max:80'], 'email'=>['required','email','max:255'],
             'phone'=>['required','string','max:50','regex:/^\+?[0-9() .\-]{5,50}$/'],
             'data'=>['present','array','max:40'],
         ])->validate();
@@ -29,10 +29,14 @@ class MemberRecords {
         }
         $base['data']=Validator::make($base['data'],$rules,[],$names)->validate();
         $base['email']=strtolower(trim($base['email']));
+        if (!empty($base['given_name'])) {
+            foreach (['given_name','first_surname','second_surname'] as $key) $base[$key]=trim($base[$key] ?? '');
+            $base['name']=implode(' ',array_filter([$base['given_name'],$base['first_surname'],$base['second_surname']]));
+        }
         $base['name']=trim($base['name']); $base['phone']=trim($base['phone']);
         return $base;
     }
     public function headers(MemberTemplate $template): array {
-        return array_merge(['Name','Email','Phone'],array_column($template->fields,'label'));
+        return array_merge(['Nombre','Primer apellido','Segundo apellido','Email','Phone'],array_column($template->fields,'label'));
     }
 }

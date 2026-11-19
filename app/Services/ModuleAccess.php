@@ -31,6 +31,7 @@ class ModuleAccess {
   'visitors.configure'=>['module'=>'visitors','es'=>'Diseñar formulario público','en'=>'Design public form','roles'=>['pastor']],
   'visitors.edit'=>['module'=>'visitors','es'=>'Editar datos y preferencias de visitas','en'=>'Edit visitor data and preferences','roles'=>['pastor']],
   'visitors.contact'=>['module'=>'visitors','es'=>'Gestionar permisos de contacto','en'=>'Manage contact consent','roles'=>['secretary']],
+  'greeting.attendance'=>['module'=>'greeting','es'=>'Registrar asistencia de miembros','en'=>'Record member attendance','roles'=>['secretary']],
   'greeting.register'=>['module'=>'greeting','es'=>'Registrar visitas (predeterminado: Secretaría y Bienvenida)','en'=>'Register visitors (default: Clerk and Greeting)','roles'=>['secretary']],
   'members.manage'=>['module'=>'members','es'=>'Gestionar plantilla y miembros','en'=>'Manage template and members','roles'=>['pastor','secretary']],
   'objectives.manage'=>['module'=>'objectives','es'=>'Gestionar objetivos propios','en'=>'Manage own department objectives','roles'=>['admin','member']],
@@ -49,7 +50,7 @@ class ModuleAccess {
   if (!$user->church_id || ($user->church_role_id && !$role)) return array_fill_keys(array_keys(self::CAPABILITIES),false);
   $defaults=$this->capabilityDefaults($user->role);
   $defaults['budget.publish']=$user->isAdmin() && (bool) $user->department?->is_treasury;
-  if ($user->isGreetingDepartmentUser() && !$user->isPastor()) {$defaults['visitors.contact']=true;$defaults['greeting.register']=true;}
+  if ($user->isGreetingDepartmentUser() && !$user->isPastor()) {$defaults['visitors.contact']=true;$defaults['greeting.register']=true;$defaults['greeting.attendance']=true;}
   return array_replace($defaults,$role?->capabilities ?? []);
  }
  public function allows(User $user,string $capability): bool {
@@ -91,6 +92,7 @@ class ModuleAccess {
   if(preg_match('#^objectives(/|$)#',$path))return 'objectives';
   if(preg_match('#^budget(/|$)#',$path))return 'budget';
   if(preg_match('#^inventory(/|$)#',$path))return 'inventory';
+  if(preg_match('#^attendance(/|$)#',$path))return 'greeting';
   if(preg_match('#^members(/|$)#',$path))return 'members';
   if(preg_match('#^(church-contacts|visitor-form)(/|$)#',$path))return 'visitors';
   if(preg_match('#^(admin|secretary)/users(/|$)#',$path))return 'users';

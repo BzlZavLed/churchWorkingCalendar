@@ -235,7 +235,7 @@ const roleLabel = computed(() => {
   return t.value.roleLabels?.[role] || role
 })
 
-const isGreetingKiosk = computed(() => route.path === '/greeting' && uiStore.greetingKiosk)
+const isGreetingKiosk = computed(() => ['/greeting','/greeting/attendance'].includes(route.path) && uiStore.greetingKiosk)
 watch(isGreetingKiosk, () => closeSidebar())
 
 const isGreetingFocusMode = computed(() => !authStore.isPlatformAdmin && authStore.user?.role !== 'secretary' && Boolean(authStore.user?.department?.is_greeting))

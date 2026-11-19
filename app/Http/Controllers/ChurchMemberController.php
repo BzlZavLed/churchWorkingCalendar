@@ -30,7 +30,7 @@ class ChurchMemberController extends Controller {
             $current=$records->current($church);
             abort_unless(($current?->version ?? 0)===$data['base_version'],409,'Template changed. Reload before saving.');
             $previous=MemberTemplate::where('church_id',$church)->get()->flatMap(fn($t)=>$t->fields)->keyBy('id');
-            $labels = ['name','email','phone'];
+            $labels = ['name','nombre','primer apellido','segundo apellido','email','phone'];
             foreach($data['fields'] as $field) {
                 $label = mb_strtolower(trim($field['label']));
                 if (!$label || in_array($label,$labels,true)) throw ValidationException::withMessages(['fields'=>['Each field needs a unique label, different from Name, Email and Phone.']]);
@@ -86,12 +86,12 @@ class ChurchMemberController extends Controller {
                     if(count($row)!==count($expected)) { $errors['row_'.$line]=['Column count does not match.']; continue; }
                     $values=array_map(fn($v)=>trim((string)$v),$row); $custom=[];
                     foreach($template->fields as $i=>$field) {
-                        $value=$values[$i+3];
+                        $value=$values[$i+5];
                         if($field['type']==='checkbox' && $value!=='') $value=match(strtolower($value)) {'true','1','yes','si','sí'=>true,'false','0','no'=>false,default=>$value};
                         $custom[$field['id']]=$value===''?null:$value;
                     }
                     try {
-                        $data=$records->validate($template,['name'=>$values[0],'email'=>$values[1],'phone'=>$values[2],'data'=>$custom]);
+                        $data=$records->validate($template,['given_name'=>$values[0],'first_surname'=>$values[1],'second_surname'=>$values[2],'email'=>$values[3],'phone'=>$values[4],'data'=>$custom]);
                         if(isset($existing[$data['email']]) || isset($emails[$data['email']])) throw ValidationException::withMessages(['email'=>['Duplicate email in this church or file.']]);
                         $emails[$data['email']]=true; $rows[]=$data;
                     } catch(ValidationException $e) { $errors['row_'.$line]=collect($e->errors())->flatten()->all(); }

@@ -16,10 +16,13 @@
         </button>
     </Teleport>
     <div class="greeting-panel">
-      <nav v-if="!isPublic && !uiStore.greetingKiosk" class="visits-tabs" :aria-label="locale === 'es' ? 'Vistas de visitas' : 'Visitor views'">
-        <RouterLink to="/greeting/contacts">{{ locale === 'es' ? 'Visitas' : 'Visitors' }}</RouterLink>
-        <RouterLink to="/greeting" aria-current="page">{{ locale === 'es' ? 'Bienvenida · Registrar visita' : 'Welcome · Register visitor' }}</RouterLink>
+      <nav v-if="!isPublic" class="visits-tabs" :aria-label="locale === 'es' ? 'Vistas de visitas' : 'Visitor views'">
+        <RouterLink v-if="!uiStore.greetingKiosk && auth.canAccess('visitors')" to="/greeting/contacts">{{ locale === 'es' ? 'Visitas' : 'Visitors' }}</RouterLink>
+        <RouterLink to="/greeting" :aria-current="route.path === '/greeting' ? 'page' : undefined">{{ locale === 'es' ? 'Bienvenida · Registrar visita' : 'Welcome · Register visitor' }}</RouterLink>
+        <RouterLink to="/greeting/attendance" :aria-current="route.path === '/greeting/attendance' ? 'page' : undefined">{{ locale === 'es' ? 'Asistencia' : 'Attendance' }}</RouterLink>
       </nav>
+      <MemberAttendance v-if="!isPublic && route.path === '/greeting/attendance'" />
+      <template v-else>
       <div v-if="!isPublic" class="greeting-display-controls">
         <button type="button" class="greeting-qr-button" :title="locale === 'es' ? 'Mostrar QR' : 'Show QR'" :aria-label="locale === 'es' ? 'Mostrar QR' : 'Show QR'" @click="showQr">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3zM15 15h2v2h-2zM20 14v3m-6 3h3m3 0h1v1" /></svg>
@@ -101,6 +104,7 @@
       </fieldset></form>
 
       <p v-if="error" class="alert alert-danger mb-0 mt-3">{{ error }}</p>
+      </template>
     </div>
     <div v-if="qrOpen" class="modal-backdrop" @click.self="qrOpen = false" @keydown.esc="qrOpen = false">
       <section class="modal-panel greeting-qr" role="dialog" aria-modal="true" aria-labelledby="visit-qr-title">
@@ -115,6 +119,7 @@
 </template>
 
 <script setup>
+import MemberAttendance from './MemberAttendance.vue'
 import VisitorCustomFields from './VisitorCustomFields.vue'
 import '../styles/visits.css'
 import { useAuthStore } from '../stores/authStore'
@@ -167,7 +172,7 @@ onMounted(async () => {
 })
 const uiStore = useUiStore()
 const { locale } = storeToRefs(uiStore)
-onUnmounted(() => { uiStore.greetingKiosk = false })
+onUnmounted(() => { if (!['/greeting','/greeting/attendance'].includes(route.path)) uiStore.greetingKiosk = false })
 const t = computed(() => translations[locale.value].greeting.intake)
 const kioskLabel = computed(() => uiStore.greetingKiosk
   ? (locale.value === 'es' ? 'Salir del modo quiosco' : 'Exit kiosk mode')
