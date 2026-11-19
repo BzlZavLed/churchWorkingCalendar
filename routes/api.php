@@ -138,6 +138,8 @@ Route::middleware(['auth:sanctum', 'superadmin.context', 'module.access'])->grou
     Route::post('meeting-points/{point}/finalize', [MeetingPointController::class, 'finalize']);
     Route::post('meeting-points/{point}/notes', [MeetingPointNoteController::class, 'store']);
 
+    Route::get('members/birthdays', [\App\Http\Controllers\MemberBirthdayController::class, 'index']);
+    Route::post('members/birthdays/message', [\App\Http\Controllers\MemberBirthdayController::class, 'generate'])->middleware('throttle:5,1');
     Route::get('members', [\App\Http\Controllers\ChurchMemberController::class, 'index']);
     Route::post('members/template', [\App\Http\Controllers\ChurchMemberController::class, 'template']);
     Route::get('members/template.csv', [\App\Http\Controllers\ChurchMemberController::class, 'download']);

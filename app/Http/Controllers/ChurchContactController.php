@@ -176,7 +176,6 @@ class ChurchContactController extends Controller
             return false;
         }
 
-        return app(\App\Services\ModuleAccess::class)->read($user,'visitors') || in_array($user->role, [User::ROLE_PASTOR, User::ROLE_ADMIN, User::ROLE_SECRETARY, User::ROLE_SUPERADMIN], true)
-            || (bool) $user->department?->is_greeting;
+        return app(\App\Services\ModuleAccess::class)->read($user, 'visitors');
     }
 }

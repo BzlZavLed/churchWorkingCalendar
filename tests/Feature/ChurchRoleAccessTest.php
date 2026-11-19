@@ -71,4 +71,19 @@ class ChurchRoleAccessTest extends TestCase {
   $this->getJson('/api/events?start=2026-01-01&end=2027-01-01')->assertForbidden();$this->postJson('/api/conference-events',[])->assertForbidden();
   $this->getJson('/api/superadmin/churches')->assertForbidden();
  }
+
+ public function test_visitors_default_access_is_limited_to_greeters_clerk_and_pastor(): void {
+  $church=Church::create(['name'=>'Visitor access']);
+  $normal=Department::create(['church_id'=>$church->id,'name'=>'Music']);
+  $greeter=Department::create(['church_id'=>$church->id,'name'=>'Welcome','is_greeting'=>true]);
+  foreach ([['admin',$normal,false],['member',$normal,false],['admin',$greeter,true],['member',$greeter,true],['secretary',null,true],['pastor',null,true]] as [$role,$department,$allowed]) {
+   $user=User::factory()->create(['role'=>$role,'church_id'=>$church->id,'department_id'=>$department?->id]);
+   Sanctum::actingAs($user);
+   $this->getJson('/api/access')->assertOk()->assertJsonPath('permissions.visitors',$allowed?'edit':'none');
+   $response=$this->getJson('/api/church-contacts');
+   $allowed ? $response->assertOk() : $response->assertForbidden();
+  }
+  $admin=User::factory()->create(['role'=>'superadmin']);Sanctum::actingAs($admin);
+  $this->getJson('/api/access')->assertJsonPath('permissions.visitors','edit');
+ }
 }

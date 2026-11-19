@@ -32,7 +32,7 @@ class ModuleAccess {
   'visitors.edit'=>['module'=>'visitors','es'=>'Editar datos y preferencias de visitas','en'=>'Edit visitor data and preferences','roles'=>['pastor']],
   'visitors.contact'=>['module'=>'visitors','es'=>'Gestionar permisos de contacto','en'=>'Manage contact consent','roles'=>['secretary']],
   'greeting.register'=>['module'=>'greeting','es'=>'Registrar visitas (predeterminado: Secretaría y Bienvenida)','en'=>'Register visitors (default: Clerk and Greeting)','roles'=>['secretary']],
-  'members.manage'=>['module'=>'members','es'=>'Gestionar plantilla y miembros','en'=>'Manage template and members','roles'=>['pastor']],
+  'members.manage'=>['module'=>'members','es'=>'Gestionar plantilla y miembros','en'=>'Manage template and members','roles'=>['pastor','secretary']],
   'objectives.manage'=>['module'=>'objectives','es'=>'Gestionar objetivos propios','en'=>'Manage own department objectives','roles'=>['admin','member']],
   'inventory.manage'=>['module'=>'inventory','es'=>'Gestionar inventario propio','en'=>'Manage own department inventory','roles'=>['admin']],
   'budget.publish'=>['module'=>'budget','es'=>'Publicar asignaciones de toda la iglesia (predeterminado: solo Tesorería)','en'=>'Publish church allocations (default: Treasury only)','roles'=>['admin']],
@@ -59,11 +59,11 @@ class ModuleAccess {
  public const BASES=['secretary','pastor','admin','member'];
  public function defaults(string $base, bool $greeter=false): array {
   $p=array_fill_keys(array_keys(self::MODULES),'none');
-  if($base==='secretary') return array_replace($p,['committees'=>'edit','calendar'=>'edit','reports'=>'edit','objectives'=>'read','budget'=>'read','inventory'=>'read','meetings'=>'edit','visitors'=>'edit','greeting'=>'edit','departments'=>'edit','users'=>'edit']);
+  if($base==='secretary') return array_replace($p,['members'=>'edit','committees'=>'edit','calendar'=>'edit','reports'=>'edit','objectives'=>'read','budget'=>'read','inventory'=>'read','meetings'=>'edit','visitors'=>'edit','greeting'=>'edit','departments'=>'edit','users'=>'edit']);
   if($base==='pastor') return array_replace($p,['visitors'=>'edit','members'=>'edit']);
   if(in_array($base,['admin','member'],true)) {
    $p=array_replace($p,['calendar'=>'edit','reports'=>'edit','objectives'=>'edit','budget'=>$base==='admin'?'edit':'read','meeting_points'=>$base==='admin'?'edit':'read']);
-   if($base==='admin') $p=array_replace($p,['inventory'=>'edit','visitors'=>'read']);
+   if($base==='admin') $p=array_replace($p,['inventory'=>'edit']);
    if($greeter) $p=array_replace(array_fill_keys(array_keys(self::MODULES),'none'),['greeting'=>'edit','visitors'=>'edit','budget'=>$base==='admin'?'edit':'read','meeting_points'=>$base==='admin'?'edit':'read']);
   }
   return $p;

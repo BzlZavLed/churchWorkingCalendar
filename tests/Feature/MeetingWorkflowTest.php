@@ -156,7 +156,6 @@ class MeetingWorkflowTest extends TestCase
         $id=$this->point($meeting,$admin);$rejected=$this->point($meeting,$other,'Not on agenda');
         $this->accept($id,$clerk);
         $this->postJson("/api/meeting-points/$rejected/review",['status'=>'rejected'])->assertOk();
-        $this->postJson("/api/meetings/{$meeting->id}/start")->assertUnprocessable();
         $this->postJson("/api/meetings/{$meeting->id}/adjourn")->assertUnprocessable();
         $this->patchJson("/api/meetings/{$meeting->id}",['summary_public'=>true])->assertUnprocessable();
         $this->travelTo($meeting->planned_start_at);
@@ -317,4 +316,29 @@ class MeetingWorkflowTest extends TestCase
         $this->getJson("/api/meetings/{$meeting->id}")->assertForbidden();
     }
 
+
+    public function test_clerk_can_start_early_and_close_submissions_without_changing_schedule(): void
+    {
+        [, $clerk, $department, , $meeting] = $this->setupMeeting();
+        $planned = $meeting->planned_start_at->toIso8601String();
+        $this->travel(1)->days();
+        Sanctum::actingAs($department);
+        $this->postJson("/api/meetings/{$meeting->id}/start")->assertForbidden();
+        Sanctum::actingAs($clerk);
+        $this->postJson("/api/meetings/{$meeting->id}/start")->assertOk();
+        $meeting->refresh();
+        $this->assertEquals(now()->timestamp, $meeting->start_at->timestamp);
+        $this->assertEquals(now()->timestamp, $meeting->agenda_closed_at->timestamp);
+        $this->assertSame($planned, $meeting->planned_start_at->toIso8601String());
+        $this->assertSame($clerk->id, $meeting->opened_by);
+        $started = $meeting->start_at->timestamp;
+        $this->travel(1)->minutes();
+        $this->postJson("/api/meetings/{$meeting->id}/start")->assertOk();
+        $this->assertSame($started, $meeting->fresh()->start_at->timestamp);
+        Sanctum::actingAs($department);
+        $this->postJson("/api/meetings/{$meeting->id}/points", ['title'=>'Late point','description'=>'After early start'])->assertUnprocessable();
+        $meeting->update(['end_at'=>now()]);
+        Sanctum::actingAs($clerk);
+        $this->postJson("/api/meetings/{$meeting->id}/start")->assertUnprocessable();
+    }
 }

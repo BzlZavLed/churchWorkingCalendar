@@ -108,8 +108,12 @@ class MeetingController extends Controller
         return DB::transaction(function () use ($meeting, $request) {
             $meeting = Meeting::whereKey($meeting->id)->lockForUpdate()->firstOrFail();
             abort_if($meeting->end_at, 422, 'Meeting has ended.');
-            abort_if(now()->lessThan($meeting->planned_start_at), 422, 'The scheduled meeting time has not arrived.');
             $this->workflow->syncDeadline($meeting);
+            // An early start closes submissions immediately, without changing the scheduled date.
+            if (!$meeting->agenda_closed_at) {
+                $meeting->update(['agenda_closed_at' => now()]);
+                DomainUpdate::forMeeting('agenda_closed', $meeting, $request->user());
+            }
             if (!$meeting->start_at) $meeting->update(['start_at' => now(), 'opened_by' => $request->user()->id, 'updated_by' => $request->user()->id]);
             DomainUpdate::forMeeting('started', $meeting, $request->user());
             return response()->json($this->workflow->meetingFor($meeting, $request->user()));

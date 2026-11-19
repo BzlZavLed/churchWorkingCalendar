@@ -41,7 +41,7 @@ class ChurchCapabilitiesTest extends TestCase {
   $this->postJson('/api/conference-events',['title'=>'Conference','start_at'=>now()->addDays(20)->toIso8601String(),'end_at'=>now()->addDays(20)->addHour()->toIso8601String()])->assertCreated()->assertJsonPath('publish_to_feed',false);
   $meeting=$this->postJson('/api/meetings',['meeting_date'=>now()->addDays(5)->toDateString(),'planned_start_at'=>now()->addDays(5)->toIso8601String(),'location'=>'Church'])->assertCreated()->json('id');
   $this->postJson("/api/meetings/$meeting/points",['title'=>'Agenda','description'=>'Review calendar'])->assertCreated();
-  $this->postJson("/api/meetings/$meeting/start")->assertUnprocessable();
+  $this->postJson("/api/meetings/$meeting/start")->assertOk();
   $this->assertSame('pastor',$pastor->fresh()->role);
   $role->update(['permissions'=>['calendar'=>'read','meetings'=>'read']]);
   $this->postJson("/api/events/{$event->id}/review",['review_status'=>'changes_requested','review_note'=>'No'])->assertForbidden();

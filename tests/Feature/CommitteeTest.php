@@ -14,7 +14,7 @@ class CommitteeTest extends TestCase {
   $church=Church::create(['name'=>'Main']);$other=Church::create(['name'=>'Other']);
   $a=$this->member($church,'Ana');$b=$this->member($church,'Ben');$foreign=$this->member($other,'Foreign');
   $clerk=User::factory()->create(['church_id'=>$church->id,'role'=>'secretary']);Sanctum::actingAs($clerk);
-  $this->getJson('/api/members')->assertForbidden();
+  $this->getJson('/api/members')->assertOk()->assertJsonCount(2,'members');
   $this->getJson('/api/committees')->assertOk()->assertJsonCount(2,'members')->assertJsonMissingPath('members.0.data')->assertJsonMissingPath('members.0.phone');
   $data=['name'=>'Music committee','objective'=>'Coordinate worship','formation_voted_on'=>now()->toDateString(),'minutes_number'=>'2026-12','member_ids'=>[$a->id,$b->id],'created_by'=>999];
   $result=$this->postJson('/api/committees',$data)->assertCreated()->assertJsonPath('created_by',$clerk->id)->assertJsonPath('members_count',2)->assertJsonPath('revision',1);

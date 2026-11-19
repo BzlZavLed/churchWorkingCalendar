@@ -1,6 +1,7 @@
 <template>
   <section class="container py-4 management-page members-page">
-    <header class="management-heading"><div><p class="management-eyebrow">{{ auth.user?.church?.name }}</p><h1>{{ tr('Miembros','Members') }}</h1><p>{{ tr('Define la información de tu iglesia, registra miembros o importa tu plantilla CSV.','Define your church’s information, register members or import your CSV template.') }}</p></div></header>
+    <header class="management-heading"><div><p class="management-eyebrow">{{ auth.user?.church?.name }}</p><h1>{{ tr('Miembros','Members') }}</h1><p>{{ tr('Define la información de tu iglesia, registra miembros o importa tu plantilla CSV.','Define your church’s information, register members or import your CSV template.') }}</p></div><button class="btn btn-outline-primary" :aria-expanded="showBirthdays" aria-controls="member-birthdays" @click="showBirthdays=!showBirthdays">{{ showBirthdays ? tr('Cerrar cumpleaños','Close birthdays') : tr('Cumpleaños','Birthdays') }}</button></header>
+    <MemberBirthdays v-if="showBirthdays" id="member-birthdays" />
     <p v-if="error" class="alert alert-danger" role="alert">{{ error }}</p><p v-if="notice" class="alert alert-success" role="status">{{ notice }}</p>
     <p v-if="loading" role="status">{{ tr('Cargando…','Loading…') }}</p>
     <template v-else>
@@ -49,6 +50,7 @@
   </section>
 </template>
 <script setup>
+import MemberBirthdays from './MemberBirthdays.vue'
 import { computed, ref, onMounted, nextTick } from 'vue'
 import { useAuthStore } from '../stores/authStore'
 import { useUiStore } from '../stores/uiStore'
@@ -56,7 +58,7 @@ import { membersApi } from '../services/membersApi'
 import '../styles/clerk-management.css'
 const auth=useAuthStore(),ui=useUiStore(),tr=(es,en)=>ui.locale==='es'?es:en
 const loading=ref(true),busy=ref(false),error=ref(''),notice=ref(''),template=ref(null),members=ref([]),historicalFields=ref([]),draftFields=ref([]),newType=ref('text'),templateOpen=ref(false)
-const expandedMembers=ref({})
+const expandedMembers=ref({}),showBirthdays=ref(false)
 const search=ref(''),importFile=ref(null),importPreview=ref(null),fileInput=ref(null),editing=ref(false),editingId=ref(null),memberDraft=ref({}),memberError=ref(''),editor=ref(null)
 const types=['text','textarea','email','phone','dob','date','number','checkbox','select']
 const typeLabel=type=>({text:tr('Texto corto','Short text'),textarea:tr('Texto largo','Long text'),email:tr('Correo','Email'),phone:tr('Teléfono','Phone'),dob:tr('Fecha de nacimiento','Date of birth'),date:tr('Fecha','Date'),number:tr('Número','Number'),checkbox:tr('Sí / No','Yes / No'),select:tr('Lista de opciones','Dropdown')})[type]

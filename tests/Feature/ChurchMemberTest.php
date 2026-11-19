@@ -27,7 +27,7 @@ class ChurchMemberTest extends TestCase {
         rewind($stream);$content=stream_get_contents($stream);fclose($stream);
         return UploadedFile::fake()->createWithContent('members.csv',$content);
     }
-    public function test_members_are_pastor_only_and_church_scoped_including_drilldown(): void {
+    public function test_members_are_church_scoped_including_drilldown(): void {
         [$church,$pastor]=$this->setupPastor(); $template=$this->template();
         $payload=['template_id'=>$template['id'],'name'=>'Member','email'=>'MEMBER@example.test','phone'=>'+1 555 123 4567','data'=>[]];
         $id=$this->postJson('/api/members',$payload)->assertOk()->assertJsonPath('email','member@example.test')->json('id');
@@ -37,7 +37,7 @@ class ChurchMemberTest extends TestCase {
         Sanctum::actingAs(User::factory()->create(['role'=>'pastor','church_id'=>$other->id]));
         $this->getJson('/api/members')->assertOk()->assertJsonCount(0,'members');
         $this->patchJson('/api/members/'.$id,$payload)->assertNotFound();
-        foreach(['secretary','admin','member','superadmin'] as $role) {
+        foreach(['admin','member','superadmin'] as $role) {
             Sanctum::actingAs(User::factory()->create(['role'=>$role,'church_id'=>$church->id]));
             $this->getJson('/api/members')->assertForbidden();
             $this->postJson('/api/members/template',['base_version'=>0,'fields'=>[]])->assertForbidden();

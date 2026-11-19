@@ -174,14 +174,23 @@ const navItems = computed(() => {
   }
 
   const icons = {committees:'committees',calendar:'calendar',reports:'reports',objectives:'objectives',budget:'budget',inventory:'inventory',meetings:'meetings',meeting_points:'meetingPoints',visitors:'greetingList',greeting:'greeting',members:'members',departments:'departments',users:'users'}
-  const items = Object.entries(authStore.accessModules).filter(([key])=>authStore.isPlatformAdmin || authStore.canAccess(key)).map(([key,module])=>({to:module.path,label:locale.value==='es'?module.es:module.en,icon:iconPaths[icons[key]]}))
+  const platformView = authStore.isPlatformAdmin && !authStore.adminContext
+  const platformPaths = {
+    calendar: '/superadmin/calendars',
+    departments: '/superadmin/departments',
+    users: '/superadmin/users',
+    meetings: '/superadmin/meetings',
+  }
+  const items = Object.entries(authStore.accessModules)
+    .filter(([key]) => platformView || authStore.canAccess(key))
+    .map(([key, module]) => ({
+      to: platformView ? (platformPaths[key] || module.path) : module.path,
+      label: locale.value === 'es' ? module.es : module.en,
+      icon: iconPaths[icons[key]],
+    }))
   if (authStore.isPlatformAdmin) items.unshift(
     {to:'/superadmin/churches',label:t.value.churches,icon:iconPaths.churches},
     {to:'/superadmin/roles',label:locale.value==='es'?'Roles y permisos':'Roles and permissions',icon:iconPaths.roles},
-    {to:'/superadmin/calendars',label:t.value.calendarManager,icon:iconPaths.calendarManager},
-    {to:'/superadmin/departments',label:locale.value==='es'?'Departamentos · plataforma':'Departments · platform',icon:iconPaths.departments},
-    {to:'/superadmin/users',label:locale.value==='es'?'Usuarios · plataforma':'Users · platform',icon:iconPaths.users},
-    {to:'/superadmin/meetings',label:locale.value==='es'?'Juntas · plataforma':'Meetings · platform',icon:iconPaths.meetings},
   )
   items.push({to:'/whatsapp-settings',label:locale.value==='es'?'Asistente WhatsApp':'WhatsApp assistant',icon:iconPaths.meetingPoints})
   return items

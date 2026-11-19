@@ -34,7 +34,7 @@ const routes = [
   { path: '/committees', component: CommitteesView, meta: { requiresAuth: true } },
   { path: '/superadmin/roles', component: SuperAdminRoles, meta: { requiresAuth: true, superadminOnly: true } },
   { path: '/no-access', component: NoAccessView, meta: { requiresAuth: true } },
-  { path: '/members', component: MembersView, meta: { requiresAuth: true, pastorOnly: true } },
+  { path: '/members', component: MembersView, meta: { requiresAuth: true } },
   { path: '/greeting/form-builder', component: VisitorFormBuilder, meta: { requiresAuth: true, pastorOnly: true } },
   { path: '/visit/:churchId', component: GreetingIntakeView, meta: { noLayout: true } },
   { path: '/', redirect: '/calendar' },
@@ -76,8 +76,6 @@ router.beforeEach(async (to) => {
 
   if (to.path.startsWith('/superadmin/') && !to.meta.noLayout && authStore.isPlatformAdmin) authStore.exitContext()
 
-  const isGreetingUser = !authStore.isPlatformAdmin && authStore.user?.role !== 'secretary' && Boolean(authStore.user?.department?.is_greeting)
-  const isContactsAllowed = ['admin', 'secretary', 'superadmin', 'pastor'].includes(authStore.user?.role || '') || isGreetingUser
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     return { path: '/login', query: to.path === '/greeting/contacts' ? { redirect: to.fullPath } : {} }
