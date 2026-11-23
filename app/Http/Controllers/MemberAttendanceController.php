@@ -10,6 +10,7 @@ class MemberAttendanceController extends Controller
 {
     private function church(Request $request): int
     {
+        if($request->attributes->has('attendance_church'))return $request->attributes->get('attendance_church');
         $user = $request->user();
         abort_unless($user?->church_id && !$user->isSuperAdmin() && app(ModuleAccess::class)->read($user, 'greeting'), 403);
         return $user->church_id;
@@ -33,9 +34,34 @@ class MemberAttendanceController extends Controller
         $data = $request->validate(['surname'=>['required','string','max:80'], 'timezone'=>['required','timezone']]);
         $date = now($data['timezone'])->toDateString();
         $members = ChurchMember::where('church_id',$church)->whereRaw('LOWER(first_surname) = ?', [mb_strtolower(trim($data['surname']))])
-            ->orderBy('name')->get(['id','name']);
+            ->orderBy('name')->get();
+        $familyIds=$members->map(fn($m)=>$m->data['FamilyId']??null)->filter(fn($id)=>filled($id))->unique()->values()->all();
+        if($familyIds) $members=ChurchMember::where('church_id',$church)->where(function($q)use($members,$familyIds){
+            $q->whereIn('id',$members->pluck('id'))->orWhereIn('data->FamilyId',$familyIds);
+        })->orderBy('name')->get();
         $present = DB::table('member_attendances')->where('church_id',$church)->where('attendance_date',$date)->pluck('church_member_id')->flip();
-        return ['date'=>$date,'members'=>$members->map(fn($member)=>['id'=>$member->id,'name'=>$member->name,'present'=>isset($present[$member->id])])];
+        return ['date'=>$date,'token'=>\Illuminate\Support\Facades\Crypt::encryptString(json_encode(['church'=>$church,'ids'=>$members->pluck('id')->all(),'date'=>$date,'timezone'=>$data['timezone'],'expires'=>now()->addMinutes(15)->timestamp])),'members'=>$members->map(fn($member)=>['id'=>$member->id,'name'=>$member->name,'family_id'=>$member->data['FamilyId']??null,'present'=>isset($present[$member->id])])];
+    }
+
+    public function publicSurnames(Request $r, \App\Models\Church $church) {$r->attributes->set('attendance_church',$church->id);return $this->surnames($r);}
+    public function publicFamily(Request $r, \App\Models\Church $church) {$r->attributes->set('attendance_church',$church->id);return $this->family($r);}
+    public function publicSave(Request $r, \App\Models\Church $church) {
+        $r->attributes->set('attendance_church',$church->id);
+        return $this->batch($r);
+    }
+    public function batch(Request $r) {
+        $church=$this->church($r);$public=$r->attributes->has('attendance_church');
+        if(!$public)abort_unless($r->user()->hasCapability('greeting.attendance'),403);
+        $data=$r->validate(['member_ids'=>['required','array','min:1','max:100'],'member_ids.*'=>['integer','distinct'],'token'=>['required','string']]);
+        try{$token=json_decode(\Illuminate\Support\Facades\Crypt::decryptString($data['token']),true,512,JSON_THROW_ON_ERROR);}catch(\Throwable){abort(422,'Search the family again.');}
+        abort_unless(($token['church']??null)===$church && ($token['expires']??0)>=now()->timestamp && !array_diff($data['member_ids'],$token['ids']??[]),422,'Search the family again.');
+        abort_unless($token['date']===now($token['timezone'])->toDateString(),409,'The day changed. Search again.');
+        return DB::transaction(function()use($r,$church,$data,$token,$public){
+            $members=ChurchMember::where('church_id',$church)->whereIn('id',$data['member_ids'])->orderBy('id')->lockForUpdate()->get();
+            abort_unless($members->count()===count($data['member_ids']),404);
+            foreach($members as $member)DB::table('member_attendances')->insertOrIgnore(['church_id'=>$church,'church_member_id'=>$member->id,'attendance_date'=>$token['date'],'recorded_by'=>$public?null:$r->user()->id,'created_at'=>now(),'updated_at'=>now()]);
+            return ['present'=>true,'date'=>$token['date']];
+        });
     }
 
     public function save(Request $request)

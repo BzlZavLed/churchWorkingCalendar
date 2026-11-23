@@ -47,7 +47,7 @@ class MemberBirthdayTest extends TestCase
         $other = Church::create(['name' => 'Other']);
         $this->member($other, $template, $field, '2000-02-01', 'Private Other');
         $this->getJson('/api/members/birthdays?'.http_build_query($this->query()))->assertOk()->assertJsonCount(1, 'members')->assertJsonPath('members.0.name', 'Leap Day')->assertJsonPath('members.0.birthday', '2027-02-28')->assertJsonPath('missing_dates', 1)->assertJsonPath('from', '2027-02-01')->assertJsonPath('to', '2027-02-28')->assertJsonMissing(['name' => 'Private Other']);
-        $this->postJson('/api/members', ['template_id' => $template->id, 'name' => 'Clerk Added', 'email' => 'clerkadded@example.test', 'phone' => '+15555550101', 'data' => [$field => '1990-02-03']])->assertOk();
+        $this->postJson('/api/members', ['template_id' => $this->getJson('/api/members')->json('template.id'), 'name' => 'Clerk Added', 'email' => 'clerkadded@example.test', 'phone' => '+15555550101', 'data' => ['BornOn' => '1990-02-03']])->assertOk();
     }
 
     public function test_daily_weekly_biweekly_and_year_boundary(): void

@@ -217,7 +217,8 @@ class BudgetTest extends TestCase
         $inventoryEntry = collect($music['budget']['entries'])->firstWhere('id', $result->json('id'));
         $this->assertSame($itemId, $inventoryEntry['inventory_item']['id']);
         $this->assertNotSame($department->id, $overview->json('writable_department_id'));
-        $this->putJson('/api/budget/entries/'.$result->json('id'), ['amount' => '1'])->assertStatus(405);
+        // Unknown API URLs no longer match the SPA GET fallback.
+        $this->putJson('/api/budget/entries/'.$result->json('id'), ['amount' => '1'])->assertNotFound();
         $this->assertDatabaseHas('budget_entries', ['id' => $result->json('id'), 'amount_cents' => 10000]);
     }
 

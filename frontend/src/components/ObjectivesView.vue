@@ -53,6 +53,7 @@
 </template>
 
 <script setup>
+import {addChurchPdfLogo} from '../services/pdfBranding'
 import jsPDF from 'jspdf'
 import 'jspdf-autotable'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
@@ -105,18 +106,19 @@ function exportCsv() {
   link.remove()
   URL.revokeObjectURL(url)
 }
-function exportPdf() {
+async function exportPdf() {
   if (loading.value || error.value || !filtered.value.length) return
   const { headers, rows } = exportData()
   const doc = new jsPDF({ orientation: 'landscape' })
+  const offset = await addChurchPdfLogo(doc, churchFilter.value || auth.user?.church_id)
   const width = doc.internal.pageSize.getWidth() - 28
   doc.setFontSize(14)
-  doc.text(tr('Objetivos', 'Objectives'), 14, 16)
+  doc.text(tr('Objetivos', 'Objectives'), 14, 16 + offset)
   doc.setFontSize(9)
   const church = churches.value.find(c => String(c.id) === churchFilter.value)?.name || auth.user?.church?.name || tr('Todas las iglesias', 'All churches')
   const context = doc.splitTextToSize([church, exportScope.value, exportDate(), `${rows.length} ${tr('objetivos', 'objectives')}`, search.value.trim() ? `${tr('Buscar', 'Search')}: ${search.value.trim()}` : ''].filter(Boolean).join(' | '), width)
-  doc.text(context, 14, 23)
-  doc.autoTable({ startY: 27 + context.length * 4, head: [headers], body: rows, styles: { fontSize: 8, overflow: 'linebreak', cellPadding: 3 }, headStyles: { fillColor: [31, 111, 92] }, columnStyles: { 0: { cellWidth: 32 }, 1: { cellWidth: 44 }, 4: { cellWidth: 23, halign: 'center' }, 5: { cellWidth: 23, halign: 'center' } }, margin: { bottom: 16 } })
+  doc.text(context, 14, 23 + offset)
+  doc.autoTable({ startY: 27 + offset + context.length * 4, head: [headers], body: rows, styles: { fontSize: 8, overflow: 'linebreak', cellPadding: 3 }, headStyles: { fillColor: [31, 111, 92] }, columnStyles: { 0: { cellWidth: 32 }, 1: { cellWidth: 44 }, 4: { cellWidth: 23, halign: 'center' }, 5: { cellWidth: 23, halign: 'center' } }, margin: { bottom: 16 } })
   const pages = doc.getNumberOfPages()
   for (let page = 1; page <= pages; page++) {
     doc.setPage(page)

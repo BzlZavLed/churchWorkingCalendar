@@ -1,0 +1,21 @@
+# Member directory
+
+The member directory uses the standard 30-column Person Labels CSV format. `/members` returns basic name/contact columns only. `/members/{id}` loads the full church-scoped member record. The full record supports editing and deletion by users with `members.manage`; readers cannot mutate records. Deletion is blocked when attendance or committee records reference the member.
+
+The template builder has been removed. A fixed header-only CSV is available without configuring fields. Existing template definitions are retained as optional legacy fields when a church first opens the new directory, and old member values are preserved. Existing DOB fields remain usable for birthdays and prefill the new BornOn field on the detail screen. The richer attributes use the existing JSON data column. Run migration 2026_11_23_000000_allow_shared_member_emails to allow shared emails and add a church-scoped unique source_person_id. Email is contact information, not member identity. Duplicate nonblank PersonId values are rejected on import; rows without PersonId always create new independent records.
+
+Required data: name, email, phone and DOB. Surnames and all other attributes are optional. FirstName maps to given name; LastName is preserved as the first surname without guessing where compound surnames split. The existing second surname can still be edited separately. MiddleName and Suffix are included in the display name. MobilePhone, FamilyPhone and WorkPhone are preserved separately; the first nonblank in that order becomes the primary phone. PersonId and FamilyId are source identifiers, never internal record IDs.
+
+Imports accept UTF-8 and Windows-1252, preserve identifiers and postal codes as text, accept dates as YYYY-MM-DD or US MM/DD/YYYY, and support Y/N, yes/no and boolean checkbox values. Optional columns can be omitted or reordered; unknown or duplicate headers are rejected. Maximum 1,000 rows / 2 MB. Validation is atomic with numbered row errors and a preview before import. Missing required values are never fabricated or skipped. The original source CSV is not bundled with the app or committed.
+
+## In-browser import corrections
+
+“Load for review” returns the complete CSV draft, including invalid rows and field-specific errors. Users can edit core cells, expand other columns, filter invalid rows, and page through ten rows at a time. Changes invalidate the prior validation; “Validate corrections” sends the entire corrected draft through the same server validator. Confirmation rechecks current source IDs and atomically imports eligible rows while retaining the remaining rows in the saved draft. No members are saved by preview or validation. Unsaved edits live in the open page. “Save for later” and “Validate corrections” save the draft to the database so it can be reopened after navigation or reload. Structural CSV errors (unknown headers or mismatched column counts) remain file errors; malformed rows are never silently dropped.
+
+## Pending rows and explicit missing-data exceptions
+
+Run migration `2026_11_23_010000_add_member_import_drafts.php`. Draft rows are encrypted at rest, scoped to their church and owning account, and available only with `members.manage`. Revision checks prevent stale tabs from overwriting or reimporting a completed batch. The UI lists pending drafts under Importaciones pendientes.
+
+Name, email, phone and DOB remain required by default. A reviewer may explicitly authorize a row missing any of these values; malformed nonblank values, duplicate source IDs and other validation errors cannot be waived. The server records the approver, time and authorized missing fields on the resulting member. Unapproved rows stay in the draft. The list and full member page show missing-data markers. Filling the missing fields clears the marker; previously completed fields cannot be emptied using an old authorization. Ordinary member creation cannot bypass required-field validation.
+
+“Guardar para después” and validation retain only rows with validation errors in the saved draft, including individually authorized missing-data rows. Correct rows remain in the current browser review and must be imported before leaving. Saving an older draft also removes its valid rows from pending storage. The import action submits the complete current review before importing eligible rows.

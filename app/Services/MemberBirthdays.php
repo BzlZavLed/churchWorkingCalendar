@@ -13,7 +13,7 @@ class MemberBirthdays
     {
         $fields = MemberTemplate::where('church_id', $church)->orderBy('version')->get()
             ->flatMap(fn ($t) => $t->fields)->keyBy('id')->filter(fn ($f) => $f['type'] === 'dob')->values();
-        $field = $input['field_id'] ?? ($fields->count() === 1 ? $fields[0]['id'] : null);
+        $field = $input['field_id'] ?? ($fields->contains('id','BornOn') ? 'BornOn' : ($fields->count() === 1 ? $fields[0]['id'] : null));
         if ($field && ! $fields->contains('id', $field)) {
             throw ValidationException::withMessages(['field_id' => ['Choose a date-of-birth field from this church.']]);
         }
@@ -30,6 +30,7 @@ class MemberBirthdays
         if ($field) {
             foreach (ChurchMember::where('church_id', $church)->orderBy('name')->cursor() as $member) {
                 $value = $member->data[$field] ?? null;
+                if(!$value && $field==='BornOn') foreach($fields as $legacy) { if(!empty($member->data[$legacy['id']])) { $value=$member->data[$legacy['id']]; break; } }
                 if (! is_string($value) || ! preg_match('/^(\d{4})-(\d{2})-(\d{2})$/D', $value, $parts) || ! checkdate((int) $parts[2], (int) $parts[3], (int) $parts[1])) {
                     $missing++;
 

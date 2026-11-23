@@ -25,6 +25,9 @@ use Illuminate\Support\Facades\Route;
 Route::post('integrations/whatsapp/webhook', [\App\Http\Controllers\Integrations\WhatsAppWebhookController::class, 'receive']);
 Route::get('integrations/whatsapp/webhook', [\App\Http\Controllers\Integrations\WhatsAppWebhookController::class, 'verify'])->middleware('throttle:30,1');
 
+Route::get('public/churches/{church}/attendance/surnames', [\App\Http\Controllers\MemberAttendanceController::class, 'publicSurnames'])->middleware('throttle:30,1');
+Route::get('public/churches/{church}/attendance/family', [\App\Http\Controllers\MemberAttendanceController::class, 'publicFamily'])->middleware('throttle:30,1');
+Route::post('public/churches/{church}/attendance', [\App\Http\Controllers\MemberAttendanceController::class, 'publicSave'])->middleware('throttle:20,1');
 Route::get('public/churches/{church}/visitor-logo', [\App\Http\Controllers\VisitorFormController::class, 'logo']);
 
 Route::prefix('auth')->group(function () {
@@ -142,14 +145,28 @@ Route::middleware(['auth:sanctum', 'superadmin.context', 'module.access'])->grou
 
     Route::get('attendance/surnames', [\App\Http\Controllers\MemberAttendanceController::class, 'surnames'])->middleware('throttle:120,1');
     Route::get('attendance/family', [\App\Http\Controllers\MemberAttendanceController::class, 'family']);
+    Route::post('attendance/batch', [\App\Http\Controllers\MemberAttendanceController::class, 'batch']);
     Route::post('attendance', [\App\Http\Controllers\MemberAttendanceController::class, 'save']);
     Route::get('members/birthdays', [\App\Http\Controllers\MemberBirthdayController::class, 'index']);
     Route::post('members/birthdays/message', [\App\Http\Controllers\MemberBirthdayController::class, 'generate'])->middleware('throttle:5,1');
     Route::get('members', [\App\Http\Controllers\ChurchMemberController::class, 'index']);
-    Route::post('members/template', [\App\Http\Controllers\ChurchMemberController::class, 'template']);
     Route::get('members/template.csv', [\App\Http\Controllers\ChurchMemberController::class, 'download']);
     Route::post('members/import', [\App\Http\Controllers\ChurchMemberController::class, 'import']);
     Route::post('members', [\App\Http\Controllers\ChurchMemberController::class, 'save']);
+    Route::get('members/import-drafts', [\App\Http\Controllers\MemberImportDraftController::class, 'index']);
+    Route::post('members/import-drafts', [\App\Http\Controllers\MemberImportDraftController::class, 'save']);
+    Route::delete('members/import-drafts/{draft}', [\App\Http\Controllers\MemberImportDraftController::class, 'destroy']);
+    Route::get('members/import-drafts/{draft}', [\App\Http\Controllers\MemberImportDraftController::class, 'show']);
+    Route::put('members/import-drafts/{draft}', [\App\Http\Controllers\MemberImportDraftController::class, 'save']);
+    Route::post('members/import-drafts/{draft}/commit', [\App\Http\Controllers\MemberImportDraftController::class, 'commit']);
+    Route::get('members/export-options', [\App\Http\Controllers\MemberExportController::class, 'index']);
+    Route::get('members/export.csv', [\App\Http\Controllers\MemberExportController::class, 'download']);
+    Route::post('members/export-presets', [\App\Http\Controllers\MemberExportController::class, 'save']);
+    Route::delete('members/export-presets/{preset}', [\App\Http\Controllers\MemberExportController::class, 'destroy']);
+    Route::get('members/families', [\App\Http\Controllers\MemberFamilyController::class, 'index']);
+    Route::post('members/families/move', [\App\Http\Controllers\MemberFamilyController::class, 'move']);
+    Route::get('members/{member}', [\App\Http\Controllers\ChurchMemberController::class, 'show']);
+    Route::delete('members/{member}', [\App\Http\Controllers\ChurchMemberController::class, 'destroy']);
     Route::patch('members/{member}', [\App\Http\Controllers\ChurchMemberController::class, 'save']);
 
     Route::patch('visitor-form/logo', [\App\Http\Controllers\VisitorFormController::class, 'alignLogo']);
@@ -189,6 +206,8 @@ Route::middleware(['auth:sanctum', 'superadmin.context'])->group(function () {
     Route::get('secretary/whatsapp-diagnostics', [\App\Http\Controllers\ChurchIntegrationController::class, 'diagnostics'])->middleware('throttle:30,1');
     Route::post('secretary/whatsapp-diagnostics/check', [\App\Http\Controllers\ChurchIntegrationController::class, 'checkProviders'])->middleware('throttle:3,1');
     Route::get('secretary/whatsapp-history', [\App\Http\Controllers\WhatsAppPreferencesController::class, 'churchHistory'])->middleware('throttle:60,1');
+    Route::post('secretary/church-logo', [\App\Http\Controllers\VisitorFormController::class, 'settingsUpload']);
+    Route::delete('secretary/church-logo', [\App\Http\Controllers\VisitorFormController::class, 'settingsRemove']);
     Route::get('secretary/integrations', [\App\Http\Controllers\ChurchIntegrationController::class, 'clerkShow']);
     Route::put('secretary/integrations', [\App\Http\Controllers\ChurchIntegrationController::class, 'clerkUpdate'])->middleware('throttle:20,1');
 });

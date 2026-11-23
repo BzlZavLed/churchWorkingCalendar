@@ -1,3 +1,4 @@
+import MemberAttendance from '../components/MemberAttendance.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import CalendarView from '../components/CalendarView.vue'
@@ -25,6 +26,7 @@ import { moduleForPath } from '../services/accessApi'
 import SuperAdminModuleContext from '../components/superadmin/SuperAdminModuleContext.vue'
 import CommitteesView from '../components/CommitteesView.vue'
 import MembersView from '../components/MembersView.vue'
+import MemberDetail from '../components/MemberDetail.vue'
 import VisitorFormBuilder from '../components/VisitorFormBuilder.vue'
 import PublicConsentView from '../components/PublicConsentView.vue'
 import { getDefaultRouteForUser } from '../stores/authStore'
@@ -39,8 +41,11 @@ const routes = [
   { path: '/superadmin/roles', component: SuperAdminRoles, meta: { requiresAuth: true, superadminOnly: true } },
   { path: '/no-access', component: NoAccessView, meta: { requiresAuth: true } },
   { path: '/superadmin/settings', component: SuperAdminSettings, meta: { requiresAuth: true, superadminOnly: true } },
+  { path: '/members/new', component: MemberDetail, meta: { requiresAuth: true } },
+  { path: '/members/:id', component: MemberDetail, meta: { requiresAuth: true } },
   { path: '/members', component: MembersView, meta: { requiresAuth: true } },
   { path: '/greeting/form-builder', component: VisitorFormBuilder, meta: { requiresAuth: true, pastorOnly: true } },
+  { path: '/attendance/:churchId', component: MemberAttendance, props: route=>({publicChurchId:route.params.churchId}), meta: { noLayout: true } },
   { path: '/visit/:churchId', component: GreetingIntakeView, meta: { noLayout: true } },
   { path: '/', redirect: '/calendar' },
   { path: '/login', component: LoginForm, meta: { guestOnly: true, noLayout: true } },

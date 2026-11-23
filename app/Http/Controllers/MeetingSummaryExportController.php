@@ -26,6 +26,7 @@ class MeetingSummaryExportController extends Controller
         $meeting->load(['church', 'points' => fn ($q) => $q->where('status', 'accepted')->whereNotNull('final_status')->with('department'), 'opener']);
 
         $pdf = Pdf::loadView('exports.meeting-summary', [
+            'churchLogo' => app(\App\Services\PdfBranding::class)->logo($meeting->church),
             'meeting' => $meeting,
             'locale' => $data['locale'] ?? 'es',
             'timezone' => $data['timezone'] ?? 'UTC',

@@ -17,6 +17,7 @@
     </style>
   </head>
   <body>
+    @include('exports.branding')
     <h1>{{ $locale === 'en' ? 'Meeting Summary' : 'Resumen de Junta' }} #{{ $meeting->minutes_number }}</h1>
 
     <div class="section meta">

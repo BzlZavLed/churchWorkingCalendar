@@ -55,6 +55,7 @@
 </template>
 
 <script setup>
+import {addChurchPdfLogo} from '../services/pdfBranding'
 import MeetingCalendarReview from './MeetingCalendarReview.vue'
 import MeetingOverview from './MeetingOverview.vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
@@ -141,11 +142,11 @@ async function saveNote(){if(await run(()=>meetingApi.addMeetingNote(meeting.val
 async function move(p,delta){const ids=points.value.map(p=>p.id),i=ids.indexOf(p.id),next=i+delta;if(next<0||next>=ids.length)return;[ids[i],ids[next]]=[ids[next],ids[i]];await run(()=>meetingApi.reorderMeetingPoints(meeting.value.id,ids))}
 function downloadBlob(blob,name){const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url)}
 async function downloadSummary(m){try{downloadBlob(await meetingApi.downloadMeetingSummary(m.id,ui.locale),`meeting-minutes-${m.minutes_number}.pdf`)}catch(e){error.value=message(e)}}
-function exportReport(type){
+async function exportReport(type){
   const headers=[tr('Junta','Meeting'),tr('Departamento','Department'),tr('Punto','Point'),tr('Solicitud','Request'),tr('Revisión','Review'),tr('Decisión','Decision'),tr('Acuerdo','Decision note'),tr('Origen','Source')]
   const rows=filteredReport.value.map(p=>[date(p.meeting.planned_start_at),p.department?.name||tr('Secretaría','Clerk'),`#${p.id} · ${p.title}`,p.description,label(p.status),p.final_status?label(p.final_status):'',p.final_note||p.review_note||'',p.related_meeting_point_id||''])
   if(type==='csv'){const cell=v=>{let s=String(v??'');if(/^[\s]*[=+@-]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"'};downloadBlob(new Blob(['\uFEFF'+[headers,...rows].map(r=>r.map(cell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}),'meeting-points.csv')}
-  else{const pdf=new jsPDF({orientation:'landscape'});pdf.setFontSize(14);pdf.text(tr('Historial de puntos de junta','Meeting point history'),14,16);pdf.autoTable({startY:24,head:[headers],body:rows,styles:{fontSize:8,overflow:'linebreak'},headStyles:{fillColor:[31,111,92]}});pdf.save('meeting-points.pdf')}
+  else{const pdf=new jsPDF({orientation:'landscape'});const offset=await addChurchPdfLogo(pdf);pdf.setFontSize(14);pdf.text(tr('Historial de puntos de junta','Meeting point history'),14,16+offset);pdf.autoTable({startY:24+offset,head:[headers],body:rows,styles:{fontSize:8,overflow:'linebreak'},headStyles:{fillColor:[31,111,92]}});pdf.save('meeting-points.pdf')}
 }
 onMounted(async()=>{await refresh();if(auth.user?.role==='superadmin'){try{let page=1,result,all=[];do{result=await superAdminApi.listChurches({page:page++});all.push(...result.data)}while(result.next_page_url);if(alive)churches.value=all}catch(e){error.value=message(e)}}clock=setInterval(()=>now.value=Date.now(),1000);timer=setInterval(()=>{if(!busy.value&&!document.hidden)refresh(true)},15000)})
 onUnmounted(()=>{alive=false;requestVersion++;clearInterval(timer);clearInterval(clock)})

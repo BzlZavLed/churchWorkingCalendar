@@ -18,6 +18,9 @@ class ClerkIntegrationSettingsTest extends TestCase
   $church->forceFill(['whatsapp_ai_limit'=>12])->save();
   Sanctum::actingAs(User::factory()->create(['church_id'=>$church->id,'role'=>'secretary']));
   $url='/api/secretary/integrations';
+  $this->putJson($url,['organization_code'=>'00123','whatsapp_enabled'=>true,'ai_enabled'=>true])->assertOk()->assertJsonPath('organization_code','00123');
+  $this->assertSame('00123',$church->fresh()->organization_code);
+  $this->assertNull($other->fresh()->organization_code);
   $this->getJson($url)->assertOk()->assertJsonPath('limits.whatsapp_ai_limit',12)->assertJsonMissingPath('usage.ai.global_used');
   $this->putJson($url,['whatsapp_enabled'=>false,'ai_enabled'=>false])->assertOk()->assertJsonPath('whatsapp_enabled',false);
   $service=app(ChurchIntegrations::class);

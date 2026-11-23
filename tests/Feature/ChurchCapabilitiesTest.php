@@ -70,7 +70,7 @@ class ChurchCapabilitiesTest extends TestCase {
   $this->postJson('/api/secretary/departments',['name'=>'New department'])->assertCreated();
   $this->postJson('/api/secretary/users',[])->assertUnprocessable();
   $this->postJson('/api/visitor-form',['base_version'=>0,'fields'=>[]])->assertForbidden();
-  $this->postJson('/api/members/template',['base_version'=>0,'fields'=>[]])->assertForbidden();
+  $this->postJson('/api/members',[])->assertForbidden();
   $role->update(['capabilities'=>['departments.manage'=>false,'users.manage'=>false]]);
   $this->postJson('/api/secretary/departments',['name'=>'Not allowed'])->assertForbidden();
   $this->postJson('/api/secretary/users',[])->assertForbidden();

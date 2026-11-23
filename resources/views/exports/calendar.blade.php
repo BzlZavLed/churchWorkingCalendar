@@ -17,6 +17,7 @@
     </style>
   </head>
   <body>
+    @include('exports.branding')
     @php
       $locale = $locale ?? 'es';
       $isEs = $locale === 'es';

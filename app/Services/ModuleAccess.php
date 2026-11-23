@@ -33,7 +33,7 @@ class ModuleAccess {
   'visitors.contact'=>['module'=>'visitors','es'=>'Gestionar permisos de contacto','en'=>'Manage contact consent','roles'=>['secretary']],
   'greeting.attendance'=>['module'=>'greeting','es'=>'Registrar asistencia de miembros','en'=>'Record member attendance','roles'=>['secretary']],
   'greeting.register'=>['module'=>'greeting','es'=>'Registrar visitas (predeterminado: Secretaría y Bienvenida)','en'=>'Register visitors (default: Clerk and Greeting)','roles'=>['secretary']],
-  'members.manage'=>['module'=>'members','es'=>'Gestionar plantilla y miembros','en'=>'Manage template and members','roles'=>['pastor','secretary']],
+  'members.manage'=>['module'=>'members','es'=>'Gestionar miembros e importaciones','en'=>'Manage members and imports','roles'=>['pastor','secretary']],
   'objectives.manage'=>['module'=>'objectives','es'=>'Gestionar objetivos propios','en'=>'Manage own department objectives','roles'=>['admin','member']],
   'inventory.manage'=>['module'=>'inventory','es'=>'Gestionar inventario propio','en'=>'Manage own department inventory','roles'=>['admin']],
   'budget.publish'=>['module'=>'budget','es'=>'Publicar asignaciones de toda la iglesia (predeterminado: solo Tesorería)','en'=>'Publish church allocations (default: Treasury only)','roles'=>['admin']],

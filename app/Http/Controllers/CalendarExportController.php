@@ -64,6 +64,7 @@ class CalendarExportController extends Controller
 
         $view = $data['view'] === 'calendar' ? 'exports.calendar' : 'exports.list';
         $pdf = Pdf::loadView($view, [
+            'churchLogo' => app(\App\Services\PdfBranding::class)->logo($request->user()->isSuperAdmin()?null:\App\Models\Church::find($request->user()->church_id)),
             'months' => $months,
             'includeHistory' => (bool) ($data['include_history'] ?? false),
             'locale' => $data['locale'] ?? 'es',

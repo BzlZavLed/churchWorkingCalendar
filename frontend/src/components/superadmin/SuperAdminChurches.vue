@@ -17,6 +17,7 @@
               <input v-model="createForm.name" class="form-control" type="text" required />
             </label>
           </div>
+          <div class="mb-3"><label class="form-label">{{ locale === 'es' ? 'Código de organización' : 'Organization code' }}<input v-model="createForm.organization_code" class="form-control" type="text" maxlength="100" /></label></div>
           <div class="mb-3">
             <label class="form-label">
               {{ t.conference }}
@@ -135,7 +136,7 @@
                     <td colspan="6">
                       <div class="row g-3">
                         <div class="col-12 col-md-6">
-                          <strong>{{ t.conference }}:</strong> {{ church.conference_name || '—' }}
+                          <label class="form-label">{{ locale === 'es' ? 'Código de organización' : 'Organization code' }}<input v-model="church.organization_code" class="form-control" maxlength="100" /></label><br /><strong>{{ t.conference }}:</strong> {{ church.conference_name || '—' }}
                         </div>
                         <div class="col-12 col-md-6">
                           <strong>{{ t.pastor }}:</strong> {{ church.pastor_name || '—' }}
@@ -188,7 +189,7 @@
 
                 <div v-if="isExpanded(church.id)" class="border-top pt-3 mt-2">
                   <div class="mb-2">
-                    <strong>{{ t.conference }}:</strong> {{ church.conference_name || '—' }}
+                    <label class="form-label">{{ locale === 'es' ? 'Código de organización' : 'Organization code' }}<input v-model="church.organization_code" class="form-control" maxlength="100" /></label><br /><strong>{{ t.conference }}:</strong> {{ church.conference_name || '—' }}
                   </div>
                   <div class="mb-2">
                     <strong>{{ t.pastor }}:</strong> {{ church.pastor_name || '—' }}
@@ -274,6 +275,7 @@ const showSuccessToast = (message = '') => {
 
 const createForm = reactive({
   name: '',
+  organization_code: '',
   conference_name: '',
   pastor_name: '',
   address: '',
@@ -309,6 +311,7 @@ const createChurch = async () => {
     const response = await superAdminApi.createChurch(payload)
     inviteCode.value = response.invitation.code
     createForm.name = ''
+    createForm.organization_code = ''
     createForm.conference_name = ''
     createForm.pastor_name = ''
     createForm.address = ''
@@ -323,7 +326,7 @@ const createChurch = async () => {
 const updateChurch = async (church) => {
   error.value = ''
   try {
-    await superAdminApi.updateChurch(church.id, { name: church.name })
+    await superAdminApi.updateChurch(church.id, { name: church.name, organization_code: church.organization_code })
     showSuccessToast()
   } catch {
     error.value = t.value.updateError

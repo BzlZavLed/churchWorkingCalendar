@@ -9,7 +9,7 @@
         <a v-if="auth.user?.role === 'pastor' && auth.user?.church_id" :href="visitUrl" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary">{{ locale === 'es' ? 'Ver formulario público ↗' : 'View public form ↗' }}</a>
         <RouterLink v-if="auth.can('visitors.configure')" to="/greeting/form-builder" class="btn btn-primary">{{ locale === 'es' ? 'Configurar formulario' : 'Configure form' }}</RouterLink>
         <button class="btn btn-outline-secondary" :disabled="loading || !filteredContacts.length" @click="exportVisitors">CSV</button>
-        <button class="btn btn-primary" type="button" :disabled="exportingQr || !auth.user?.church_id" @click="exportQr">{{ exportingQr ? (locale === 'es' ? 'Preparando…' : 'Preparing…') : (locale === 'es' ? 'Descargar QR para imprimir' : 'Download printable QR') }}</button>
+        <button class="btn btn-primary" type="button" :disabled="exportingQr || !auth.user?.church_id" @click="exportQr(false)">{{ exportingQr ? (locale === 'es' ? 'Preparando…' : 'Preparing…') : (locale === 'es' ? 'Descargar QR para imprimir' : 'Download printable QR') }}</button><button class="btn btn-outline-primary" type="button" :disabled="exportingQr || !auth.user?.church_id" @click="exportQr(true)">{{ locale === 'es' ? 'Descargar QR de asistencia' : 'Download attendance QR' }}</button>
         <button class="btn btn-outline-secondary" type="button" :disabled="loading" @click="loadContacts">
           {{ t.refresh }}
         </button>
@@ -115,9 +115,8 @@
 import '../styles/clerk-management.css'
 import '../styles/visits.css'
 import VisitorCustomFields from './VisitorCustomFields.vue'
-import QRCode from 'qrcode'
+import {exportCheckinQr} from '../services/checkinQr'
 import { useRoute } from 'vue-router'
-import jsPDF from 'jspdf'
 import { useAuthStore } from '../stores/authStore'
 import { computed, onMounted, onUnmounted, watch, ref, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
@@ -136,38 +135,10 @@ async function editVisitor(contact){editing.value=contact;editError.value='';edi
 async function saveVisitor(){savingVisitor.value=true;editError.value='';try{const updated=await churchContactsApi.update(editing.value.id,editDraft.value);contacts.value=contacts.value.map(c=>c.id===updated.id?updated:c);editing.value=null}catch(e){editError.value=Object.values(e.response?.data?.errors||{}).flat().join(' ')||e.response?.data?.message||'Unable to save'}finally{savingVisitor.value=false}}
 const exportingQr = ref(false)
 const visitUrl = computed(() => `${window.location.origin}/visit/${auth.user?.church_id}`)
-const exportQr = async () => {
-  if (exportingQr.value) return
-  exportingQr.value = true
-  try {
-    const es = locale.value === 'es'
-    const doc = new jsPDF({ unit: 'mm', format: 'a4' })
-    const qr = await QRCode.toDataURL(visitUrl.value, { width: 1400, margin: 4, errorCorrectionLevel: 'M' })
-    doc.setTextColor(31, 111, 92)
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(20)
-    const churchLines = doc.splitTextToSize(auth.user?.church?.name || (es ? 'Bienvenidos' : 'Welcome'), 170)
-    doc.text(churchLines, 105, 28, { align: 'center' })
-    const headingY = 28 + churchLines.length * 9 + 12
-    doc.setTextColor(35, 49, 41)
-    doc.setFontSize(24)
-    doc.text(es ? 'Registra tu visita' : 'Register your visit', 105, headingY, { align: 'center' })
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(13)
-    doc.text(es ? 'Escanea con la cámara de tu teléfono' : 'Scan with your phone camera', 105, headingY + 12, { align: 'center' })
-    const qrY = headingY + 22
-    doc.addImage(qr, 'PNG', 45, qrY, 120, 120)
-    doc.setFontSize(12)
-    doc.text(es ? 'Sin cuenta. Completa el formulario cuando puedas.' : 'No account needed. Complete the form in your own time.', 105, qrY + 133, { align: 'center' })
-    doc.setFontSize(10)
-    doc.setTextColor(90, 100, 94)
-    doc.text(doc.splitTextToSize(visitUrl.value, 170), 105, qrY + 147, { align: 'center' })
-    doc.save('registro-visitas-qr.pdf')
-  } catch {
-    uiStore.showToast(locale.value === 'es' ? 'No se pudo exportar el PDF.' : 'Unable to export PDF.', 'error')
-  } finally {
-    exportingQr.value = false
-  }
+const exportQr = async (attendance=false) => {
+ if(exportingQr.value)return
+ exportingQr.value=true
+ try{await exportCheckinQr(auth.user.church_id,attendance,locale.value==='es')}catch{uiStore.showToast(locale.value==='es'?'No se pudo exportar el QR.':'Unable to export QR.','error')}finally{exportingQr.value=false}
 }
 const canGreet = computed(() => auth.can('visitors.contact'))
 const consentTarget = ref(null)

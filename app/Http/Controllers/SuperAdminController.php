@@ -28,6 +28,7 @@ class SuperAdminController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'organization_code' => ['nullable', 'string', 'max:100'],
             'conference_name' => ['nullable', 'string', 'max:255'],
             'pastor_name' => ['nullable', 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:255'],
@@ -42,6 +43,7 @@ class SuperAdminController extends Controller
             $church = Church::create([
                 'name' => $data['name'],
                 'slug' => Church::generateUniqueSlug($data['name']),
+                'organization_code' => $data['organization_code'] ?? null,
                 'conference_name' => $data['conference_name'] ?? null,
                 'pastor_name' => $data['pastor_name'] ?? null,
                 'address' => $data['address'] ?? null,
@@ -72,6 +74,7 @@ class SuperAdminController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'organization_code' => ['nullable', 'string', 'max:100'],
             'conference_name' => ['nullable', 'string', 'max:255'],
             'pastor_name' => ['nullable', 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:255'],
@@ -80,6 +83,7 @@ class SuperAdminController extends Controller
 
         $payload = [
             'name' => $data['name'],
+            'organization_code' => $data['organization_code'] ?? $church->organization_code,
             'conference_name' => $data['conference_name'] ?? $church->conference_name,
             'pastor_name' => $data['pastor_name'] ?? $church->pastor_name,
             'address' => $data['address'] ?? $church->address,

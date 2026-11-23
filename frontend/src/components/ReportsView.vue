@@ -376,6 +376,7 @@
 </template>
 
 <script setup>
+import {addChurchPdfLogo} from '../services/pdfBranding'
 import AttendanceReport from './AttendanceReport.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
@@ -708,11 +709,12 @@ const downloadCsv = (filename, rows) => {
   URL.revokeObjectURL(link.href)
 }
 
-const exportPdf = (filename, title, headers, rows) => {
+const exportPdf = async (filename, title, headers, rows) => {
   const doc = new jsPDF({ orientation: 'landscape' })
-  doc.text(title, 14, 12)
+  const offset = await addChurchPdfLogo(doc)
+  doc.text(title, 14, 12 + offset)
   doc.autoTable({
-    startY: 18,
+    startY: 18 + offset,
     head: [headers],
     body: rows,
     styles: { fontSize: 8 },

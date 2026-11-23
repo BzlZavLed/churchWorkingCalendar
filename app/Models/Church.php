@@ -16,6 +16,7 @@ class Church extends Model
         'name',
         'slug',
         'conference_name',
+        'organization_code',
         'pastor_name',
         'address',
         'ethnicity',

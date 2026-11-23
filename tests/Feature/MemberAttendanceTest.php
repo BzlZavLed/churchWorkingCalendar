@@ -37,11 +37,29 @@ class MemberAttendanceTest extends TestCase
   Sanctum::actingAs(User::factory()->create(['church_id'=>$church->id,'role'=>'member']));
   $this->getJson('/api/attendance/surnames?q=Ga')->assertForbidden();$this->postJson('/api/attendance',$payload)->assertForbidden();
  }
+ public function test_public_qr_checkin_uses_family_ids_and_scoped_expiring_tokens(): void {
+  $church=Church::create(['name'=>'QR']);
+  $other=Church::create(['name'=>'Other']);
+  $template=app(\App\Services\MemberRecords::class)->current($church->id);
+  $make=fn($name,$surname,$family)=>ChurchMember::create(['church_id'=>$church->id,'member_template_id'=>$template->id,'name'=>$name,'first_surname'=>$surname,'email'=>'private@example.test','phone'=>'5551234567','data'=>['FamilyId'=>$family]]);
+  $one=$make('Ana Test','Test','f1');$two=$make('Luis Different','Different','f1');$three=$make('Unrelated Test','Test','f2');$four=$make('Not matched','Other','f3');
+  $url='/api/public/churches/'.$church->id.'/attendance';
+  $roster=$this->getJson($url.'/family?surname=Test&timezone=America/New_York')->assertOk()->assertJsonCount(3,'members')->assertJsonMissing(['email'=>'private@example.test'])->json();
+  $payload=['member_ids'=>[$one->id,$two->id],'token'=>$roster['token']];
+  $this->postJson($url,$payload)->assertOk();$this->postJson($url,$payload)->assertOk();
+  $this->assertDatabaseCount('member_attendances',2);
+  $this->assertDatabaseHas('member_attendances',['church_member_id'=>$one->id,'recorded_by'=>null]);
+  $this->postJson($url,['member_ids'=>[$four->id],'token'=>$roster['token']])->assertUnprocessable();
+  $this->postJson('/api/public/churches/'.$other->id.'/attendance',$payload)->assertUnprocessable();
+  $this->postJson($url,['member_ids'=>[$three->id],'token'=>'bad'])->assertUnprocessable();
+  $this->travel(16)->minutes();
+  $this->postJson($url,$payload)->assertUnprocessable();
+ }
  public function test_split_names_preserve_full_display_name(): void {
   $church=Church::create(['name'=>'Names']);Sanctum::actingAs(User::factory()->create(['church_id'=>$church->id,'role'=>'secretary']));
-  $template=$this->postJson('/api/members/template',['base_version'=>0,'fields'=>[]])->assertCreated()->json('id');
-  $payload=['template_id'=>$template,'given_name'=>'Ana María','first_surname'=>'De la Cruz','second_surname'=>'López','email'=>'ana@example.test','phone'=>'5551234567','data'=>[]];
+  $template=$this->getJson('/api/members')->assertOk()->json('template.id');
+  $payload=['template_id'=>$template,'given_name'=>'Ana María','first_surname'=>'De la Cruz','second_surname'=>'López','email'=>'ana@example.test','phone'=>'5551234567','data'=>['BornOn'=>'1990-01-01']];
   $this->postJson('/api/members',$payload)->assertOk()->assertJsonPath('name','Ana María De la Cruz López')->assertJsonPath('first_surname','De la Cruz');
-  $this->postJson('/api/members',array_replace($payload,['first_surname'=>'','email'=>'other@example.test']))->assertUnprocessable();
+  $this->postJson('/api/members',array_replace($payload,['first_surname'=>'','email'=>'other@example.test']))->assertOk();
  }
 }

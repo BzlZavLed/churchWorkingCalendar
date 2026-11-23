@@ -128,6 +128,7 @@
 </template>
 
 <script setup>
+import {addChurchPdfLogo} from '../services/pdfBranding'
 import FormSection from "./FormSection.vue"
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useAuthStore } from '../stores/authStore'
@@ -190,18 +191,19 @@ function exportMovementsCsv() {
   link.remove()
   URL.revokeObjectURL(url)
 }
-function exportMovementsPdf() {
+async function exportMovementsPdf() {
   if (!visibleEntries.value.length) return
   const { headers, rows } = movementExport()
   const doc = new jsPDF({ orientation: 'landscape' })
+  const offset = await addChurchPdfLogo(doc)
   const width = doc.internal.pageSize.getWidth() - 28
   doc.setFontSize(14)
   const title = doc.splitTextToSize(`${tr('Movimientos', 'Transactions')} · ${selected.value?.name || tr('Todos los departamentos', 'All departments')}`, width)
-  doc.text(title, 14, 14)
+  doc.text(title, 14, 14 + offset)
   doc.setFontSize(9)
   const kind = recordKind.value === 'all' ? tr('Todos', 'All') : recordKind.value === 'opening' ? tr('Saldo inicial y ajustes', 'Starting balance and adjustments') : kindLabel(recordKind.value)
   const context = doc.splitTextToSize(`${auth.user?.church?.name || ''} | ${kind} | ${recordFrom.value || tr('Desde el inicio', 'From the beginning')} – ${recordTo.value || tr('Sin fecha final', 'No end date')} | USD`, width)
-  const contextY = 14 + title.length * 6
+  const contextY = 14 + offset + title.length * 6
   doc.text(context, 14, contextY)
   doc.autoTable({ startY: contextY + context.length * 4 + 4, head: [headers], body: rows.map(row => row.map((value, index) => index === 6 ? Number(value).toFixed(2) : value)), styles: { fontSize: 8, overflow: 'linebreak' }, headStyles: { fillColor: [31, 111, 92] }, columnStyles: { 6: { halign: 'right' } }, margin: { bottom: 16 } })
   const pages = doc.getNumberOfPages()

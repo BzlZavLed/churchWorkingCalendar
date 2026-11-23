@@ -15,10 +15,21 @@ class VisitorFormController extends Controller
         return response()->file(Storage::disk('local')->path($church->visitor_logo_path), ['Cache-Control' => 'public, max-age=300', 'X-Content-Type-Options' => 'nosniff']);
     }
 
+    public function settingsUpload(Request $request) {
+        abort_unless($request->user()?->isSecretary() && $request->user()->church_id,403);
+        $request->attributes->set('church_logo_settings',true);
+        return $this->updateLogo($request);
+    }
+    public function settingsRemove(Request $request) {
+        abort_unless($request->user()?->isSecretary() && $request->user()->church_id,403);
+        $request->attributes->set('church_logo_settings',true);
+        return $this->removeLogo($request);
+    }
+
     public function updateLogo(Request $request)
     {
         $user = $request->user();
-        abort_unless(!$user->isSuperAdmin() && $user->hasCapability('visitors.configure') && $user->church_id, 403);
+        abort_unless(!$user->isSuperAdmin() && ($user->hasCapability('visitors.configure') || $request->attributes->get('church_logo_settings')) && $user->church_id, 403);
         $request->validate(['logo' => ['required', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048', 'dimensions:max_width=4096,max_height=4096']]);
         $path = $request->file('logo')->store('visitor-logos/'.$user->church_id, 'local');
         try {
@@ -36,7 +47,7 @@ class VisitorFormController extends Controller
     public function alignLogo(Request $request)
     {
         $user = $request->user();
-        abort_unless(!$user->isSuperAdmin() && $user->hasCapability('visitors.configure') && $user->church_id, 403);
+        abort_unless(!$user->isSuperAdmin() && ($user->hasCapability('visitors.configure') || $request->attributes->get('church_logo_settings')) && $user->church_id, 403);
         $data = $request->validate(['alignment' => ['required', 'in:left,center,right']]);
         $church = Church::findOrFail($user->church_id);
         $church->visitor_logo_alignment = $data['alignment'];
@@ -47,7 +58,7 @@ class VisitorFormController extends Controller
     public function removeLogo(Request $request)
     {
         $user = $request->user();
-        abort_unless(!$user->isSuperAdmin() && $user->hasCapability('visitors.configure') && $user->church_id, 403);
+        abort_unless(!$user->isSuperAdmin() && ($user->hasCapability('visitors.configure') || $request->attributes->get('church_logo_settings')) && $user->church_id, 403);
         DB::transaction(function () use ($user) {
             $church = Church::whereKey($user->church_id)->lockForUpdate()->firstOrFail();
             $old = $church->visitor_logo_path;
@@ -68,7 +79,7 @@ class VisitorFormController extends Controller
     public function publish(Request $request, VisitorForms $forms)
     {
         $user=$request->user();
-        abort_unless(!$user->isSuperAdmin() && $user->hasCapability('visitors.configure') && $user->church_id,403);
+        abort_unless(!$user->isSuperAdmin() && ($user->hasCapability('visitors.configure') || $request->attributes->get('church_logo_settings')) && $user->church_id,403);
         $data=$request->validate([
             'base_version'=>['required','integer','min:0'],
             'fields'=>['present','array','max:40'],
