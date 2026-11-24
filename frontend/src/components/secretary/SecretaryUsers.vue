@@ -1,5 +1,6 @@
 <template>
   <section class="container py-4 management-page">
+    <UserActivityDialog v-if="activityUser" :user="activityUser" @close="activityUser=null" />
     <header class="management-heading">
       <p class="management-eyebrow">{{ authStore.user?.church?.name || (locale === 'es' ? 'Administración' : 'Administration') }}</p>
       <h1>{{ t.title }}</h1>
@@ -38,7 +39,7 @@
 
       <div class="user-list">
         <article v-for="user in filteredUsers" :key="user.id" class="user-card">
-          <header class="user-card-heading"><div class="user-identity"><strong>{{ user.name }}</strong><span>{{ user.email }}</span></div><div class="user-badges"><span v-if="!user.pending_activation && user.active_sessions_count" class="role-badge">{{ locale === 'es' ? 'Sesión abierta' : 'Open session' }} · {{ user.active_sessions_count }}</span><span v-if="isRecentlyActive(user)" class="active-badge">● {{ locale === 'es' ? 'Actividad reciente' : 'Recently active' }}</span><span class="role-badge">{{ roleLabels[user.role] || user.role }}</span><span v-if="user.pending_activation" class="pending-badge">{{ locale === 'es' ? 'Pendiente de activar' : 'Activation pending' }}</span><span v-if="user.id === currentUserId" class="role-badge">{{ locale === 'es' ? 'Tu cuenta' : 'Your account' }}</span></div></header>
+          <header class="user-card-heading"><div class="user-identity"><strong>{{ user.name }}</strong><span>{{ user.email }}</span></div><div class="user-badges"><span v-if="!user.pending_activation && user.active_sessions_count" class="role-badge">{{ locale === 'es' ? 'Sesión abierta' : 'Open session' }} · {{ user.active_sessions_count }}</span><button v-if="isRecentlyActive(user) && authStore.can('users.manage')" type="button" class="active-badge activity-link" @click="activityUser=user">● {{ locale === 'es' ? 'Actividad reciente' : 'Recently active' }}</button><span v-else-if="isRecentlyActive(user)" class="active-badge">● {{ locale === 'es' ? 'Actividad reciente' : 'Recently active' }}</span><span class="role-badge">{{ roleLabels[user.role] || user.role }}</span><span v-if="user.pending_activation" class="pending-badge">{{ locale === 'es' ? 'Pendiente de activar' : 'Activation pending' }}</span><span v-if="user.id === currentUserId" class="role-badge">{{ locale === 'es' ? 'Tu cuenta' : 'Your account' }}</span></div></header>
           <div class="user-fields">
             <label>{{ t.name }}<input v-model="user.name" class="form-control" type="text" :disabled="!authStore.can('users.manage')" /></label>
             <label>{{ t.email }}<input v-model="user.email" class="form-control" type="email" :disabled="!authStore.can('users.manage')" /></label>
@@ -46,7 +47,7 @@
             <label>{{ t.department }}<select v-model="user.department_id" class="form-select" :disabled="!authStore.can('users.manage')"><option value="">{{ common.select }}</option><option v-for="department in departments" :key="department.id" :value="department.id">{{ department.name }}</option></select></label>
           </div>
           <WhatsAppUserFields :form="user" />
-          <div class="user-actions"><button v-write="'users.manage'" class="btn btn-sm btn-outline-secondary" type="button" @click="updateUser(user)">{{ t.save }}</button><button v-write="'users.manage'" class="btn btn-sm btn-outline-primary" type="button" @click="sendPasswordLink(user)">{{ locale === 'es' ? 'Enviar enlace de contraseña' : 'Send password link' }}</button></div>
+          <div class="user-actions"><button v-if="authStore.can('users.manage')" class="btn btn-sm btn-outline-primary" type="button" @click="activityUser=user">{{ locale === 'es' ? 'Ver actividad' : 'View activity' }}</button><button v-write="'users.manage'" class="btn btn-sm btn-outline-secondary" type="button" @click="updateUser(user)">{{ t.save }}</button><button v-write="'users.manage'" class="btn btn-sm btn-outline-primary" type="button" @click="sendPasswordLink(user)">{{ locale === 'es' ? 'Enviar enlace de contraseña' : 'Send password link' }}</button></div>
         </article>
       </div>
     </div>
@@ -100,6 +101,7 @@
 
 <script setup>
 import WhatsAppUserFields from '../WhatsAppUserFields.vue'
+import UserActivityDialog from '../UserActivityDialog.vue'
 import FormSection from "../FormSection.vue"
 import '../../styles/clerk-management.css'
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
@@ -112,6 +114,7 @@ import { translations } from '../../i18n/translations'
 
 const departments = ref([])
 const users = ref([])
+const activityUser = ref(null)
 const loading = ref(false)
 const error = ref('')
 const filterText = ref('')
@@ -265,4 +268,5 @@ onUnmounted(()=>clearInterval(activityTimer))
 <style scoped>
 .user-list{display:grid;gap:14px;padding:18px;min-width:0}.user-card{min-width:0;border:1px solid #dfe9e2;border-radius:10px;padding:16px;background:#fff}.user-card-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}.user-identity{display:grid;gap:3px;min-width:0}.user-identity strong{font-size:15px;color:#244c3c;overflow-wrap:anywhere}.user-identity span{color:#62746a;overflow-wrap:anywhere}.user-badges{display:flex;gap:6px;flex-wrap:wrap}.role-badge,.pending-badge{padding:4px 8px;border-radius:6px;background:#eaf3ed;color:#28624a;font-size:11px}.pending-badge{background:#fff2d6;color:#805619}.user-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.user-fields label{display:grid;gap:5px;min-width:0;color:#596b61}.user-fields input,.user-fields select{min-width:0;width:100%}.user-actions{display:flex;flex-wrap:wrap;gap:8px;border-top:1px solid #edf1ed;padding-top:12px;margin-top:12px}.management-page .user-actions .btn{white-space:normal;max-width:100%}@media(max-width:1100px){.user-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:540px){.user-list{padding:12px}.user-card{padding:14px}.user-fields{grid-template-columns:1fr}.user-actions .btn{flex:1 1 auto}}
 .activity-explanation{margin:0;padding:12px 18px 0;color:#5b6d62;font-size:12px}.active-badge{padding:4px 8px;border-radius:6px;background:#dff3e5;color:#17683c;font-size:11px;font-weight:600}
+.activity-link{border:1px solid #9bccaa;cursor:pointer;width:auto}.activity-link:hover{text-decoration:underline}
 </style>

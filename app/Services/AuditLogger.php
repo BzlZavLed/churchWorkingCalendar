@@ -24,6 +24,7 @@ class AuditLogger
         $metadata = array_merge([
             'payload' => $payload,
             'viewing_context' => $request->attributes->get('viewing_context'),
+            'church_id' => $request->attributes->get('viewing_context')['church_id'] ?? $request->user()?->church_id,
         ], $metadata);
 
         AuditLog::create([

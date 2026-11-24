@@ -1,5 +1,6 @@
 <template>
   <section class="container py-4">
+    <UserActivityDialog v-if="activityUser" :user="activityUser" superadmin @close="activityUser=null" />
     <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3">
       <h1 class="h3 m-0">{{ t.title }}</h1>
     </div>
@@ -123,6 +124,7 @@
               <td class="text-end">
                 <div class="d-flex flex-column flex-md-row justify-content-end gap-2">
                   <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateUser(user)">{{ t.save }}</button>
+                  <button class="btn btn-sm btn-outline-primary" type="button" @click="activityUser=user">Ver actividad</button>
                   <button class="btn btn-sm btn-outline-danger" type="button" @click="confirmDeleteUser(user)">{{ t.delete }}</button>
                 </div>
               </td>
@@ -176,6 +178,7 @@
             </div>
             <div class="d-flex flex-wrap gap-2">
               <button class="btn btn-sm btn-outline-secondary" type="button" @click="updateUser(user)">{{ t.save }}</button>
+              <button class="btn btn-sm btn-outline-primary" type="button" @click="activityUser=user">Ver actividad</button>
               <button class="btn btn-sm btn-outline-danger" type="button" @click="confirmDeleteUser(user)">{{ t.delete }}</button>
             </div>
           </div>
@@ -245,6 +248,7 @@
 </template>
 
 <script setup>
+import UserActivityDialog from '../UserActivityDialog.vue'
 import WhatsAppUserFields from '../WhatsAppUserFields.vue'
 import FormSection from "../FormSection.vue"
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
@@ -263,6 +267,7 @@ const selectedChurchId = ref('')
 const churches = ref([])
 const departments = ref([])
 const users = ref([])
+const activityUser = ref(null)
 const loading = ref(false)
 const error = ref('')
 const filterText = ref('')

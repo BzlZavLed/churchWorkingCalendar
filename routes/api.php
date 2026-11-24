@@ -212,6 +212,7 @@ Route::middleware(['auth:sanctum', 'superadmin.context', 'module.access', 'secre
     Route::get('secretary/departments', [AdminUserController::class, 'listDepartmentsWithUsers']);
     Route::put('secretary/departments/{department}', [AdminUserController::class, 'updateDepartment']);
     Route::get('secretary/users', [AdminUserController::class, 'listUsers']);
+    Route::get('secretary/users/{user}/activity', [\App\Http\Controllers\UserActivityController::class, 'clerk']);
     Route::put('secretary/users/{user}', [AdminUserController::class, 'updateUser']);
     Route::post('secretary/users/{user}/password-link', [\App\Http\Controllers\AccountPasswordController::class, 'sendForUser'])->middleware('throttle:5,1');
 });
@@ -227,6 +228,7 @@ Route::middleware(['auth:sanctum', 'superadmin.context'])->group(function () {
 });
 
 Route::middleware(['auth:sanctum', 'superadmin'])->group(function () {
+    Route::get('superadmin/users/{user}/activity', [\App\Http\Controllers\UserActivityController::class, 'superadmin']);
     Route::get('superadmin/email-activity', [\App\Http\Controllers\SuperAdminEmailActivityController::class, 'index']);
     Route::get('superadmin/churches/{church}/integrations/providers', [\App\Http\Controllers\ChurchIntegrationController::class, 'providers'])->middleware('throttle:20,1');
     Route::get('superadmin/churches/{church}/integrations', [\App\Http\Controllers\ChurchIntegrationController::class, 'show']);
