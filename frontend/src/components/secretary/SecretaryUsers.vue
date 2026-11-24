@@ -9,12 +9,11 @@
       <form class="row g-3 mt-1" @submit.prevent="createUser">
         <label class="col-12 col-md-6">{{ t.name }}<input v-model="createForm.name" class="form-control" required maxlength="255" autocomplete="name" /></label>
         <label class="col-12 col-md-6">{{ t.email }}<input v-model="createForm.email" class="form-control" type="email" required maxlength="255" autocomplete="off" /></label>
-        <label class="col-12 col-md-6">{{ t.password }}<input v-model="createForm.password" class="form-control" type="password" required minlength="8" autocomplete="new-password" /></label>
         <label class="col-12 col-md-6">{{ t.role }}<select v-model="createForm.role" class="form-select"><option v-for="role in ['admin', 'member', 'secretary', 'pastor']" :key="role" :value="role">{{ roleLabels[role] }}</option></select></label>
         <label class="col-12">{{ t.department }}<select v-model="createForm.department_id" class="form-select"><option value="">{{ common.select }}</option><option v-for="department in departments" :key="department.id" :value="department.id">{{ department.name }}</option></select></label>
         <WhatsAppUserFields :form="createForm" class="col-12" />
         <p v-if="createError" class="management-error col-12" role="alert">{{ createError }}</p>
-        <p v-if="createSuccess" class="text-success col-12" role="status">{{ locale === 'es' ? 'Usuario creado.' : 'User created.' }}</p>
+        <p v-if="createSuccess" class="text-success col-12" role="status">{{ locale === 'es' ? 'Usuario creado. Se envió una invitación para activar su cuenta.' : 'User created. An activation invitation was sent.' }}</p>
         <div class="col-12"><button class="btn btn-primary" :disabled="creating || loading">{{ creating ? (locale === 'es' ? 'Guardando…' : 'Saving…') : (locale === 'es' ? 'Crear usuario' : 'Create user') }}</button></div>
       </form>
     </FormSection>
@@ -36,105 +35,18 @@
         </div>
       </div>
 
-      <div class="table-responsive d-none d-md-block">
-        <table class="table table-sm align-middle mb-0" data-dt="off">
-          <thead>
-            <tr>
-
-              <th>{{ t.columns.name }}</th>
-              <th>{{ t.columns.email }}</th>
-              <th>{{ t.columns.role }}</th>
-              <th>{{ t.columns.department }}</th>
-              <th>{{ t.columns.password }}</th>
-              <th class="text-end">{{ t.columns.actions }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="user in filteredUsers" :key="user.id">
-
-              <td>
-                <div class="d-flex align-items-center gap-2">
-                  <input v-model="user.name" :aria-label="t.name" class="form-control" type="text" :disabled="!authStore.can('users.manage')" /><WhatsAppUserFields :form="user" />
-                  <span v-if="user.id === currentUserId" class="badge bg-info text-dark">{{ common.loggedIn }}</span>
-                </div>
-              </td>
-              <td><input v-model="user.email" :aria-label="t.email" class="form-control" type="email" :disabled="!authStore.can('users.manage')" /></td>
-              <td>
-                <select :aria-label="t.role" v-model="user.role" class="form-select" :disabled="!authStore.can('users.manage')">
-                  <option value="admin">{{ roleLabels.admin }}</option>
-                  <option value="member">{{ roleLabels.member }}</option>
-                  <option value="secretary">{{ roleLabels.secretary }}</option><option value="pastor">{{ roleLabels.pastor }}</option>
-                </select>
-              </td>
-              <td>
-                <select :aria-label="t.department" v-model="user.department_id" class="form-select" :disabled="!authStore.can('users.manage')">
-                  <option value="">{{ common.select }}</option>
-                  <option v-for="department in departments" :key="department.id" :value="department.id">
-                    {{ department.name }}
-                  </option>
-                </select>
-              </td>
-              <td>
-                <button v-write="'users.manage'" class="btn btn-sm btn-outline-primary" type="button" @click="openPasswordModal(user)">
-                  {{ t.changePassword }}
-                </button>
-              </td>
-              <td class="text-end">
-                <button v-write="'users.manage'" class="btn btn-sm btn-outline-secondary" type="button" @click="updateUser(user)">{{ t.save }}</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="d-md-none p-3">
-        <div v-for="user in filteredUsers" :key="user.id" class="card mb-3">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-              <div>
-                <h5 class="card-title mb-1">{{ user.name }}</h5>
-                <p class="card-subtitle text-muted mb-0">#{{ user.id }}</p>
-              </div>
-              <div class="d-flex flex-column align-items-end gap-1">
-                <span class="badge bg-secondary">{{ roleLabels[user.role] || user.role }}</span>
-                <span v-if="user.id === currentUserId" class="badge bg-info text-dark">{{ common.loggedIn }}</span>
-              </div>
-            </div>
-            <div class="mb-2">
-              <label class="form-label small mb-1">{{ t.email }}</label>
-              <input v-model="user.email" :aria-label="t.email" class="form-control" type="email" :disabled="!authStore.can('users.manage')" />
-            </div>
-            <div class="mb-2">
-              <label class="form-label small mb-1">{{ t.name }}</label>
-              <input v-model="user.name" :aria-label="t.name" class="form-control" type="text" :disabled="!authStore.can('users.manage')" /><WhatsAppUserFields :form="user" />
-            </div>
-            <div class="mb-2">
-              <label class="form-label small mb-1">{{ t.role }}</label>
-              <select :aria-label="t.role" v-model="user.role" class="form-select" :disabled="!authStore.can('users.manage')">
-                <option value="admin">{{ roleLabels.admin }}</option>
-                <option value="member">{{ roleLabels.member }}</option>
-                <option value="secretary">{{ roleLabels.secretary }}</option><option value="pastor">{{ roleLabels.pastor }}</option>
-              </select>
-            </div>
-            <div class="mb-3">
-              <label class="form-label small mb-1">{{ t.department }}</label>
-              <select :aria-label="t.department" v-model="user.department_id" class="form-select" :disabled="!authStore.can('users.manage')">
-                <option value="">{{ common.select }}</option>
-                <option v-for="department in departments" :key="department.id" :value="department.id">
-                  {{ department.name }}
-                </option>
-              </select>
-            </div>
-            <div class="d-flex flex-wrap gap-2 mb-2">
-              <button v-write="'users.manage'" class="btn btn-sm btn-outline-primary" type="button" @click="openPasswordModal(user)">
-                {{ t.changePassword }}
-              </button>
-            </div>
-            <div class="d-flex flex-wrap gap-2">
-              <button v-write="'users.manage'" class="btn btn-sm btn-outline-secondary" type="button" @click="updateUser(user)">{{ t.save }}</button>
-            </div>
+      <div class="user-list">
+        <article v-for="user in filteredUsers" :key="user.id" class="user-card">
+          <header class="user-card-heading"><div class="user-identity"><strong>{{ user.name }}</strong><span>{{ user.email }}</span></div><div class="user-badges"><span class="role-badge">{{ roleLabels[user.role] || user.role }}</span><span v-if="user.pending_activation" class="pending-badge">{{ locale === 'es' ? 'Pendiente de activar' : 'Activation pending' }}</span><span v-if="user.id === currentUserId" class="role-badge">{{ common.loggedIn }}</span></div></header>
+          <div class="user-fields">
+            <label>{{ t.name }}<input v-model="user.name" class="form-control" type="text" :disabled="!authStore.can('users.manage')" /></label>
+            <label>{{ t.email }}<input v-model="user.email" class="form-control" type="email" :disabled="!authStore.can('users.manage')" /></label>
+            <label>{{ t.role }}<select v-model="user.role" class="form-select" :disabled="!authStore.can('users.manage')"><option v-for="role in ['admin', 'member', 'secretary', 'pastor']" :key="role" :value="role">{{ roleLabels[role] }}</option></select></label>
+            <label>{{ t.department }}<select v-model="user.department_id" class="form-select" :disabled="!authStore.can('users.manage')"><option value="">{{ common.select }}</option><option v-for="department in departments" :key="department.id" :value="department.id">{{ department.name }}</option></select></label>
           </div>
-        </div>
+          <WhatsAppUserFields :form="user" />
+          <div class="user-actions"><button v-write="'users.manage'" class="btn btn-sm btn-outline-secondary" type="button" @click="updateUser(user)">{{ t.save }}</button><button v-write="'users.manage'" class="btn btn-sm btn-outline-primary" type="button" @click="sendPasswordLink(user)">{{ locale === 'es' ? 'Enviar enlace de contraseña' : 'Send password link' }}</button></div>
+        </article>
       </div>
     </div>
 
@@ -202,7 +114,7 @@ const users = ref([])
 const loading = ref(false)
 const error = ref('')
 const filterText = ref('')
-const createForm = reactive({ name: '', email: '', password: '', whatsapp_phone: '', whatsapp_assistant_enabled: false, role: 'member', department_id: '' })
+const createForm = reactive({ name: '', email: '', whatsapp_phone: '', whatsapp_assistant_enabled: false, role: 'member', department_id: '' })
 const creating = ref(false)
 const createError = ref('')
 const createSuccess = ref(false)
@@ -213,7 +125,7 @@ const createUser = async () => {
   createSuccess.value = false
   try {
     await secretaryApi.createUser({ ...createForm, department_id: createForm.department_id || null })
-    Object.assign(createForm, { name: '', email: '', password: '', whatsapp_phone: '', whatsapp_assistant_enabled: false, role: 'member', department_id: '' })
+    Object.assign(createForm, { name: '', email: '', whatsapp_phone: '', whatsapp_assistant_enabled: false, role: 'member', department_id: '' })
     await loadUsers()
     createSuccess.value = true
   } catch (err) {
@@ -292,6 +204,11 @@ const updateUser = async (user) => {
     error.value = Object.values(e.response?.data?.errors||{}).flat().join(' ') || t.value.updateError
   }
 }
+const sendPasswordLink = async user => {
+  error.value = ''
+  try { await secretaryApi.sendPasswordLink(user.id); window.alert(locale.value === 'es' ? 'Enlace enviado al correo guardado del usuario.' : 'A link was sent to the user’s saved email address.') }
+  catch (e) { error.value = e.response?.data?.message || 'No se pudo enviar el correo.' }
+}
 
 const openPasswordModal = (user) => {
   activeUser.value = user
@@ -326,3 +243,7 @@ onMounted(async () => {
   await loadUsers()
 })
 </script>
+
+<style scoped>
+.user-list{display:grid;gap:14px;padding:18px;min-width:0}.user-card{min-width:0;border:1px solid #dfe9e2;border-radius:10px;padding:16px;background:#fff}.user-card-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}.user-identity{display:grid;gap:3px;min-width:0}.user-identity strong{font-size:15px;color:#244c3c;overflow-wrap:anywhere}.user-identity span{color:#62746a;overflow-wrap:anywhere}.user-badges{display:flex;gap:6px;flex-wrap:wrap}.role-badge,.pending-badge{padding:4px 8px;border-radius:6px;background:#eaf3ed;color:#28624a;font-size:11px}.pending-badge{background:#fff2d6;color:#805619}.user-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.user-fields label{display:grid;gap:5px;min-width:0;color:#596b61}.user-fields input,.user-fields select{min-width:0;width:100%}.user-actions{display:flex;flex-wrap:wrap;gap:8px;border-top:1px solid #edf1ed;padding-top:12px;margin-top:12px}.management-page .user-actions .btn{white-space:normal;max-width:100%}@media(max-width:1100px){.user-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:540px){.user-list{padding:12px}.user-card{padding:14px}.user-fields{grid-template-columns:1fr}.user-actions .btn{flex:1 1 auto}}
+</style>

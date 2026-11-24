@@ -232,8 +232,10 @@ const navItems = computed(() => {
     {to:'/superadmin/settings',label:locale.value==='es'?'Configuración':'Settings',icon:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1 1-3Z'},
     {to:'/superadmin/roles',label:locale.value==='es'?'Roles y permisos':'Roles and permissions',icon:iconPaths.roles},
   )
-  if (authStore.isSecretary) items.unshift({to:'/secretary/settings',label:locale.value==='es'?'Configuración':'Settings',icon:iconPaths.roles})
-  items.push({to:'/whatsapp-settings',label:locale.value==='es'?'Asistente WhatsApp':'WhatsApp assistant',icon:iconPaths.meetingPoints})
+  if (route.path !== '/no-access') {
+    if (authStore.isSecretary) items.unshift({to:'/secretary/settings',label:locale.value==='es'?'Configuración':'Settings',icon:iconPaths.roles})
+    items.push({to:'/whatsapp-settings',label:locale.value==='es'?'Asistente WhatsApp':'WhatsApp assistant',icon:iconPaths.meetingPoints})
+  }
   const wording = {
     calendar: ['Calendario y eventos','Calendar and events','Fechas, reservas y revisión','Dates, reservations and review'],
     reports: ['Reportes y registros','Reports and records','Eventos, visitas y asistencia','Events, visitors and attendance'],

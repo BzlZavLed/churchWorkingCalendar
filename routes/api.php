@@ -35,7 +35,8 @@ Route::get('public/churches/{church}/visitor-logo', [\App\Http\Controllers\Visit
 Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'registerWithInvite']);
     Route::post('login', [AuthController::class, 'login']);
-    Route::post('recover', [AuthController::class, 'recoverPassword']);
+    Route::post('recover', [\App\Http\Controllers\AccountPasswordController::class, 'requestLink'])->middleware('throttle:5,1');
+    Route::post('reset-password', [\App\Http\Controllers\AccountPasswordController::class, 'reset'])->middleware('throttle:5,1');
     Route::post('webauthn/register/options', [WebAuthnController::class, 'registerOptions']);
     Route::post('webauthn/register/verify', [WebAuthnController::class, 'registerVerify']);
     Route::post('webauthn/authenticate/options', [WebAuthnController::class, 'authenticateOptions']);
@@ -212,6 +213,7 @@ Route::middleware(['auth:sanctum', 'superadmin.context', 'module.access', 'secre
     Route::put('secretary/departments/{department}', [AdminUserController::class, 'updateDepartment']);
     Route::get('secretary/users', [AdminUserController::class, 'listUsers']);
     Route::put('secretary/users/{user}', [AdminUserController::class, 'updateUser']);
+    Route::post('secretary/users/{user}/password-link', [\App\Http\Controllers\AccountPasswordController::class, 'sendForUser'])->middleware('throttle:5,1');
 });
 
 Route::middleware(['auth:sanctum', 'superadmin.context'])->group(function () {

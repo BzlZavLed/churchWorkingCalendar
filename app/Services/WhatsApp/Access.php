@@ -12,7 +12,7 @@ class Access
         $user = $account->user()->first();
         $current = $account->fresh();
 
-        return app(\App\Services\ChurchIntegrations::class)->whatsapp($user?->church_id) && config('whatsapp.enabled') && $user && $user->whatsapp_assistant_enabled
+        return app(\App\Services\ChurchIntegrations::class)->whatsapp($user?->church_id) && config('whatsapp.enabled') && $user && !$user->pending_activation && $user->whatsapp_assistant_enabled
          && $user->church_id && (string) $user->church_id === (string) config('whatsapp.church_id')
          && $current?->sender_hash === $account->sender_hash && $current?->generation === $account->generation && $account->sender_hash;
     }

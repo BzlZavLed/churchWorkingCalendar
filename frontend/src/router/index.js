@@ -51,6 +51,7 @@ const routes = [
   { path: '/visit/:churchId', component: GreetingIntakeView, meta: { noLayout: true } },
   { path: '/', redirect: '/calendar' },
   { path: '/login', component: LoginForm, meta: { guestOnly: true, noLayout: true } },
+  { path: '/reset-password', component: () => import('../components/ResetPassword.vue'), meta: { noLayout: true } },
   { path: '/register', component: RegisterWithInvite, meta: { guestOnly: true, noLayout: true } },
   { path: '/calendar', component: CalendarView, meta: { requiresAuth: true } },
   { path: '/objectives', component: ObjectivesView, meta: { requiresAuth: true } },

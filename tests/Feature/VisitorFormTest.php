@@ -107,7 +107,7 @@ class VisitorFormTest extends TestCase
     public function test_clerk_can_create_pastor_but_department_admin_cannot_promote_self(): void {
         $church=Church::create(['name'=>'Main']);
         Sanctum::actingAs(User::factory()->create(['role'=>'secretary','church_id'=>$church->id]));
-        $this->postJson('/api/secretary/users',['name'=>'Pastor','email'=>'pastor@example.test','password'=>'test-password','role'=>'pastor'])->assertCreated()->assertJsonPath('department_id',null);
+        $this->postJson('/api/secretary/users',['name'=>'Pastor','email'=>'pastor@example.test','role'=>'pastor'])->assertCreated()->assertJsonPath('department_id',null);
         $admin=User::factory()->create(['role'=>'admin','church_id'=>$church->id]);
         Sanctum::actingAs($admin);
         $this->putJson("/api/admin/users/{$admin->id}",['role'=>'pastor'])->assertForbidden();

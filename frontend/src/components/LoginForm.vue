@@ -115,25 +115,8 @@
                     <input v-model="recovery.email" class="form-control" type="email" required />
                   </label>
                 </div>
-                <div class="mb-3">
-                  <label class="form-label">
-                    {{ t.churchCode }}
-                    <input v-model="recovery.church_code" class="form-control" type="text" required />
-                  </label>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">
-                    {{ t.newPassword }}
-                    <input v-model="recovery.password" class="form-control" type="password" required />
-                  </label>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">
-                    {{ t.confirmPassword }}
-                    <input v-model="recovery.password_confirmation" class="form-control" type="password" required />
-                  </label>
-                </div>
-                <button class="btn btn-primary w-100" type="submit">{{ t.reset }}</button>
+                <p>Te enviaremos un enlace para crear una contraseña nueva.</p>
+                <button class="btn btn-primary w-100" type="submit">Enviar enlace</button>
               </form>
 
               <div class="auth-actions mt-3">
@@ -264,7 +247,7 @@ const recover = async () => {
   notice.value = ''
   try {
     await authApi.recoverPassword(recovery)
-    notice.value = t.value.success
+    notice.value = 'Si existe una cuenta con ese correo, recibirás un enlace para restablecer tu contraseña.'
     showRecovery.value = false
     recovery.email = ''
     recovery.church_code = ''

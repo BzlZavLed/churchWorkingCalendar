@@ -38,6 +38,7 @@ class User extends Authenticatable
         'department_id',
         'role',
         'church_role_id',
+        'pending_activation',
     ];
 
     /**
@@ -61,10 +62,12 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'whatsapp_assistant_enabled' => 'boolean',
             'password' => 'hashed',
+            'pending_activation' => 'boolean',
         ];
     }
 
     public function whatsappAccount() { return $this->hasOne(\App\Models\WhatsAppAccount::class); }
+    public function sendPasswordResetNotification($token): void { $this->notify(new \App\Notifications\AccountPasswordLink($token)); }
 
     public function isAdmin(): bool
     {

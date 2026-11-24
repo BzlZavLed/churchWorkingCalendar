@@ -62,6 +62,10 @@ class AdminUserController extends Controller
             if($response->getStatusCode()>=400) return $response;
             $saved=User::findOrFail($response->getData()->id);
             app(\App\Services\WhatsApp\Provisioning::class)->apply($request,$saved);
+            if ($saved->pending_activation) {
+                $status=\Illuminate\Support\Facades\Password::sendResetLink(['email'=>$saved->email]);
+                if ($status!==\Illuminate\Support\Facades\Password::RESET_LINK_SENT) throw \Illuminate\Validation\ValidationException::withMessages(['email'=>['No se pudo enviar la invitación.']]);
+            }
             return response()->json(array_merge($saved->toArray(),app(\App\Services\WhatsApp\Provisioning::class)->fields($saved)),$response->getStatusCode());
         });
     }
@@ -77,7 +81,7 @@ class AdminUserController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8'],
+            'password' => [($request->is('api/secretary/users') || $request->user()->isSecretary()) ? 'prohibited' : 'required', 'string', 'min:8'],
             'role' => ['required', 'in:admin,member,secretary,pastor'],
             'department_id' => ['nullable', 'exists:departments,id'],
         ]);
@@ -99,7 +103,8 @@ class AdminUserController extends Controller
         $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
-            'password' => Hash::make($data['password']),
+            'password' => Hash::make($data['password'] ?? \Illuminate\Support\Str::random(64)),
+            'pending_activation' => $request->is('api/secretary/users') || $request->user()->isSecretary(),
             'role' => $data['role'],
             'church_id' => $churchId,
             'department_id' => $data['department_id'] ?? null,
@@ -133,7 +138,7 @@ class AdminUserController extends Controller
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'password' => ['nullable', 'string', 'min:8'],
+            'password' => [($request->is('api/secretary/users/*') || $request->user()->isSecretary()) ? 'prohibited' : 'nullable', 'string', 'min:8'],
             'role' => ['sometimes', 'in:admin,member,secretary,pastor'],
             'department_id' => ['nullable', 'exists:departments,id'],
         ]);

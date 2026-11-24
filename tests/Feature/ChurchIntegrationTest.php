@@ -56,11 +56,12 @@ class ChurchIntegrationTest extends TestCase {
   [$church]=$this->setupChurch();$other=Church::create(['name'=>'Other']);
   $foreign=User::factory()->create(['church_id'=>$other->id]);
   Sanctum::actingAs(User::factory()->create(['church_id'=>$church->id,'role'=>'secretary']));
-  $payload=$this->userPayload();$payload['whatsapp_assistant_enabled']=false;
+  $payload=$this->userPayload();unset($payload['password']);$payload['whatsapp_assistant_enabled']=false;
   $id=$this->postJson('/api/secretary/users',$payload)->assertCreated()->json('id');
   $this->putJson('/api/secretary/users/'.$foreign->id,['whatsapp_phone'=>'+15555550404'])->assertNotFound();
   app(Inbox::class)->accept('blocked','15555550101','Hola',now()->timestamp);
   $this->assertNull(WhatsAppAccount::where('user_id',$id)->first()->sender_hash);
+  User::findOrFail($id)->update(['pending_activation'=>false]);
   $this->putJson('/api/secretary/users/'.$id,['whatsapp_assistant_enabled'=>true])->assertOk();
   app(Inbox::class)->accept('allowed','15555550101','Hola',now()->timestamp);
   $this->assertNotNull(WhatsAppAccount::where('user_id',$id)->first()->sender_hash);

@@ -21,10 +21,10 @@ class SecretaryCreationTest extends TestCase
         $department = $this->postJson('/api/secretary/departments', [
             'name' => 'Music', 'church_id' => $other->id, 'color' => '#123456',
         ])->assertCreated()->assertJsonPath('church_id', $church->id)->json('id');
-        $payload = ['name' => 'New user', 'email' => 'new@example.test', 'password' => 'Test-password-123',
+        $payload = ['name' => 'New user', 'email' => 'new@example.test',
             'role' => 'admin', 'department_id' => $department, 'church_id' => $other->id];
         $this->postJson('/api/secretary/users', $payload)->assertCreated()->assertJsonPath('church_id', $church->id)->assertJsonMissingPath('password');
-        $this->assertTrue(Hash::check($payload['password'], User::where('email', $payload['email'])->firstOrFail()->password));
+        $this->assertTrue(User::where('email', $payload['email'])->firstOrFail()->pending_activation);
         $payload['email'] = 'another@example.test';
         $payload['department_id'] = $foreign->id;
         $this->postJson('/api/secretary/users', $payload)->assertUnprocessable();
@@ -51,7 +51,7 @@ class SecretaryCreationTest extends TestCase
         $this->postJson('/api/secretary/departments', ['name' => 'Music'], $headers)
             ->assertCreated()->assertJsonPath('church_id', $church->id);
         $this->postJson('/api/secretary/users', ['name' => 'Clerk', 'email' => 'clerk@example.test',
-            'password' => 'Test-password-123', 'role' => 'secretary'], $headers)
+            'role' => 'secretary'], $headers)
             ->assertCreated()->assertJsonPath('church_id', $church->id);
     }
 }

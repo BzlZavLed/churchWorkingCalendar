@@ -16,6 +16,7 @@
         "nyholm/psr7": "*",
         "nyholm/psr7-server": "*",
         "phpoffice/phpspreadsheet": "^2.1",
+        "resend/resend-php": "^1.19",
         "symfony/psr-http-message-bridge": "*",
         "web-auth/webauthn-lib": "*"
     },
