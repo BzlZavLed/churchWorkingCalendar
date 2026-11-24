@@ -34,10 +34,11 @@
           </label>
         </div>
       </div>
+      <p class="activity-explanation">{{ locale === 'es' ? 'Actividad reciente: usó el sistema en los últimos 5 minutos. No confirma que siga conectado.' : 'Recently active: used the system in the last 5 minutes. This does not confirm they are still online.' }}</p>
 
       <div class="user-list">
         <article v-for="user in filteredUsers" :key="user.id" class="user-card">
-          <header class="user-card-heading"><div class="user-identity"><strong>{{ user.name }}</strong><span>{{ user.email }}</span></div><div class="user-badges"><span class="role-badge">{{ roleLabels[user.role] || user.role }}</span><span v-if="user.pending_activation" class="pending-badge">{{ locale === 'es' ? 'Pendiente de activar' : 'Activation pending' }}</span><span v-if="user.id === currentUserId" class="role-badge">{{ common.loggedIn }}</span></div></header>
+          <header class="user-card-heading"><div class="user-identity"><strong>{{ user.name }}</strong><span>{{ user.email }}</span></div><div class="user-badges"><span v-if="isRecentlyActive(user)" class="active-badge">● {{ locale === 'es' ? 'Actividad reciente' : 'Recently active' }}</span><span class="role-badge">{{ roleLabels[user.role] || user.role }}</span><span v-if="user.pending_activation" class="pending-badge">{{ locale === 'es' ? 'Pendiente de activar' : 'Activation pending' }}</span><span v-if="user.id === currentUserId" class="role-badge">{{ common.loggedIn }}</span></div></header>
           <div class="user-fields">
             <label>{{ t.name }}<input v-model="user.name" class="form-control" type="text" :disabled="!authStore.can('users.manage')" /></label>
             <label>{{ t.email }}<input v-model="user.email" class="form-control" type="email" :disabled="!authStore.can('users.manage')" /></label>
@@ -101,7 +102,7 @@
 import WhatsAppUserFields from '../WhatsAppUserFields.vue'
 import FormSection from "../FormSection.vue"
 import '../../styles/clerk-management.css'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { publicApi } from '../../services/publicApi'
 import { secretaryApi } from '../../services/secretaryApi'
 import { useAuthStore } from '../../stores/authStore'
@@ -172,6 +173,14 @@ const filteredUsers = computed(() => {
 })
 
 const currentUserId = computed(() => authStore.user?.id || null)
+const activityClock = ref(Date.now())
+let activityTimer
+const isRecentlyActive = user => {
+  if (user.pending_activation || !user.last_activity_at) return false
+  const value = String(user.last_activity_at)
+  const timestamp = Date.parse(value.includes('T') ? value : value.replace(' ', 'T') + 'Z')
+  return Number.isFinite(timestamp) && timestamp <= activityClock.value && timestamp >= activityClock.value - 5 * 60 * 1000
+}
 
 const loadUsers = async () => {
   loading.value = true
@@ -245,9 +254,15 @@ const submitPasswordUpdate = async () => {
 onMounted(async () => {
   await loadDepartments()
   await loadUsers()
+  activityTimer=setInterval(async()=>{
+    activityClock.value=Date.now()
+    try { const latest=await secretaryApi.listUsers();const timestamps=new Map(latest.map(user=>[user.id,user.last_activity_at]));for(const user of users.value)user.last_activity_at=timestamps.get(user.id)??null } catch { /* Keep the last known activity without affecting unsaved edits. */ }
+  },60000)
 })
+onUnmounted(()=>clearInterval(activityTimer))
 </script>
 
 <style scoped>
 .user-list{display:grid;gap:14px;padding:18px;min-width:0}.user-card{min-width:0;border:1px solid #dfe9e2;border-radius:10px;padding:16px;background:#fff}.user-card-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}.user-identity{display:grid;gap:3px;min-width:0}.user-identity strong{font-size:15px;color:#244c3c;overflow-wrap:anywhere}.user-identity span{color:#62746a;overflow-wrap:anywhere}.user-badges{display:flex;gap:6px;flex-wrap:wrap}.role-badge,.pending-badge{padding:4px 8px;border-radius:6px;background:#eaf3ed;color:#28624a;font-size:11px}.pending-badge{background:#fff2d6;color:#805619}.user-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.user-fields label{display:grid;gap:5px;min-width:0;color:#596b61}.user-fields input,.user-fields select{min-width:0;width:100%}.user-actions{display:flex;flex-wrap:wrap;gap:8px;border-top:1px solid #edf1ed;padding-top:12px;margin-top:12px}.management-page .user-actions .btn{white-space:normal;max-width:100%}@media(max-width:1100px){.user-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:540px){.user-list{padding:12px}.user-card{padding:14px}.user-fields{grid-template-columns:1fr}.user-actions .btn{flex:1 1 auto}}
+.activity-explanation{margin:0;padding:12px 18px 0;color:#5b6d62;font-size:12px}.active-badge{padding:4px 8px;border-radius:6px;background:#dff3e5;color:#17683c;font-size:11px;font-weight:600}
 </style>

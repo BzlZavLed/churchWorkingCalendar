@@ -4,7 +4,8 @@ use App\Models\{ChurchMember,MemberTemplate};
 use Illuminate\Validation\ValidationException;
 class MemberImportReview {
  public function analyze(MemberTemplate $template,array $rows): array {
-  $existing=ChurchMember::where('church_id',$template->church_id)->get();$bySource=$existing->filter(fn($m)=>filled($m->source_person_id))->keyBy('source_person_id');$seen=[];$review=[];
+  $existing=ChurchMember::where('church_id',$template->church_id)->get();$bySource=$existing->filter(fn($m)=>filled($m->source_person_id))->keyBy('source_person_id');$seen=[];$review=[];$fileSources=[];
+  foreach($rows as $row){$id=trim((string)($row['values']['PersonId']??''));if($id!=='')$fileSources[$id][]=$row['line'];}
   foreach($rows as $row){
    $values=array_replace(array_fill_keys(MemberDirectorySchema::HEADERS,''),$row['values']);$custom=[];
    foreach($template->fields as $field){
@@ -30,7 +31,8 @@ class MemberImportReview {
    if($matches && $action==='update' && !collect($matches)->contains('id',$target)){$errors['PersonId']=['Select a matching member to update.'];$canAuthorize=false;}
    $authorized=$canAuthorize && ($row['authorize_missing']??false);
    if($payload){$payload['source_person_id']=$source;}
-   $review[]=['line'=>$row['line'],'values'=>$values,'errors'=>$errors,'missing_fields'=>$missing,'can_authorize'=>$canAuthorize,'authorize_missing'=>(bool)$authorized,'duplicate_matches'=>$matches,'duplicate_action'=>$matches?$action:'new','duplicate_target'=>$target,'eligible'=>!$errors||$authorized,'payload'=>$payload];
+   $fileDuplicates=$source!==null && count($fileSources[$source]??[])>1?array_values(array_diff($fileSources[$source],[$row['line']])):[];
+   $review[]=['line'=>$row['line'],'values'=>$values,'errors'=>$errors,'missing_fields'=>$missing,'can_authorize'=>$canAuthorize,'authorize_missing'=>(bool)$authorized,'duplicate_matches'=>$matches,'duplicate_file_lines'=>$fileDuplicates,'duplicate_action'=>$matches?$action:'new','duplicate_target'=>$target,'eligible'=>!$errors||$authorized,'payload'=>$payload];
   }
   return $review;
  }

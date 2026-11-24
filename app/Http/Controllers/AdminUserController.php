@@ -34,6 +34,10 @@ class AdminUserController extends Controller
 
         $users = User::query()
             ->where('church_id', $churchId)
+            ->withMax(['tokens as last_activity_at' => function ($query) {
+                $query->where(function ($q) { $q->whereNull('expires_at')->orWhere('expires_at', '>', now()); });
+                if (config('sanctum.expiration')) $query->where('created_at', '>', now()->subMinutes((int) config('sanctum.expiration')));
+            }], 'last_used_at')
             ->orderBy('name')
             ->get();
 

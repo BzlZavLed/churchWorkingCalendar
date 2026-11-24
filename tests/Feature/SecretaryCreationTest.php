@@ -12,6 +12,21 @@ class SecretaryCreationTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_user_list_reports_recent_activity_only_for_own_church(): void
+    {
+        $church=Church::create(['name'=>'Own']);$other=Church::create(['name'=>'Other']);
+        $clerk=User::factory()->create(['role'=>'secretary','church_id'=>$church->id]);
+        $member=User::factory()->create(['role'=>'member','church_id'=>$church->id]);
+        $foreign=User::factory()->create(['role'=>'member','church_id'=>$other->id]);
+        $member->createToken('activity');$member->tokens()->update(['last_used_at'=>now()->subMinute()]);
+        $foreign->createToken('activity');$foreign->tokens()->update(['last_used_at'=>now()]);
+        Sanctum::actingAs($clerk);
+        $users=collect($this->getJson('/api/secretary/users')->assertOk()->json());
+        $this->assertNotNull($users->firstWhere('id',$member->id)['last_activity_at']);
+        $this->assertNull($users->firstWhere('id',$clerk->id)['last_activity_at']);
+        $this->assertFalse($users->contains('id',$foreign->id));
+    }
+
     public function test_secretary_creates_departments_and_users_only_in_own_church(): void
     {
         $church = Church::create(['name' => 'Own']);

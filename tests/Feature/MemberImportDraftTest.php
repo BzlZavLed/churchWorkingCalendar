@@ -81,7 +81,7 @@ class MemberImportDraftTest extends TestCase {
  }
  public function test_missing_data_cannot_be_waived_through_regular_creation_or_duplicate_id(): void {
   $this->context();$template=$this->getJson('/api/members')->json('template.id');$this->postJson('/api/members',['template_id'=>$template,'given_name'=>'Name','email'=>'','phone'=>'','data'=>[],'missing_fields'=>[],'missing_data_authorization'=>['fields'=>['email','phone','dob']]])->assertUnprocessable();
-  $draft=$this->postJson('/api/members/import-drafts',['rows'=>[$this->row(2),$this->row(3,['PersonId'=>'source-2','Email'=>''],true)]])->assertOk()->assertJsonPath('rows.1.can_authorize',false)->json();
+  $draft=$this->postJson('/api/members/import-drafts',['rows'=>[$this->row(2),$this->row(3,['PersonId'=>'source-2','Email'=>''],true)]])->assertOk()->assertJsonPath('rows.1.can_authorize',false)->assertJsonPath('rows.0.duplicate_file_lines.0',3)->assertJsonPath('rows.1.duplicate_file_lines.0',2)->json();
   $this->postJson('/api/members/import-drafts/'.$draft['draft_id'].'/commit',['revision'=>1])->assertJsonPath('created',1)->assertJsonPath('remaining',1);
  }
 }
