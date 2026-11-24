@@ -8,6 +8,17 @@ class MemberImportDraftTest extends TestCase {
  use RefreshDatabase;
  private function context(): array {$church=Church::create(['name'=>'Draft church']);$user=User::factory()->create(['church_id'=>$church->id,'role'=>'secretary']);Sanctum::actingAs($user);return [$church,$user];}
  private function row(int $line,array $replace=[],bool $authorize=false): array {return ['line'=>$line,'values'=>array_replace(['FirstName'=>'Member '.$line,'Email'=>'shared@example.test','MobilePhone'=>'5551234567','BornOn'=>'1990-01-02','PersonId'=>'source-'.$line],$replace),'authorize_missing'=>$authorize];}
+ public function test_duplicate_is_skipped_or_explicitly_updated_without_replacing_empty_fields(): void {
+  [$church]=$this->context();$first=$this->postJson('/api/members/import-drafts',['rows'=>[$this->row(2,['City'=>'Original city'])]])->assertOk()->json();
+  $this->postJson('/api/members/import-drafts/'.$first['draft_id'].'/commit',['revision'=>1])->assertOk();$member=ChurchMember::firstOrFail();
+  $duplicate=$this->row(3,['PersonId'=>'source-2','FirstName'=>'Changed','City'=>'']);$new=$this->row(4);
+  $draft=$this->postJson('/api/members/import-drafts',['rows'=>[$duplicate,$new]])->assertOk()->assertJsonPath('rows.0.duplicate_matches.0.id',$member->id)->assertJsonPath('rows.0.duplicate_action','skip')->json();
+  $this->postJson('/api/members/import-drafts/'.$draft['draft_id'].'/commit',['revision'=>1])->assertOk()->assertJsonPath('created',1)->assertJsonPath('skipped',1);$this->assertSame('Member 2',$member->fresh()->name);
+  $duplicate['duplicate_action']='update';$duplicate['duplicate_target']=$member->id;
+  $draft=$this->postJson('/api/members/import-drafts',['rows'=>[$duplicate]])->assertOk()->json();
+  $this->postJson('/api/members/import-drafts/'.$draft['draft_id'].'/commit',['revision'=>1])->assertOk()->assertJsonPath('updated',1);
+  $this->assertSame('Changed',$member->fresh()->name);$this->assertSame('Original city',$member->fresh()->data['City']);$this->assertDatabaseCount('church_members',2);
+ }
  public function test_save_for_later_keeps_only_errors_without_losing_review_rows(): void {
   $this->context();
   $rows=array_map(fn($line)=>$this->row($line,$line<26?['Email'=>'']:[]),range(2,76));

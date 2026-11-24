@@ -13,7 +13,7 @@
         <label class="col-12">{{ t.department }}<select v-model="createForm.department_id" class="form-select"><option value="">{{ common.select }}</option><option v-for="department in departments" :key="department.id" :value="department.id">{{ department.name }}</option></select></label>
         <WhatsAppUserFields :form="createForm" class="col-12" />
         <p v-if="createError" class="management-error col-12" role="alert">{{ createError }}</p>
-        <p v-if="createSuccess" class="text-success col-12" role="status">{{ locale === 'es' ? 'Usuario creado. Se envió una invitación para activar su cuenta.' : 'User created. An activation invitation was sent.' }}</p>
+        <p v-if="createSuccess" class="col-12" :class="invitationStatus !== 'accepted' ? 'management-error' : 'text-success'" role="status">{{ invitationStatus === 'simulated' ? (locale === 'es' ? 'Usuario creado, pero el servidor está en modo de correo de prueba y no se envió la invitación.' : 'User created, but the server is using a test mailer and the invitation was not sent.') : invitationStatus !== 'accepted' ? (locale === 'es' ? 'Usuario creado, pero no se pudo enviar la invitación. Reenvía el enlace desde la lista.' : 'User created, but the invitation could not be sent. Resend the link from the list.') : (locale === 'es' ? 'Usuario creado. Se envió una invitación para activar su cuenta.' : 'User created. An activation invitation was sent.') }}</p>
         <div class="col-12"><button class="btn btn-primary" :disabled="creating || loading">{{ creating ? (locale === 'es' ? 'Guardando…' : 'Saving…') : (locale === 'es' ? 'Crear usuario' : 'Create user') }}</button></div>
       </form>
     </FormSection>
@@ -119,13 +119,15 @@ const createFormVersion = ref(0)
 const creating = ref(false)
 const createError = ref('')
 const createSuccess = ref(false)
+const invitationStatus = ref('')
 const createUser = async () => {
   if (creating.value) return
   creating.value = true
   createError.value = ''
   createSuccess.value = false
   try {
-    await secretaryApi.createUser({ ...createForm, department_id: createForm.department_id || null })
+    const created = await secretaryApi.createUser({ ...createForm, department_id: createForm.department_id || null })
+    invitationStatus.value = created.invitation_status
     Object.assign(createForm, { name: '', email: '', whatsapp_phone: '', whatsapp_assistant_enabled: false, role: 'member', department_id: '' })
     createFormVersion.value++
     createSuccess.value = true
@@ -208,7 +210,7 @@ const updateUser = async (user) => {
 }
 const sendPasswordLink = async user => {
   error.value = ''
-  try { await secretaryApi.sendPasswordLink(user.id); window.alert(locale.value === 'es' ? 'Enlace enviado al correo guardado del usuario.' : 'A link was sent to the user’s saved email address.') }
+  try { const result=await secretaryApi.sendPasswordLink(user.id); window.alert(result.status==='simulated' ? (locale.value === 'es' ? 'El servidor usa correo de prueba; no se envió el enlace.' : 'The server uses a test mailer; the link was not sent.') : (locale.value === 'es' ? 'Enlace enviado al correo guardado del usuario.' : 'A link was sent to the user’s saved email address.')) }
   catch (e) { error.value = e.response?.data?.message || 'No se pudo enviar el correo.' }
 }
 

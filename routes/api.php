@@ -227,6 +227,7 @@ Route::middleware(['auth:sanctum', 'superadmin.context'])->group(function () {
 });
 
 Route::middleware(['auth:sanctum', 'superadmin'])->group(function () {
+    Route::get('superadmin/email-activity', [\App\Http\Controllers\SuperAdminEmailActivityController::class, 'index']);
     Route::get('superadmin/churches/{church}/integrations/providers', [\App\Http\Controllers\ChurchIntegrationController::class, 'providers'])->middleware('throttle:20,1');
     Route::get('superadmin/churches/{church}/integrations', [\App\Http\Controllers\ChurchIntegrationController::class, 'show']);
     Route::put('superadmin/churches/{church}/integrations', [\App\Http\Controllers\ChurchIntegrationController::class, 'update']);

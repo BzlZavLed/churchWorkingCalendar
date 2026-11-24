@@ -88,7 +88,7 @@ class ChurchMemberTest extends TestCase {
   $this->postJson('/api/members/import',['file'=>$this->csv([$fixed]),'preview'=>true,'editable'=>true])->assertOk()->assertJsonPath('valid',true);
   $this->assertDatabaseCount('church_members',0);
   $this->postJson('/api/members/import',['file'=>$this->csv([$fixed]),'preview'=>false])->assertOk()->assertJsonPath('created',1);
-  $this->postJson('/api/members/import',['file'=>$this->csv([$fixed]),'preview'=>true,'editable'=>true])->assertOk()->assertJsonPath('valid',false)->assertJsonStructure(['rows'=>[['errors'=>['PersonId']]]]);
+  $this->postJson('/api/members/import',['file'=>$this->csv([$fixed]),'preview'=>true,'editable'=>true])->assertOk()->assertJsonPath('rows.0.duplicate_action','skip')->assertJsonPath('rows.0.duplicate_matches.0.match','person_id');
  }
  public function test_delete_protects_history_and_removes_unreferenced_member(): void {
   $church=$this->context();$payload=$this->payload();$id=$this->postJson('/api/members',$payload)->json('id');

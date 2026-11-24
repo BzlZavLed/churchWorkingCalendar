@@ -102,7 +102,7 @@ class ChurchMemberController extends Controller {
                 if(!$raw)throw ValidationException::withMessages(['file'=>['No member rows found.']]);
                 $analyzer=app(\App\Services\MemberImportReview::class);$review=$analyzer->analyze($template,$raw);
                 $rows=[];$errors=[];
-                foreach($review as $row){if($row['errors'])$errors['row_'.$row['line']]=collect($row['errors'])->flatten()->all();else $rows[]=$row['payload'];}
+                foreach($review as $row){if($row['errors'])$errors['row_'.$row['line']]=collect($row['errors'])->flatten()->all();elseif($row['duplicate_matches'])$errors['row_'.$row['line']]=['Existing member detected. Use the review screen to update or skip.'];else $rows[]=$row['payload'];}
                 if($request->boolean('preview') && $request->boolean('editable')) {
                     return response()->json($analyzer->response($review))->header('Cache-Control','no-store');
                 }

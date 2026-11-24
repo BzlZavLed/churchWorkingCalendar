@@ -203,7 +203,7 @@ const postLoginRoute = () => {
     ? target : getDefaultRouteForUser(authStore.user)
 }
 const error = ref('')
-const notice = ref('')
+const notice = ref(route.query.password_reset === 'success' ? 'Tu contraseña fue guardada. Inicia sesión con tus credenciales.' : '')
 const showRecovery = ref(false)
 const showPassword = ref(false)
 const rememberMe = ref(true)

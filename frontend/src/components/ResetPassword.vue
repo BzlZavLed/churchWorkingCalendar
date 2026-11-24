@@ -3,9 +3,10 @@
 </template>
 <script setup>
 import { reactive,ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { apiClient } from '../services/authApi'
-const route=useRoute(),form=reactive({email:String(route.query.email||''),token:String(route.query.token||''),password:'',password_confirmation:''}),busy=ref(false),done=ref(false),error=ref('')
-async function submit(){busy.value=true;error.value='';try{await apiClient.post('/auth/reset-password',form);done.value=true;form.password='';form.password_confirmation=''}catch(e){error.value=Object.values(e.response?.data?.errors||{}).flat().join(' ')||'No se pudo guardar la contraseña.'}finally{busy.value=false}}
+import { useAuthStore } from '../stores/authStore'
+const route=useRoute(),router=useRouter(),auth=useAuthStore(),form=reactive({email:String(route.query.email||''),token:String(route.query.token||''),password:'',password_confirmation:''}),busy=ref(false),done=ref(false),error=ref('')
+async function submit(){busy.value=true;error.value='';try{await apiClient.post('/auth/reset-password',form);form.password='';form.password_confirmation='';if(auth.isAuthenticated){try{await auth.logout()}catch{/* An expired session is cleared by logout. */}}await router.replace({path:'/login',query:{password_reset:'success'}})}catch(e){error.value=Object.values(e.response?.data?.errors||{}).flat().join(' ')||'No se pudo guardar la contraseña.'}finally{busy.value=false}}
 </script>
 <style scoped>.reset-page{min-height:100vh;display:grid;place-items:center;padding:20px;background:#f1f5f2}.reset-card{width:min(100%,480px);padding:30px;background:white;border:1px solid #dce5df;border-radius:14px}.reset-card h1{font-size:24px}.reset-card form{display:grid;gap:15px;margin:20px 0}.reset-card label{display:grid;gap:6px}.reset-card .btn{background:#1f6f5c;color:white}</style>

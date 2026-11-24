@@ -4,7 +4,7 @@ use App\Models\{ChurchMember,MemberTemplate};
 use Illuminate\Validation\ValidationException;
 class MemberImportReview {
  public function analyze(MemberTemplate $template,array $rows): array {
-  $existing=ChurchMember::where('church_id',$template->church_id)->whereNotNull('source_person_id')->pluck('source_person_id')->flip();$seen=[];$review=[];
+  $existing=ChurchMember::where('church_id',$template->church_id)->get();$bySource=$existing->filter(fn($m)=>filled($m->source_person_id))->keyBy('source_person_id');$seen=[];$review=[];
   foreach($rows as $row){
    $values=array_replace(array_fill_keys(MemberDirectorySchema::HEADERS,''),$row['values']);$custom=[];
    foreach($template->fields as $field){
@@ -21,10 +21,16 @@ class MemberImportReview {
     try{$payload=app(MemberRecords::class)->validate($template,$input,['name','email','phone','dob']);$missing=$payload['missing_fields'];$canAuthorize=(bool)$missing;}catch(ValidationException){$payload=null;}
    }
    $source=filled($custom['PersonId']??null)?$custom['PersonId']:null;
-   if($source!==null){if(isset($existing[$source])||isset($seen[$source])){$errors['PersonId']=['Duplicate PersonId in this church or file.'];$canAuthorize=false;$payload=null;}$seen[$source]=true;}
+   if($source!==null){if(isset($seen[$source])){$errors['PersonId']=['Duplicate PersonId in this file.'];$canAuthorize=false;$payload=null;}$seen[$source]=true;}
+   $matches=collect();
+   if($source!==null && isset($bySource[$source]))$matches=collect([$bySource[$source]]);
+   elseif($payload && filled($payload['name']??null) && filled($payload['data']['BornOn']??null))$matches=$existing->filter(fn($m)=>mb_strtolower(trim($m->name??''))===mb_strtolower(trim($payload['name'])) && ($m->data['BornOn']??null)===$payload['data']['BornOn']);
+   $matches=$matches->map(fn($m)=>['id'=>$m->id,'name'=>$m->name,'dob'=>$m->data['BornOn']??null,'match'=>$source!==null && (string)$m->source_person_id===(string)$source?'person_id':'name_dob'])->values()->all();
+   $action=($row['duplicate_action']??'skip')==='update'?'update':'skip';$target=isset($row['duplicate_target'])?(int)$row['duplicate_target']:null;
+   if($matches && $action==='update' && !collect($matches)->contains('id',$target)){$errors['PersonId']=['Select a matching member to update.'];$canAuthorize=false;}
    $authorized=$canAuthorize && ($row['authorize_missing']??false);
    if($payload){$payload['source_person_id']=$source;}
-   $review[]=['line'=>$row['line'],'values'=>$values,'errors'=>$errors,'missing_fields'=>$missing,'can_authorize'=>$canAuthorize,'authorize_missing'=>(bool)$authorized,'eligible'=>!$errors||$authorized,'payload'=>$payload];
+   $review[]=['line'=>$row['line'],'values'=>$values,'errors'=>$errors,'missing_fields'=>$missing,'can_authorize'=>$canAuthorize,'authorize_missing'=>(bool)$authorized,'duplicate_matches'=>$matches,'duplicate_action'=>$matches?$action:'new','duplicate_target'=>$target,'eligible'=>!$errors||$authorized,'payload'=>$payload];
   }
   return $review;
  }

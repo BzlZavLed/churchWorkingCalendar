@@ -57,17 +57,19 @@ class AdminUserController extends Controller
     }
 
     public function storeUser(Request $request) {
-        return \Illuminate\Support\Facades\DB::transaction(function() use ($request) {
+        $response=\Illuminate\Support\Facades\DB::transaction(function() use ($request) {
             $response=$this->performstoreUser($request);
             if($response->getStatusCode()>=400) return $response;
             $saved=User::findOrFail($response->getData()->id);
             app(\App\Services\WhatsApp\Provisioning::class)->apply($request,$saved);
-            if ($saved->pending_activation) {
-                $status=\Illuminate\Support\Facades\Password::sendResetLink(['email'=>$saved->email]);
-                if ($status!==\Illuminate\Support\Facades\Password::RESET_LINK_SENT) throw \Illuminate\Validation\ValidationException::withMessages(['email'=>['No se pudo enviar la invitación.']]);
-            }
             return response()->json(array_merge($saved->toArray(),app(\App\Services\WhatsApp\Provisioning::class)->fields($saved)),$response->getStatusCode());
         });
+        if($response->getStatusCode()===201 && $response->getData()->pending_activation) {
+            try {$status=app(\App\Services\AccountEmailSender::class)->send(User::findOrFail($response->getData()->id),$request->user()->id);}
+            catch(\Throwable $e){report($e);$status='failed';}
+            return response()->json(array_merge((array)$response->getData(),['invitation_status'=>$status]),201);
+        }
+        return $response;
     }
 
     private function performstoreUser(Request $request)

@@ -8,7 +8,8 @@ use Illuminate\Validation\ValidationException;
 class AccountPasswordController extends Controller {
  public function requestLink(Request $request) {
   $data=$request->validate(['email'=>['required','email','max:255']]);
-  try { Password::sendResetLink($data); } catch (\Throwable $e) { report($e); }
+  $user=User::where('email',$data['email'])->first();
+  if($user)try { app(\App\Services\AccountEmailSender::class)->send($user,null); } catch (\Throwable $e) { report($e); }
   return response()->noContent();
  }
  public function reset(Request $request) {
@@ -22,8 +23,8 @@ class AccountPasswordController extends Controller {
  }
  public function sendForUser(Request $request, User $user) {
   abort_unless($request->user()->hasCapability('users.manage') && $request->user()->church_id===$user->church_id,404);
-  $status=Password::sendResetLink(['email'=>$user->email]);
-  if($status!==Password::RESET_LINK_SENT) throw ValidationException::withMessages(['email'=>['No se pudo enviar el correo. Intenta de nuevo más tarde.']]);
-  return response()->noContent();
+  $status=app(\App\Services\AccountEmailSender::class)->send($user,$request->user()->id);
+  if(!in_array($status,['accepted','simulated'],true)) throw ValidationException::withMessages(['email'=>['No se pudo enviar el correo. Intenta de nuevo más tarde.']]);
+  return response()->json(['status'=>$status]);
  }
 }

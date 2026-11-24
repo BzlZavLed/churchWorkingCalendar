@@ -230,6 +230,7 @@ const navItems = computed(() => {
   if (authStore.isPlatformAdmin) items.unshift(
     {to:'/superadmin/churches',label:t.value.churches,icon:iconPaths.churches},
     {to:'/superadmin/settings',label:locale.value==='es'?'Configuración':'Settings',icon:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1 1-3Z'},
+    {to:'/superadmin/email-activity',label:locale.value==='es'?'Actividad de correo':'Email activity',icon:'M3 6h18v12H3zM3 7l9 6 9-6'},
     {to:'/superadmin/roles',label:locale.value==='es'?'Roles y permisos':'Roles and permissions',icon:iconPaths.roles},
   )
   if (route.path !== '/no-access') {
@@ -252,6 +253,7 @@ const navItems = computed(() => {
     users: ['Usuarios y accesos','Users and access','Cuentas y asignaciones','Accounts and assignments'],
     '/superadmin/churches':['Iglesias','Churches','Crear y administrar iglesias','Create and manage churches'],
     '/superadmin/settings':['Configuración general','Platform settings','Integraciones, uso y límites','Integrations, usage and limits'],
+    '/superadmin/email-activity':['Actividad de correo','Email activity','Envíos de toda la plataforma','Platform-wide email activity'],
     '/superadmin/roles':['Roles y permisos','Roles and permissions','Acceso y funciones por iglesia','Access and capabilities by church'],
     '/secretary/settings':['Configuración de iglesia','Church settings','Logo, código e integraciones','Logo, code and integrations'],
     '/whatsapp-settings':['Asistente WhatsApp','WhatsApp assistant','Vinculación, ayuda e interacciones','Linking, help and interactions'],

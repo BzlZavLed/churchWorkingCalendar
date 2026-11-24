@@ -118,12 +118,13 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const logout = async () => {
-    if (token.value) {
-      await authApi.logout()
+    try {
+      if (token.value) await authApi.logout()
+    } finally {
+      setAdminContext(null)
+      applyToken(null)
+      account.value = null
     }
-    setAdminContext(null)
-    applyToken(null)
-    account.value = null
   }
 
   return {

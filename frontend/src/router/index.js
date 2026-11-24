@@ -43,6 +43,7 @@ const routes = [
   { path: '/superadmin/roles', component: SuperAdminRoles, meta: { requiresAuth: true, superadminOnly: true } },
   { path: '/no-access', component: NoAccessView, meta: { requiresAuth: true } },
   { path: '/superadmin/settings', component: SuperAdminSettings, meta: { requiresAuth: true, superadminOnly: true } },
+  { path: '/superadmin/email-activity', component: () => import('../components/superadmin/EmailActivity.vue'), meta: { requiresAuth: true, superadminOnly: true } },
   { path: '/members/new', component: MemberDetail, meta: { requiresAuth: true } },
   { path: '/members/:id', component: MemberDetail, meta: { requiresAuth: true } },
   { path: '/members', component: MembersView, meta: { requiresAuth: true } },
