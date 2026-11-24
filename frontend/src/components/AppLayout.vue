@@ -85,13 +85,13 @@
               <router-link
                 :to="item.to"
                 :ref="(el) => setNavLinkRef(el, item.to)"
-                :title="shouldShowIconsOnly ? item.label : ''"
+                :title="item.description ? item.label + ' — ' + item.description : item.label"
               >
                 <span class="nav-link-content">
                   <svg viewBox="0 0 24 24" class="nav-icon" aria-hidden="true">
                     <path :d="item.icon" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9" />
                   </svg>
-                  <span v-if="!shouldShowIconsOnly" class="nav-label">{{ item.label }}</span>
+                  <span v-if="!shouldShowIconsOnly" class="nav-copy"><span class="nav-label">{{ item.label }}</span><small v-if="item.description" class="nav-description">{{ item.description }}</small></span>
                 </span>
               </router-link>
             </li>
@@ -222,6 +222,7 @@ const navItems = computed(() => {
   const items = Object.entries(authStore.accessModules)
     .filter(([key]) => platformView || authStore.canAccess(key))
     .map(([key, module]) => ({
+      key,
       to: platformView ? (platformPaths[key] || module.path) : module.path,
       label: locale.value === 'es' ? module.es : module.en,
       icon: iconPaths[icons[key]],
@@ -233,7 +234,30 @@ const navItems = computed(() => {
   )
   if (authStore.isSecretary) items.unshift({to:'/secretary/settings',label:locale.value==='es'?'Configuración':'Settings',icon:iconPaths.roles})
   items.push({to:'/whatsapp-settings',label:locale.value==='es'?'Asistente WhatsApp':'WhatsApp assistant',icon:iconPaths.meetingPoints})
-  return items
+  const wording = {
+    calendar: ['Calendario y eventos','Calendar and events','Fechas, reservas y revisión','Dates, reservations and review'],
+    reports: ['Reportes y registros','Reports and records','Eventos, visitas y asistencia','Events, visitors and attendance'],
+    objectives: ['Objetivos del departamento','Department objectives','Metas vinculadas a eventos','Goals linked to events'],
+    budget: ['Presupuesto y movimientos','Budget and transactions','Saldos, ingresos y gastos','Balances, income and expenses'],
+    inventory: ['Inventario de bienes','Asset inventory','Artículos de los departamentos','Department items and assets'],
+    meetings: ['Juntas y actas','Meetings and minutes','Agenda, sesiones y acuerdos','Agendas, sessions and decisions'],
+    meeting_points: ['Solicitudes para juntas','Meeting submissions','Presenta puntos y consulta resultados','Submit topics and view outcomes'],
+    visitors: ['Registro de visitas','Visitor registration','Formulario, QR y quiosco de visitas','Visitor form, QR and kiosk'],
+    greeting: ['Asistencia y servicios','Attendance and services','Abrir servicios, QR y quiosco','Open services, QR and kiosk'],
+    members: ['Miembros y familias','Members and families','Directorio, importación y cumpleaños','Directory, imports and birthdays'],
+    committees: ['Comités e informes','Committees and reports','Integrantes, objetivos y resultados','Members, objectives and results'],
+    departments: ['Departamentos','Departments','Áreas, responsables y funciones','Teams, leaders and functions'],
+    users: ['Usuarios y accesos','Users and access','Cuentas y asignaciones','Accounts and assignments'],
+    '/superadmin/churches':['Iglesias','Churches','Crear y administrar iglesias','Create and manage churches'],
+    '/superadmin/settings':['Configuración general','Platform settings','Integraciones, uso y límites','Integrations, usage and limits'],
+    '/superadmin/roles':['Roles y permisos','Roles and permissions','Acceso y funciones por iglesia','Access and capabilities by church'],
+    '/secretary/settings':['Configuración de iglesia','Church settings','Logo, código e integraciones','Logo, code and integrations'],
+    '/whatsapp-settings':['Asistente WhatsApp','WhatsApp assistant','Vinculación, ayuda e interacciones','Linking, help and interactions'],
+  }
+  return items.map(item=>{
+    const copy=wording[item.key || item.to]
+    return copy ? {...item,label:copy[locale.value==='es'?0:1],description:copy[locale.value==='es'?2:3]} : item
+  })
 })
 
 const shouldShowIconsOnly = computed(() => {

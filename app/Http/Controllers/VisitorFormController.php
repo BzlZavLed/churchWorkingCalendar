@@ -9,6 +9,24 @@ use Illuminate\Validation\ValidationException;
 
 class VisitorFormController extends Controller
 {
+    public function image(Church $church,string $image)
+    {
+        $row=DB::table('visitor_form_images')->where('church_id',$church->id)->where('id',$image)->first();
+        abort_unless($row && Storage::disk('local')->exists($row->path),404);
+        return response()->file(Storage::disk('local')->path($row->path),['Cache-Control'=>'public, max-age=31536000, immutable','X-Content-Type-Options'=>'nosniff']);
+    }
+    public function uploadImage(Request $request)
+    {
+        $user=$request->user();
+        abort_unless($user?->church_id && !$user->isSuperAdmin() && $user->hasCapability('visitors.configure'),403);
+        $request->validate(['image'=>['required','image','mimes:png,jpg,jpeg,webp','max:2048','dimensions:max_width=4096,max_height=4096']]);
+        $id=(string)\Illuminate\Support\Str::uuid();
+        $path=$request->file('image')->store('visitor-form-images/'.$user->church_id,'local');
+        try {DB::table('visitor_form_images')->insert(['id'=>$id,'church_id'=>$user->church_id,'path'=>$path,'created_at'=>now(),'updated_at'=>now()]);}
+        catch(\Throwable $e){Storage::disk('local')->delete($path);throw $e;}
+        return ['id'=>$id];
+    }
+
     public function logo(Church $church)
     {
         abort_unless($church->visitor_logo_path && Storage::disk('local')->exists($church->visitor_logo_path), 404);
@@ -73,7 +91,7 @@ class VisitorFormController extends Controller
     {
         $user=$request->user();
         abort_unless($user->church_id && (app(\App\Services\ModuleAccess::class)->read($user,'visitors') || app(\App\Services\ModuleAccess::class)->read($user,'greeting')),403);
-        return $forms->definition($forms->current($user->church_id)) + ['logo_url' => Church::findOrFail($user->church_id)->visitorLogoUrl(), 'logo_alignment' => Church::findOrFail($user->church_id)->visitor_logo_alignment];
+        return $forms->definition($forms->current($user->church_id)) + ['report_fields'=>VisitorForm::where('church_id',$user->church_id)->orderBy('version')->get()->flatMap(fn($f)=>$f->fields)->where('type','!=','label')->keyBy('id')->values()->all(), 'logo_url' => Church::findOrFail($user->church_id)->visitorLogoUrl(), 'logo_alignment' => Church::findOrFail($user->church_id)->visitor_logo_alignment];
     }
 
     public function publish(Request $request, VisitorForms $forms)
@@ -83,7 +101,21 @@ class VisitorFormController extends Controller
         $data=$request->validate([
             'base_version'=>['required','integer','min:0'],
             'fields'=>['present','array','max:40'],
-            'fields.*'=>['array:id,type,label,required,options'],
+            'fields.*'=>['array:id,type,label,required,options,span'],
+            'fields.*.span'=>['sometimes','integer','in:4,6,12'],
+            'layout'=>['sometimes','nullable','array:title,introduction,accent,images'],
+            'layout.title'=>['required_with:layout','string','max:150'],
+            'layout.introduction'=>['nullable','string','max:1000'],
+            'layout.accent'=>['required_with:layout','regex:/^#[0-9a-fA-F]{6}$/'],
+            'layout.images'=>['sometimes','array','max:8'],
+            'layout.images.*'=>['array:id,source,asset,position,alignment,width,alt'],
+            'layout.images.*.id'=>['required','uuid','distinct'],
+            'layout.images.*.source'=>['required','in:church,welcome,blessing,footer,upload'],
+            'layout.images.*.asset'=>['nullable','uuid'],
+            'layout.images.*.position'=>['required','in:header,after,footer'],
+            'layout.images.*.alignment'=>['required','in:left,center,right'],
+            'layout.images.*.width'=>['required','integer','between:15,100'],
+            'layout.images.*.alt'=>['required','string','max:150'],
             'fields.*.id'=>['required','uuid','distinct'],
             'fields.*.type'=>['required','in:text,textarea,number,date,select,checkbox,label'],
             'fields.*.label'=>['required','string','max:500'],
@@ -104,8 +136,17 @@ class VisitorFormController extends Controller
                     throw ValidationException::withMessages(['fields'=>['Dropdown choices must be nonempty and unique.']]);
                 }
             }
+            // A legacy client may not send the layout. Keep its form publishable and
+            // normalize the value before accessing image settings.
+            $layout=$data['layout']??['title'=>'¡Bienvenido!','introduction'=>null,'accent'=>'#1f6f5c','images'=>[]];
+            $layout['images']=$layout['images']??[];
+            foreach($layout['images']??[] as $image){
+                if($image['source']==='upload' && !DB::table('visitor_form_images')->where('church_id',$user->church_id)->where('id',$image['asset']??null)->exists()){
+                    throw ValidationException::withMessages(['layout'=>['Choose an uploaded image belonging to this church.']]);
+                }
+            }
             $fields=array_map(fn($f)=>array_merge($f,['required'=>$f['type']==='label'?false:$f['required'],'options'=>$f['type']==='select'?$f['options']:[]]),$data['fields']);
-            $form=VisitorForm::create(['church_id'=>$user->church_id,'version'=>($current?->version ?? 0)+1,'fields'=>$fields,'published_by'=>$user->id]);
+            $form=VisitorForm::create(['church_id'=>$user->church_id,'version'=>($current?->version ?? 0)+1,'fields'=>$fields,'layout'=>$layout,'published_by'=>$user->id]);
             return response()->json($forms->definition($form),201);
         });
     }

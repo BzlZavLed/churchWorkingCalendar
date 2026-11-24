@@ -12,6 +12,7 @@ class MemberAttendanceTest extends TestCase
   $this->travelTo(now()->setDate(2026,11,18)->setTime(16,0));
   $church=Church::create(['name'=>'Attendance']);
   $other=Church::create(['name'=>'Other']);
+  \App\Models\AttendanceSession::create(['church_id'=>$church->id,'batch_id'=>(string)\Illuminate\Support\Str::uuid(),'name'=>'Service','service_date'=>now('America/New_York')->toDateString(),'timezone'=>'America/New_York','starts_at'=>now()->subHour(),'ends_at'=>now()->addHours(3),'opened_at'=>now()]);
   $clerk=User::factory()->create(['church_id'=>$church->id,'role'=>'secretary']);
   $make=fn($church,$name,$surname)=>ChurchMember::create(['member_template_id'=>\App\Models\MemberTemplate::firstOrCreate(['church_id'=>$church->id,'version'=>1],['fields'=>[]])->id,'church_id'=>$church->id,'name'=>$name,'first_surname'=>$surname,'email'=>uniqid().'@example.test','phone'=>'5551234567','data'=>['private'=>'secret']]);
   $one=$make($church,'Ana García López','García');$two=$make($church,'Luis García Pérez','garcía');
@@ -40,6 +41,7 @@ class MemberAttendanceTest extends TestCase
  public function test_public_qr_checkin_uses_family_ids_and_scoped_expiring_tokens(): void {
   $church=Church::create(['name'=>'QR']);
   $other=Church::create(['name'=>'Other']);
+  \App\Models\AttendanceSession::create(['church_id'=>$church->id,'batch_id'=>(string)\Illuminate\Support\Str::uuid(),'name'=>'Service','service_date'=>now('America/New_York')->toDateString(),'timezone'=>'America/New_York','starts_at'=>now()->subHour(),'ends_at'=>now()->addHours(3),'opened_at'=>now()]);
   $template=app(\App\Services\MemberRecords::class)->current($church->id);
   $make=fn($name,$surname,$family)=>ChurchMember::create(['church_id'=>$church->id,'member_template_id'=>$template->id,'name'=>$name,'first_surname'=>$surname,'email'=>'private@example.test','phone'=>'5551234567','data'=>['FamilyId'=>$family]]);
   $one=$make('Ana Test','Test','f1');$two=$make('Luis Different','Different','f1');$three=$make('Unrelated Test','Test','f2');$four=$make('Not matched','Other','f3');

@@ -4,9 +4,9 @@
       <div>
         <p class="reports-eyebrow">{{ authStore.user?.church?.name || (locale === 'es' ? 'Administración de iglesia' : 'Church administration') }}</p>
         <h1>{{ t.title }}</h1>
-        <p class="reports-intro">{{ locale === 'es' ? 'Consulta el avance de los eventos, sus objetivos, las conversaciones y la asistencia de miembros.' : 'Review event progress, objectives, team conversations, and member attendance.' }}</p>
+        <p class="reports-intro">{{ locale === 'es' ? 'Consulta el avance de los eventos, sus objetivos, las conversaciones, la asistencia de miembros y las visitas.' : 'Review event progress, objectives, team conversations, member attendance, and visitor records.' }}</p>
       </div>
-      <div v-if="activeTab !== 'attendance'" class="reports-scope">
+      <div v-if="!['attendance','visitors'].includes(activeTab)" class="reports-scope">
         <span>{{ locale === 'es' ? 'Eventos del año' : 'Event year' }}</span>
         <strong>{{ reportYear }}</strong>
         <span>{{ canChooseDepartment ? (locale === 'es' ? 'Todos los departamentos disponibles' : 'All available departments') : authStore.user?.department?.name }}</span>
@@ -41,10 +41,12 @@
         {{ t.tabs.events }}
       </button>
       <button v-if="authStore.canAccess('members')" type="button" class="report-tab" :class="{ active: activeTab === 'attendance' }" :aria-pressed="activeTab === 'attendance'" @click="activeTab = 'attendance'">{{ locale === 'es' ? 'Asistencia' : 'Attendance' }}</button>
+      <button v-if="authStore.canAccess('visitors')" type="button" class="report-tab" :class="{active:activeTab==='visitors'}" :aria-pressed="activeTab==='visitors'" @click="activeTab='visitors'">{{ locale==='es'?'Visitantes':'Visitors' }}</button>
     </div>
 
+    <VisitorRegistryReport v-if="activeTab === 'visitors' && authStore.canAccess('visitors')" />
     <AttendanceReport v-if="activeTab === 'attendance'" />
-    <div v-if="activeTab !== 'attendance'" class="report-summary" aria-live="polite">
+    <div v-if="!['attendance','visitors'].includes(activeTab)" class="report-summary" aria-live="polite">
       <div v-for="stat in reportStats" :key="stat.label" class="report-stat">
         <span>{{ stat.label }}</span><strong>{{ reportLoading ? '…' : reportReady ? stat.value : '—' }}</strong>
       </div>
@@ -376,6 +378,7 @@
 </template>
 
 <script setup>
+import VisitorRegistryReport from './VisitorRegistryReport.vue'
 import {addChurchPdfLogo} from '../services/pdfBranding'
 import AttendanceReport from './AttendanceReport.vue'
 import { computed, onMounted, ref, watch } from 'vue'

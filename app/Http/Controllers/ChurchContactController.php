@@ -21,7 +21,7 @@ class ChurchContactController extends Controller
 
         $contacts = ChurchContact::query()
             ->where('church_id', $churchId)
-            ->with(['creator:id,name,email', 'department:id,name,is_greeting', 'visitorForm:id,version,fields'])
+            ->with(['creator:id,name,email', 'department:id,name,is_greeting', 'visitorForm:id,version,fields,layout'])
             ->latest()
             ->get();
 
@@ -95,7 +95,7 @@ class ChurchContactController extends Controller
         ]);
 
         return response()->json(
-            $contact->load(['creator:id,name,email', 'department:id,name,is_greeting', 'visitorForm:id,version,fields']),
+            $contact->load(['creator:id,name,email', 'department:id,name,is_greeting', 'visitorForm:id,version,fields,layout']),
             201
         );
     }
@@ -137,7 +137,7 @@ class ChurchContactController extends Controller
                 $contact->custom_answers = array_replace($contact->custom_answers ?? [], $answers);
             }
             $contact->save();
-            return response()->json($contact->load(['creator:id,name,email','department:id,name,is_greeting','visitorForm:id,version,fields'])->makeHidden('consent_token'));
+            return response()->json($contact->load(['creator:id,name,email','department:id,name,is_greeting','visitorForm:id,version,fields,layout'])->makeHidden('consent_token'));
         });
     }
 
@@ -158,7 +158,7 @@ class ChurchContactController extends Controller
         if (!$contact->{$channel.'_consent'}) {
             $contact->update([$channel.'_consent' => true, $channel.'_consented_at' => now()]);
         }
-        return response()->json($contact->load(['creator:id,name,email', 'department:id,name,is_greeting', 'visitorForm:id,version,fields']));
+        return response()->json($contact->load(['creator:id,name,email', 'department:id,name,is_greeting', 'visitorForm:id,version,fields,layout']));
     }
 
     private function canCreateContacts(?User $user): bool

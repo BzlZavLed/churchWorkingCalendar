@@ -14,7 +14,7 @@ class VisitorForms
 
     public function definition(?VisitorForm $form): array
     {
-        return ['id'=>$form?->id, 'version'=>$form?->version ?? 0, 'fields'=>$form?->fields ?? []];
+        return ['id'=>$form?->id, 'version'=>$form?->version ?? 0, 'fields'=>$form?->fields ?? [], 'layout'=>$form?->layout];
     }
 
     public function answers(int $church, array $input, bool $partial = false): array

@@ -16,24 +16,12 @@
         </button>
     </Teleport>
     <div class="greeting-panel">
-      <nav v-if="!isPublic" class="visits-tabs" :aria-label="locale === 'es' ? 'Vistas de visitas' : 'Visitor views'">
-        <RouterLink v-if="!uiStore.greetingKiosk && auth.canAccess('visitors')" to="/greeting/contacts">{{ locale === 'es' ? 'Visitas' : 'Visitors' }}</RouterLink>
-        <RouterLink to="/greeting" :aria-current="route.path === '/greeting' ? 'page' : undefined">{{ locale === 'es' ? 'Bienvenida · Registrar visita' : 'Welcome · Register visitor' }}</RouterLink>
-        <RouterLink to="/greeting/attendance" :aria-current="route.path === '/greeting/attendance' ? 'page' : undefined">{{ locale === 'es' ? 'Asistencia' : 'Attendance' }}</RouterLink>
-      </nav>
       <MemberAttendance v-if="!isPublic && route.path === '/greeting/attendance'" />
       <template v-else>
-      <div v-if="!isPublic" class="greeting-display-controls">
-        <button type="button" class="greeting-qr-button" :title="locale === 'es' ? 'Mostrar QR' : 'Show QR'" :aria-label="locale === 'es' ? 'Mostrar QR' : 'Show QR'" @click="showQr">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3zM15 15h2v2h-2zM20 14v3m-6 3h3m3 0h1v1" /></svg>
-          <span>{{ locale === 'es' ? 'Regístrate con QR' : 'Register with QR' }}</span>
-        </button>
-
-      </div>
-      <div class="greeting-header"><img v-if="churchLogo" :src="churchLogo" :alt="publicChurchName || auth.user?.church?.name || 'Church logo'" class="visitor-church-logo" :class="`logo-${logoAlignment}`" />
+      <div class="greeting-header" :style="{color:visitorForm.layout?.accent}"><VisitorFormImages v-if="visitorForm.layout" :layout="visitorForm.layout" position="header" :church-id="Number(route.params.churchId || auth.user?.church_id)" :logo-url="churchLogo" /><img v-if="churchLogo && !visitorForm.layout" :src="churchLogo" :alt="publicChurchName || auth.user?.church?.name || 'Church logo'" class="visitor-church-logo" :class="`logo-${logoAlignment}`" />
         <p class="greeting-kicker">{{ isPublic ? publicChurchName : t.kicker }}</p>
-        <h1 class="greeting-title">{{ t.title }}</h1>
-        <p class="greeting-copy">{{ isPublic ? (locale === 'es' ? 'Te damos la bienvenida. Completa tus datos para registrar tu visita.' : 'Welcome. Fill in your details to register your visit.') : t.subtitle }}</p>
+        <h1 class="greeting-title">{{ visitorForm.layout?.title || t.title }}</h1>
+        <p class="greeting-copy">{{ visitorForm.layout?.introduction || (isPublic ? (locale === 'es' ? 'Te damos la bienvenida. Completa tus datos para registrar tu visita.' : 'Welcome. Fill in your details to register your visit.') : t.subtitle) }}</p>
         <p v-if="!isPublic && !uiStore.greetingKiosk && !auth.isPlatformAdmin && auth.user?.department?.is_greeting" class="greeting-shortcut">{{ t.menuHint }}</p>
         <details v-if="!isPublic && !uiStore.greetingKiosk" class="greeting-disclaimer">
           <summary>{{ t.disclaimerTitle }}</summary>
@@ -59,18 +47,9 @@
             <input v-model="form.email" class="form-control" type="email" />
           </label>
 
-          <label class="form-label greeting-grid-span-2">
-            {{ t.fields.address }}
-            <input
-              v-model="form.address"
-              class="form-control"
-              type="text"
-              :placeholder="t.fields.addressHint"
-            />
-          </label>
         </div>
 
-        <VisitorCustomFields :fields="visitorForm.fields" v-model="customAnswers" />
+        <VisitorCustomFields :fields="visitorForm.fields" v-model="customAnswers" /><VisitorFormImages :layout="visitorForm.layout" position="after" :church-id="Number(route.params.churchId || auth.user?.church_id)" :logo-url="churchLogo" />
 
         <div class="greeting-toggle">
           <div>
@@ -101,31 +80,23 @@
         <button class="btn btn-primary greeting-submit" type="submit" :disabled="saving">
           {{ saving ? t.saving : t.submit }}
         </button>
-      </fieldset></form>
+      </fieldset></form><VisitorFormImages v-if="!submitted" :layout="visitorForm.layout" position="footer" :church-id="Number(route.params.churchId || auth.user?.church_id)" :logo-url="churchLogo" />
 
       <p v-if="error" class="alert alert-danger mb-0 mt-3">{{ error }}</p>
       </template>
     </div>
-    <div v-if="qrOpen" class="modal-backdrop" @click.self="qrOpen = false" @keydown.esc="qrOpen = false">
-      <section class="modal-panel greeting-qr" role="dialog" aria-modal="true" aria-labelledby="visit-qr-title">
-        <header class="modal-header"><h2 id="visit-qr-title">{{ locale === 'es' ? 'Registra tu visita desde tu teléfono' : 'Register your visit on your phone' }}</h2><button type="button" class="modal-close" :aria-label="locale === 'es' ? 'Cerrar' : 'Close'" @click="qrOpen = false">×</button></header>
-        <p>{{ locale === 'es' ? 'Escanea el código con la cámara. No necesitas una cuenta y puedes completar el formulario más tarde.' : 'Scan with your camera. No account needed; you can complete the form later.' }}</p>
-        <img v-if="qrImage" :src="qrImage" alt="QR" width="280" height="280" />
-        <p v-if="qrError" role="alert">{{ qrError }}</p>
-        <a class="d-block" :href="visitUrl" target="_blank" rel="noopener">{{ locale === 'es' ? 'Abrir formulario' : 'Open form' }}</a>
-      </section>
-    </div>
+
   </section>
 </template>
 
 <script setup>
+import VisitorFormImages from './VisitorFormImages.vue'
 import MemberAttendance from './MemberAttendance.vue'
 import VisitorCustomFields from './VisitorCustomFields.vue'
 import '../styles/visits.css'
 import { useAuthStore } from '../stores/authStore'
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import QRCode from 'qrcode'
 import { storeToRefs } from 'pinia'
 import { churchContactsApi } from '../services/churchContactsApi'
 import { useUiStore } from '../stores/uiStore'
@@ -141,20 +112,7 @@ const customAnswers = ref({})
 const formLoaded = ref(false)
 const initialAnswers = fields => Object.fromEntries(fields.filter(f=>f.type==='checkbox').map(f=>[f.id,false]))
 const submitted = ref(false)
-const qrOpen = ref(false)
-const qrImage = ref('')
-const qrError = ref('')
 const auth = useAuthStore()
-const visitUrl = computed(() => `${window.location.origin}/visit/${auth.user?.church_id}`)
-const showQr = async () => {
-  qrOpen.value = true
-  qrError.value = ''
-  try {
-    qrImage.value = await QRCode.toDataURL(visitUrl.value, { width: 560, margin: 4, errorCorrectionLevel: 'M' })
-  } catch {
-    qrError.value = locale.value === 'es' ? 'No se pudo generar el QR.' : 'Unable to generate QR.'
-  }
-}
 onMounted(async () => {
   try {
     if (isPublic.value) {
@@ -184,7 +142,6 @@ const form = reactive({
   name: '',
   phone: '',
   email: '',
-  address: '',
   is_sda: false,
   sms_consent: false,
   email_consent: false,
@@ -195,7 +152,6 @@ const resetForm = () => {
   form.name = ''
   form.phone = ''
   form.email = ''
-  form.address = ''
   form.is_sda = false
   form.sms_consent = false
   form.email_consent = false
@@ -212,7 +168,6 @@ const submit = async () => {
       name: form.name,
       phone: form.phone || null,
       email: form.email || null,
-      address: form.address || null,
       is_sda: Boolean(form.is_sda),
       sms_consent: Boolean(form.phone && form.sms_consent),
       email_consent: Boolean(form.email && form.email_consent),

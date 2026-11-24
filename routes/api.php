@@ -25,9 +25,11 @@ use Illuminate\Support\Facades\Route;
 Route::post('integrations/whatsapp/webhook', [\App\Http\Controllers\Integrations\WhatsAppWebhookController::class, 'receive']);
 Route::get('integrations/whatsapp/webhook', [\App\Http\Controllers\Integrations\WhatsAppWebhookController::class, 'verify'])->middleware('throttle:30,1');
 
+Route::get('public/churches/{church}/attendance/status', [\App\Http\Controllers\MemberAttendanceController::class, 'publicStatus'])->middleware('throttle:60,1');
 Route::get('public/churches/{church}/attendance/surnames', [\App\Http\Controllers\MemberAttendanceController::class, 'publicSurnames'])->middleware('throttle:30,1');
 Route::get('public/churches/{church}/attendance/family', [\App\Http\Controllers\MemberAttendanceController::class, 'publicFamily'])->middleware('throttle:30,1');
 Route::post('public/churches/{church}/attendance', [\App\Http\Controllers\MemberAttendanceController::class, 'publicSave'])->middleware('throttle:20,1');
+Route::get('public/churches/{church}/visitor-form-images/{image}', [\App\Http\Controllers\VisitorFormController::class, 'image'])->whereUuid('image');
 Route::get('public/churches/{church}/visitor-logo', [\App\Http\Controllers\VisitorFormController::class, 'logo']);
 
 Route::prefix('auth')->group(function () {
@@ -100,6 +102,9 @@ Route::middleware(['auth:sanctum', 'superadmin.context', 'module.access'])->grou
     Route::get('calendar/objectives', [ObjectiveController::class, 'index']);
     Route::get('calendar/export', [CalendarExportController::class, 'export']);
 
+    Route::get('qr-designs/{kind}', [\App\Http\Controllers\QrDesignController::class, 'show']);
+    Route::put('qr-designs/{kind}', [\App\Http\Controllers\QrDesignController::class, 'save']);
+
     Route::get('objectives', [ObjectiveController::class, 'index']);
     Route::get('objectives/{objective}/events', [ObjectiveController::class, 'events']);
     Route::post('objectives', [ObjectiveController::class, 'store']);
@@ -143,6 +148,12 @@ Route::middleware(['auth:sanctum', 'superadmin.context', 'module.access'])->grou
     Route::post('meeting-points/{point}/finalize', [MeetingPointController::class, 'finalize']);
     Route::post('meeting-points/{point}/notes', [MeetingPointNoteController::class, 'store']);
 
+    Route::get('attendance/status', [\App\Http\Controllers\MemberAttendanceController::class, 'status']);
+    Route::get('attendance/services', [\App\Http\Controllers\AttendanceServiceController::class, 'index']);
+    Route::post('attendance/services', [\App\Http\Controllers\AttendanceServiceController::class, 'save']);
+    Route::put('attendance/services/{service}', [\App\Http\Controllers\AttendanceServiceController::class, 'save']);
+    Route::post('attendance/sessions', [\App\Http\Controllers\AttendanceServiceController::class, 'open']);
+    Route::patch('attendance/sessions/{session}', [\App\Http\Controllers\AttendanceServiceController::class, 'status']);
     Route::get('attendance/surnames', [\App\Http\Controllers\MemberAttendanceController::class, 'surnames'])->middleware('throttle:120,1');
     Route::get('attendance/family', [\App\Http\Controllers\MemberAttendanceController::class, 'family']);
     Route::post('attendance/batch', [\App\Http\Controllers\MemberAttendanceController::class, 'batch']);
@@ -169,6 +180,7 @@ Route::middleware(['auth:sanctum', 'superadmin.context', 'module.access'])->grou
     Route::delete('members/{member}', [\App\Http\Controllers\ChurchMemberController::class, 'destroy']);
     Route::patch('members/{member}', [\App\Http\Controllers\ChurchMemberController::class, 'save']);
 
+    Route::post('visitor-form/images', [\App\Http\Controllers\VisitorFormController::class, 'uploadImage']);
     Route::patch('visitor-form/logo', [\App\Http\Controllers\VisitorFormController::class, 'alignLogo']);
     Route::post('visitor-form/logo', [\App\Http\Controllers\VisitorFormController::class, 'updateLogo']);
     Route::delete('visitor-form/logo', [\App\Http\Controllers\VisitorFormController::class, 'removeLogo']);

@@ -1,3 +1,5 @@
+import AttendanceManager from '../components/AttendanceManager.vue'
+import VisitorRegistryReport from '../components/VisitorRegistryReport.vue'
 import MemberAttendance from '../components/MemberAttendance.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
@@ -52,8 +54,10 @@ const routes = [
   { path: '/register', component: RegisterWithInvite, meta: { guestOnly: true, noLayout: true } },
   { path: '/calendar', component: CalendarView, meta: { requiresAuth: true } },
   { path: '/objectives', component: ObjectivesView, meta: { requiresAuth: true } },
+  { path: '/reports/visitors', component: VisitorRegistryReport, meta: { requiresAuth: true, contactsAllowed: true } },
   { path: '/reports', component: ReportsView, meta: { requiresAuth: true } },
   { path: '/meeting-points', component: MeetingPointsView, meta: { requiresAuth: true } },
+  { path: '/attendance-manager', component: AttendanceManager, meta: { requiresAuth: true } },
   { path: '/greeting/attendance', component: GreetingIntakeView, meta: { requiresAuth: true, greetingOnly: true } },
   { path: '/greeting', component: GreetingIntakeView, meta: { requiresAuth: true, greetingOnly: true } },
   { path: '/greeting/contacts', component: GreetingContactsView, meta: { requiresAuth: true, contactsAllowed: true } },
@@ -90,8 +94,10 @@ router.beforeEach(async (to) => {
 
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    return { path: '/login', query: to.path === '/greeting/contacts' ? { redirect: to.fullPath } : {} }
+    return { path: '/login', query: ['/greeting/contacts','/reports/visitors'].includes(to.path) ? { redirect: to.fullPath } : {} }
   }
+
+  if(to.path==='/greeting/contacts' && (to.query.from || to.query.to)) return {path:'/reports/visitors',query:to.query}
 
   if (to.meta.guestOnly && authStore.isAuthenticated) {
     return getDefaultRouteForUser(authStore.user)
