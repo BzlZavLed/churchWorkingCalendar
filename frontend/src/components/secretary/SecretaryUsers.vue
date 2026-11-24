@@ -6,7 +6,7 @@
       <p>{{ locale === 'es' ? 'Administra los usuarios, sus roles y su departamento.' : 'Manage users, their roles and department.' }}</p>
     </header>
     <FormSection :busy="creating" v-write="'users.manage'" v-if="authStore.can('users.manage')" class="management-surface management-create mb-3" :title="locale === 'es' ? 'Crear usuario' : 'Create user'">
-      <form class="row g-3 mt-1" @submit.prevent="createUser">
+      <form :key="createFormVersion" class="row g-3 mt-1" @submit.prevent="createUser">
         <label class="col-12 col-md-6">{{ t.name }}<input v-model="createForm.name" class="form-control" required maxlength="255" autocomplete="name" /></label>
         <label class="col-12 col-md-6">{{ t.email }}<input v-model="createForm.email" class="form-control" type="email" required maxlength="255" autocomplete="off" /></label>
         <label class="col-12 col-md-6">{{ t.role }}<select v-model="createForm.role" class="form-select"><option v-for="role in ['admin', 'member', 'secretary', 'pastor']" :key="role" :value="role">{{ roleLabels[role] }}</option></select></label>
@@ -115,6 +115,7 @@ const loading = ref(false)
 const error = ref('')
 const filterText = ref('')
 const createForm = reactive({ name: '', email: '', whatsapp_phone: '', whatsapp_assistant_enabled: false, role: 'member', department_id: '' })
+const createFormVersion = ref(0)
 const creating = ref(false)
 const createError = ref('')
 const createSuccess = ref(false)
@@ -126,8 +127,9 @@ const createUser = async () => {
   try {
     await secretaryApi.createUser({ ...createForm, department_id: createForm.department_id || null })
     Object.assign(createForm, { name: '', email: '', whatsapp_phone: '', whatsapp_assistant_enabled: false, role: 'member', department_id: '' })
-    await loadUsers()
+    createFormVersion.value++
     createSuccess.value = true
+    await loadUsers()
   } catch (err) {
     createError.value = Object.values(err.response?.data?.errors || {}).flat().join(' ') || err.response?.data?.message || (locale.value === 'es' ? 'No se pudo crear el usuario.' : 'Unable to create user.')
   } finally {
