@@ -34,11 +34,11 @@
           </label>
         </div>
       </div>
-      <p class="activity-explanation">{{ locale === 'es' ? 'Actividad reciente: usó el sistema en los últimos 5 minutos. No confirma que siga conectado.' : 'Recently active: used the system in the last 5 minutes. This does not confirm they are still online.' }}</p>
+      <p class="activity-explanation">{{ locale === 'es' ? 'Sesión abierta indica que existe una sesión válida; no confirma que la persona esté en línea. Actividad reciente indica uso en los últimos 5 minutos.' : 'Open session means a valid session exists; it does not confirm the person is online. Recently active means the system was used in the last 5 minutes.' }}</p>
 
       <div class="user-list">
         <article v-for="user in filteredUsers" :key="user.id" class="user-card">
-          <header class="user-card-heading"><div class="user-identity"><strong>{{ user.name }}</strong><span>{{ user.email }}</span></div><div class="user-badges"><span v-if="isRecentlyActive(user)" class="active-badge">● {{ locale === 'es' ? 'Actividad reciente' : 'Recently active' }}</span><span class="role-badge">{{ roleLabels[user.role] || user.role }}</span><span v-if="user.pending_activation" class="pending-badge">{{ locale === 'es' ? 'Pendiente de activar' : 'Activation pending' }}</span><span v-if="user.id === currentUserId" class="role-badge">{{ common.loggedIn }}</span></div></header>
+          <header class="user-card-heading"><div class="user-identity"><strong>{{ user.name }}</strong><span>{{ user.email }}</span></div><div class="user-badges"><span v-if="!user.pending_activation && user.active_sessions_count" class="role-badge">{{ locale === 'es' ? 'Sesión abierta' : 'Open session' }} · {{ user.active_sessions_count }}</span><span v-if="isRecentlyActive(user)" class="active-badge">● {{ locale === 'es' ? 'Actividad reciente' : 'Recently active' }}</span><span class="role-badge">{{ roleLabels[user.role] || user.role }}</span><span v-if="user.pending_activation" class="pending-badge">{{ locale === 'es' ? 'Pendiente de activar' : 'Activation pending' }}</span><span v-if="user.id === currentUserId" class="role-badge">{{ locale === 'es' ? 'Tu cuenta' : 'Your account' }}</span></div></header>
           <div class="user-fields">
             <label>{{ t.name }}<input v-model="user.name" class="form-control" type="text" :disabled="!authStore.can('users.manage')" /></label>
             <label>{{ t.email }}<input v-model="user.email" class="form-control" type="email" :disabled="!authStore.can('users.manage')" /></label>
@@ -256,7 +256,7 @@ onMounted(async () => {
   await loadUsers()
   activityTimer=setInterval(async()=>{
     activityClock.value=Date.now()
-    try { const latest=await secretaryApi.listUsers();const timestamps=new Map(latest.map(user=>[user.id,user.last_activity_at]));for(const user of users.value)user.last_activity_at=timestamps.get(user.id)??null } catch { /* Keep the last known activity without affecting unsaved edits. */ }
+    try { const latest=await secretaryApi.listUsers();const states=new Map(latest.map(user=>[user.id,user]));for(const user of users.value){const state=states.get(user.id);user.last_activity_at=state?.last_activity_at??null;user.active_sessions_count=state?.active_sessions_count??0} } catch { /* Keep the last known activity without affecting unsaved edits. */ }
   },60000)
 })
 onUnmounted(()=>clearInterval(activityTimer))

@@ -23,6 +23,8 @@ class SecretaryCreationTest extends TestCase
         Sanctum::actingAs($clerk);
         $users=collect($this->getJson('/api/secretary/users')->assertOk()->json());
         $this->assertNotNull($users->firstWhere('id',$member->id)['last_activity_at']);
+        $this->assertSame(1,$users->firstWhere('id',$member->id)['active_sessions_count']);
+        $this->assertSame(0,$users->firstWhere('id',$clerk->id)['active_sessions_count']);
         $this->assertNull($users->firstWhere('id',$clerk->id)['last_activity_at']);
         $this->assertFalse($users->contains('id',$foreign->id));
     }

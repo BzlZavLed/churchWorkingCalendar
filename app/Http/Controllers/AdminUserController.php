@@ -38,6 +38,10 @@ class AdminUserController extends Controller
                 $query->where(function ($q) { $q->whereNull('expires_at')->orWhere('expires_at', '>', now()); });
                 if (config('sanctum.expiration')) $query->where('created_at', '>', now()->subMinutes((int) config('sanctum.expiration')));
             }], 'last_used_at')
+            ->withCount(['tokens as active_sessions_count' => function ($query) {
+                $query->where(function ($q) { $q->whereNull('expires_at')->orWhere('expires_at', '>', now()); });
+                if (config('sanctum.expiration')) $query->where('created_at', '>', now()->subMinutes((int) config('sanctum.expiration')));
+            }])
             ->orderBy('name')
             ->get();
 
