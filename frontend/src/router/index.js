@@ -32,6 +32,7 @@ import MemberDetail from '../components/MemberDetail.vue'
 import VisitorFormBuilder from '../components/VisitorFormBuilder.vue'
 import PublicConsentView from '../components/PublicConsentView.vue'
 import { getDefaultRouteForUser } from '../stores/authStore'
+import { apiClient } from '../services/authApi'
 
 const routes = [
   { path: '/superadmin/whatsapp-tools', component: () => import('../components/superadmin/WhatsAppTools.vue'), meta: { requiresAuth: true, superadminOnly: true } },
@@ -116,6 +117,11 @@ router.beforeEach(async (to) => {
   }
 
   return true
+})
+
+router.afterEach((to,from,failure)=>{
+  if(failure || !to.meta.requiresAuth || to.path===from.path)return
+  apiClient.post('/activity/page-view',{path:to.path}).catch(()=>{})
 })
 
 export default router

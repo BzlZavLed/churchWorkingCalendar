@@ -28,6 +28,7 @@ class AuditLogMiddleware
 
     private function shouldLog(Request $request, Response $response): bool
     {
+        if ($request->is('api/activity/page-view')) return false;
         if (!in_array($request->method(), ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
             return false;
         }

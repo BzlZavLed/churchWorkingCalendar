@@ -68,6 +68,7 @@ Route::prefix('public')->group(function () {
 });
 
 Route::middleware(['auth:sanctum', 'superadmin.context', 'module.access'])->group(function () {
+    Route::post('activity/page-view', [\App\Http\Controllers\PageActivityController::class, 'store'])->middleware('throttle:120,1');
     Route::get('access', [\App\Http\Controllers\ChurchRoleController::class, 'current']);
     Route::get('reports/attendance', [\App\Http\Controllers\AttendanceReportController::class, 'index']);
     Route::get('reports/events', [EventController::class, 'index']);
