@@ -16,7 +16,7 @@ class WhatsAppHistoryTest extends TestCase
     {
         $this->travelTo(now()->setDate(2026,11,19)->setTime(21,0));
         $church = Church::create(['name'=>'Pilot']);
-        $user = User::factory()->create(['church_id'=>$church->id]);
+        $user = User::factory()->create(['church_id'=>$church->id,'role'=>'member']);
         $other = User::factory()->create(['church_id'=>$church->id]);
         $account = WhatsAppAccount::create(['user_id'=>$user->id]);
         $row = app(InteractionHistory::class)->record($account,'incoming','Private request','received');

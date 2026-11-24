@@ -16,6 +16,7 @@ class ModuleAccess {
   'committees'=>['es'=>'Comités','en'=>'Committees','path'=>'/committees'],
   'departments'=>['es'=>'Departamentos','en'=>'Departments','path'=>'/secretary/departments'],
   'users'=>['es'=>'Usuarios','en'=>'Users','path'=>'/secretary/users'],
+  'whatsapp'=>['es'=>'Asistente WhatsApp','en'=>'WhatsApp assistant','path'=>'/whatsapp-settings'],
  ];
  // These presets are the original workflows. Overrides belong only to a church role.
  public const CAPABILITIES = [
@@ -60,13 +61,13 @@ class ModuleAccess {
  }
  public const BASES=['secretary','pastor','admin','member'];
  public function defaults(string $base, bool $greeter=false): array {
-  $p=array_fill_keys(array_keys(self::MODULES),'none');
+  $p=array_fill_keys(array_keys(self::MODULES),'none');$p['whatsapp']='edit';
   if($base==='secretary') return array_replace($p,['members'=>'edit','committees'=>'edit','calendar'=>'edit','reports'=>'edit','objectives'=>'read','budget'=>'read','inventory'=>'read','meetings'=>'edit','visitors'=>'edit','greeting'=>'edit','departments'=>'edit','users'=>'edit']);
   if($base==='pastor') return array_replace($p,['visitors'=>'edit','members'=>'edit']);
   if(in_array($base,['admin','member'],true)) {
    $p=array_replace($p,['calendar'=>'edit','reports'=>'edit','objectives'=>'edit','budget'=>$base==='admin'?'edit':'read','meeting_points'=>$base==='admin'?'edit':'read']);
    if($base==='admin') $p=array_replace($p,['inventory'=>'edit']);
-   if($greeter) $p=array_replace(array_fill_keys(array_keys(self::MODULES),'none'),['greeting'=>'edit','visitors'=>'edit','budget'=>$base==='admin'?'edit':'read','meeting_points'=>$base==='admin'?'edit':'read']);
+   if($greeter) $p=array_replace(array_fill_keys(array_keys(self::MODULES),'none'),['whatsapp'=>'edit','greeting'=>'edit','visitors'=>'edit','budget'=>$base==='admin'?'edit':'read','meeting_points'=>$base==='admin'?'edit':'read']);
   }
   return $p;
  }
@@ -77,16 +78,19 @@ class ModuleAccess {
  }
  public function permissions(User $user): array {
   if($user->isSuperAdmin())return array_fill_keys(array_keys(self::MODULES),'edit');
-  if(!$user->church_id)return array_fill_keys(array_keys(self::MODULES),'none');
+  if(!$user->church_id || !in_array($user->role,self::BASES,true))return array_fill_keys(array_keys(self::MODULES),'none');
   $role=$this->role($user);
   if($user->church_role_id && !$role)return array_fill_keys(array_keys(self::MODULES),'none');
-  return array_replace($this->defaults($user->role,$user->isGreetingDepartmentUser()),$role?->permissions ?? []);
+  $defaults=$this->defaults($user->role,$user->isGreetingDepartmentUser());
+  if($role && !$role->is_builtin) $defaults['whatsapp']='none';
+  return array_replace($defaults,$role?->permissions ?? []);
  }
  public function level(User $user,string $module): string {return $this->permissions($user)[$module]??'none';}
  public function read(User $user,string $module): bool {return $this->level($user,$module)!=='none';}
  public function write(User $user,string $module): bool {return $this->level($user,$module)==='edit';}
  public function routeModule(string $path): ?string {
   $path=preg_replace('#^api/#','',trim($path,'/'));
+  if(preg_match('#^(auth/whatsapp-(preferences|history|link)|secretary/whatsapp-history)$#',$path))return 'whatsapp';
   if(preg_match('#^committees(/|$)#',$path))return 'committees';
   if(str_starts_with($path,'reports/'))return 'reports';
   if(preg_match('#^(events|conference-events|notes|calendar)(/|$)#',$path))return 'calendar';

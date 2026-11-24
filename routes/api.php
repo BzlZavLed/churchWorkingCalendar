@@ -45,11 +45,11 @@ Route::prefix('auth')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
         Route::get('me', [AuthController::class, 'me']);
-        Route::post('whatsapp-link', [\App\Http\Controllers\WhatsAppPreferencesController::class, 'link'])->middleware('throttle:5,1');
-        Route::delete('whatsapp-link', [\App\Http\Controllers\WhatsAppPreferencesController::class, 'unlink']);
-        Route::get('whatsapp-history', [\App\Http\Controllers\WhatsAppPreferencesController::class, 'history'])->middleware('throttle:60,1');
-        Route::get('whatsapp-preferences', [\App\Http\Controllers\WhatsAppPreferencesController::class, 'show']);
-        Route::patch('whatsapp-preferences', [\App\Http\Controllers\WhatsAppPreferencesController::class, 'update'])->middleware('throttle:10,1');
+        Route::post('whatsapp-link', [\App\Http\Controllers\WhatsAppPreferencesController::class, 'link'])->middleware(['module.access','throttle:5,1']);
+        Route::delete('whatsapp-link', [\App\Http\Controllers\WhatsAppPreferencesController::class, 'unlink'])->middleware('module.access');
+        Route::get('whatsapp-history', [\App\Http\Controllers\WhatsAppPreferencesController::class, 'history'])->middleware(['module.access','throttle:60,1']);
+        Route::get('whatsapp-preferences', [\App\Http\Controllers\WhatsAppPreferencesController::class, 'show'])->middleware('module.access');
+        Route::patch('whatsapp-preferences', [\App\Http\Controllers\WhatsAppPreferencesController::class, 'update'])->middleware(['module.access','throttle:10,1']);
     });
 });
 

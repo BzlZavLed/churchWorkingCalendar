@@ -211,7 +211,7 @@ const navItems = computed(() => {
     return []
   }
 
-  const icons = {committees:'committees',calendar:'calendar',reports:'reports',objectives:'objectives',budget:'budget',inventory:'inventory',meetings:'meetings',meeting_points:'meetingPoints',visitors:'greetingList',greeting:'greeting',members:'members',departments:'departments',users:'users'}
+  const icons = {committees:'committees',calendar:'calendar',reports:'reports',objectives:'objectives',budget:'budget',inventory:'inventory',meetings:'meetings',meeting_points:'meetingPoints',visitors:'greetingList',greeting:'greeting',members:'members',departments:'departments',users:'users',whatsapp:'meetingPoints'}
   const platformView = authStore.isPlatformAdmin && !authStore.adminContext
   const platformPaths = {
     calendar: '/superadmin/calendars',
@@ -235,7 +235,6 @@ const navItems = computed(() => {
   )
   if (route.path !== '/no-access') {
     if (authStore.isSecretary) items.unshift({to:'/secretary/settings',label:locale.value==='es'?'Configuración':'Settings',icon:iconPaths.roles})
-    items.push({to:'/whatsapp-settings',label:locale.value==='es'?'Asistente WhatsApp':'WhatsApp assistant',icon:iconPaths.meetingPoints})
   }
   const wording = {
     calendar: ['Calendario y eventos','Calendar and events','Fechas, reservas y revisión','Dates, reservations and review'],
@@ -251,6 +250,7 @@ const navItems = computed(() => {
     committees: ['Comités e informes','Committees and reports','Integrantes, objetivos y resultados','Members, objectives and results'],
     departments: ['Departamentos','Departments','Áreas, responsables y funciones','Teams, leaders and functions'],
     users: ['Usuarios y accesos','Users and access','Cuentas y asignaciones','Accounts and assignments'],
+    whatsapp: ['Asistente WhatsApp','WhatsApp assistant','Vinculación, ayuda e interacciones','Linking, help and interactions'],
     '/superadmin/churches':['Iglesias','Churches','Crear y administrar iglesias','Create and manage churches'],
     '/superadmin/settings':['Configuración general','Platform settings','Integraciones, uso y límites','Integrations, usage and limits'],
     '/superadmin/email-activity':['Actividad de correo','Email activity','Envíos de toda la plataforma','Platform-wide email activity'],

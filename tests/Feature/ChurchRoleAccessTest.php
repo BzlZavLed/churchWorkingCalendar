@@ -11,6 +11,28 @@ class ChurchRoleAccessTest extends TestCase {
  private function role(Church $church,string $base,array $permissions): ChurchRole {
   return ChurchRole::create(['church_id'=>$church->id,'key'=>$base,'name'=>$base,'base_role'=>$base,'permissions'=>$permissions,'is_builtin'=>true]);
  }
+ public function test_whatsapp_view_permission_controls_read_write_and_is_church_scoped(): void {
+  $church=Church::create(['name'=>'One']);$other=Church::create(['name'=>'Two']);
+  $role=$this->role($church,'pastor',['whatsapp'=>'none']);$user=User::factory()->create(['role'=>'pastor','church_id'=>$church->id]);
+  $otherUser=User::factory()->create(['role'=>'pastor','church_id'=>$other->id]);Sanctum::actingAs($user);
+  $this->getJson('/api/access')->assertJsonPath('permissions.whatsapp','none');
+  $this->getJson('/api/auth/whatsapp-preferences')->assertForbidden();
+  $this->getJson('/api/auth/whatsapp-history?date=2026-01-01&timezone=UTC')->assertForbidden();
+  $this->patchJson('/api/auth/whatsapp-preferences',['enabled'=>true])->assertForbidden();
+  $role->update(['permissions'=>['whatsapp'=>'read']]);
+  $this->getJson('/api/auth/whatsapp-preferences')->assertOk();
+  $this->getJson('/api/auth/whatsapp-history?date=2026-01-01&timezone=UTC')->assertOk();
+  $this->patchJson('/api/auth/whatsapp-preferences',['enabled'=>true])->assertForbidden();
+  $this->postJson('/api/auth/whatsapp-link')->assertForbidden();
+  $this->deleteJson('/api/auth/whatsapp-link')->assertForbidden();
+  $role->update(['permissions'=>['whatsapp'=>'edit']]);
+  $this->patchJson('/api/auth/whatsapp-preferences',['enabled'=>true])->assertOk();
+  Sanctum::actingAs($otherUser);$this->getJson('/api/access')->assertJsonPath('permissions.whatsapp','edit')->assertOk();
+  $custom=ChurchRole::create(['church_id'=>$church->id,'key'=>'custom_test','name'=>'Custom','base_role'=>'pastor','permissions'=>['calendar'=>'read'],'is_builtin'=>false]);
+  $user->update(['church_role_id'=>$custom->id]);Sanctum::actingAs($user->fresh());
+  $this->getJson('/api/access')->assertJsonPath('permissions.whatsapp','none');
+  $this->getJson('/api/auth/whatsapp-preferences')->assertForbidden();
+ }
  public function test_superadmin_can_manage_church_roles_and_assign_custom_workflows(): void {
   $church=Church::create(['name'=>'One']);$other=Church::create(['name'=>'Two']);$dept=Department::create(['church_id'=>$church->id,'name'=>'Music']);
   $actor=User::factory()->create(['role'=>'superadmin']);$user=User::factory()->create(['church_id'=>$church->id,'role'=>'pastor']);

@@ -110,7 +110,7 @@ router.beforeEach(async (to) => {
     if (to.meta.integrationManager && !authStore.isSecretary && !authStore.isPlatformAdmin) return authStore.firstAccessibleRoute()
     if (to.meta.superadminOnly && !authStore.isPlatformAdmin) return authStore.firstAccessibleRoute()
     const module = moduleForPath(to.path)
-    if (module && authStore.isPlatformAdmin && (!authStore.adminContext || !authStore.canAccess(module))) return {path:'/superadmin/module-context',query:{module}}
+    if (module && authStore.isPlatformAdmin && !(module==='whatsapp' && !authStore.adminContext) && (!authStore.adminContext || !authStore.canAccess(module))) return {path:'/superadmin/module-context',query:{module}}
     if (module && !authStore.canAccess(module)) return authStore.firstAccessibleRoute()
     if (to.path === '/greeting/form-builder' && !authStore.can('visitors.configure')) return '/greeting/contacts'
   }

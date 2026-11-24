@@ -5,7 +5,8 @@
   <p v-if="loading" role="status">{{ tr('Cargando…','Loading…') }}</p>
   <section v-else class="management-surface p-3">
    <div class="wa-status"><span class="wa-status-dot" :class="{ 'wa-status-dot--ready': ready }"></span><strong>{{ ready ? tr('Listo para usar','Ready to use') : linked ? tr('Número vinculado · asistente inactivo','Number linked · assistant inactive') : tr('Pendiente de vinculación','Awaiting connection') }}</strong></div>
-   <label class="d-flex align-items-start gap-2 mt-3"><input type="checkbox" :checked="enabled" :disabled="saving" @change="save($event.target.checked)" /><span>{{ tr('Permitir el asistente WhatsApp en mi cuenta','Allow the WhatsApp assistant for my account') }}</span></label>
+   <p v-if="!auth.canEdit('whatsapp')" class="alert alert-info mt-3">{{ tr('Tu acceso es de solo lectura.','You have read-only access.') }}</p>
+   <label class="d-flex align-items-start gap-2 mt-3"><input type="checkbox" :checked="enabled" :disabled="saving || !auth.canEdit('whatsapp')" @change="save($event.target.checked)" /><span>{{ tr('Permitir el asistente WhatsApp en mi cuenta','Allow the WhatsApp assistant for my account') }}</span></label>
    <p v-if="blockReason" class="alert alert-info mt-3" role="status">{{ reasonText(blockReason) }}</p>
    <section v-if="registeredNumber && !linked" class="wa-connect">
     <h2>{{ tr('Activa tu número registrado','Activate your registered number') }}</h2>
@@ -17,12 +18,12 @@
    <section v-else-if="!linked" class="wa-connect">
     <h2>{{ tr('Conecta tu WhatsApp','Connect your WhatsApp') }}</h2>
     <p>{{ tr('No tienes un número registrado. Genera un código y envíalo desde tu WhatsApp','No number is registered. Generate a code and send it from your WhatsApp') }}<template v-if="destinationNumber"> {{ tr('al','to') }} <strong>{{ destinationNumber }}</strong></template>.</p>
-    <button class="btn btn-primary" :disabled="saving || !enabled || !systemEnabled || !!blockReason" @click="link">{{ tr('Generar código de vinculación','Generate linking code') }}</button>
+    <button class="btn btn-primary" :disabled="saving || !auth.canEdit('whatsapp') || !enabled || !systemEnabled || !!blockReason" @click="link">{{ tr('Generar código de vinculación','Generate linking code') }}</button>
     <div v-if="command" class="alert alert-info mt-3"><p>{{ tr('Envía este texto completo. Vence en diez minutos; no lo compartas.','Send this complete text. It expires in ten minutes; do not share it.') }}</p><code class="text-break">{{ command }}</code><a v-if="destinationNumber" class="btn btn-outline-secondary mt-3" :href="whatsappLink(command)" target="_blank" rel="noopener noreferrer">{{ tr('Abrir WhatsApp','Open WhatsApp') }}</a></div>
    </section>
    <p v-else class="mt-3">{{ tr('Puedes escribir al asistente según los permisos de tu cuenta.','You can message the assistant according to your account permissions.') }} <strong v-if="destinationNumber">{{ destinationNumber }}</strong></p>
    <p v-if="!destinationNumber" class="alert alert-warning mt-3">{{ tr('El administrador debe configurar el número de WhatsApp de la iglesia para mostrar aquí el destino.','The administrator must configure the church WhatsApp number so the destination can be shown here.') }}</p>
-   <div class="wa-actions"><button class="btn btn-outline-secondary" :disabled="saving" @click="refreshStatus">{{ tr('Actualizar estado','Refresh status') }}</button><button v-if="linked" class="btn btn-outline-secondary" :disabled="saving" @click="unlink">{{ tr('Desvincular número','Unlink number') }}</button></div>
+   <div class="wa-actions"><button class="btn btn-outline-secondary" :disabled="saving" @click="refreshStatus">{{ tr('Actualizar estado','Refresh status') }}</button><button v-if="linked" class="btn btn-outline-secondary" :disabled="saving || !auth.canEdit('whatsapp')" @click="unlink">{{ tr('Desvincular número','Unlink number') }}</button></div>
    <details class="mt-3"><summary>{{ tr('Qué puedes hacer por WhatsApp','What you can do via WhatsApp') }}</summary><p class="small mt-2">{{ tr('Prepara eventos o consulta visitas según tus permisos. CONFIRMAR envía un evento a revisión; EXTENDER renueva la reserva; BAJA desactiva el asistente. El uso está sujeto a los límites de la iglesia.','Prepare events or query visitors according to your permissions. CONFIRMAR submits an event for review; EXTENDER renews its reservation; BAJA disables the assistant. Church usage limits apply.') }}</p></details>
    <p v-if="notice" class="text-success" role="status">{{ notice }}</p>
   </section>
