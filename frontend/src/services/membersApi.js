@@ -11,7 +11,14 @@ export const membersApi = {
   async draft(id) { return (await apiClient.get(`/members/import-drafts/${id}`)).data },
   async saveDraft(id, payload) { return (await apiClient[id ? 'put' : 'post'](id ? `/members/import-drafts/${id}` : '/members/import-drafts', payload)).data },
   async commitDraft(id, revision) { return (await apiClient.post(`/members/import-drafts/${id}/commit`, {revision})).data },
+  async correctBirthDates(file, token) {
+    const body = new FormData()
+    body.append('file', file)
+    if (token) body.append('preview_token', token)
+    return (await apiClient.post('/members/birthdate-correction', body)).data
+  },
   async list() { return (await apiClient.get('/members')).data },
+  async familyMap() { return (await apiClient.get('/members', { params: { view: 'family-map' } })).data },
   async get(id) { return (await apiClient.get(`/members/${id}`)).data },
   async remove(id) { await apiClient.delete(`/members/${id}`) },
   async download() { return (await apiClient.get('/members/template.csv', { responseType: 'blob' })).data },

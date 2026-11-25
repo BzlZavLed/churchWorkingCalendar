@@ -25,6 +25,14 @@
      <label class="d-block mb-2">{{ tr('Iglesia','Church') }}<input class="form-control" :value="settings.church_name" readonly /></label>
      <label class="d-block mb-2">{{ tr('Código de organización','Organization code') }}<input v-model="draft.organization_code" class="form-control" type="text" maxlength="100" /></label>
      <p>{{ tr('Este código y el nombre de la iglesia se asignan automáticamente a los miembros y no se editan en sus fichas.','This code and the church name are assigned automatically to members and cannot be edited in their records.') }}</p>
+     <label class="d-block mb-2">{{ tr('Formato de fecha de nacimiento','Birth date format') }}
+      <select v-model="draft.member_date_format" class="form-select">
+       <option value="mdy">{{ tr('Mes / día / año','Month / day / year') }} (12/11/1998)</option>
+       <option value="dmy">{{ tr('Día / mes / año','Day / month / year') }} (11/12/1998)</option>
+       <option value="ydm">{{ tr('Año / día / mes (CSV)','Year / day / month (CSV)') }} (1998-11-12)</option>
+      </select>
+     </label>
+     <p>{{ tr('Elige el orden de las fechas del CSV. Año / día / mes convierte 1998-11-12 en 11 de diciembre de 1998. Los registros ya guardados conservan su fecha.','Choose the date order in your CSV. Year / day / month reads 1998-11-12 as December 11, 1998. Saved records keep their dates.') }}</p>
      <h2>{{ tr('Funciones de la iglesia','Church features') }}</h2>
      <label class="setting-switch"><input type="checkbox" v-model="draft.whatsapp_enabled" /> WhatsApp</label>
      <p>{{ tr('Permite o detiene los mensajes del asistente para todos los usuarios de esta iglesia. Desactivarlo descarta el trabajo pendiente.','Allow or stop assistant messages for every user in this church. Disabling discards pending work.') }}</p>
@@ -59,14 +67,14 @@ import {apiClient} from '../../services/authApi'
 import {useUiStore} from '../../stores/uiStore'
 import '../../styles/clerk-management.css'
 const ui=useUiStore(),tr=(es,en)=>ui.locale==='es'?es:en
-const settings=ref(null),draft=reactive({organization_code:'',whatsapp_enabled:false,ai_enabled:false}),loading=ref(false),saving=ref(false),error=ref(''),saved=ref(false),month=ref(new Date().toISOString().slice(0,7))
+const settings=ref(null),draft=reactive({organization_code:'',member_date_format:'mdy',whatsapp_enabled:false,ai_enabled:false}),loading=ref(false),saving=ref(false),error=ref(''),saved=ref(false),month=ref(new Date().toISOString().slice(0,7))
 let version=0
 const labels=computed(()=>({whatsapp_ai_limit:tr('IA WhatsApp / mes','WhatsApp AI / month'),whatsapp_replies_limit:tr('Respuestas / mes','Replies / month'),whatsapp_inbox_limit:tr('Mensajes recibidos / mes','Incoming messages / month'),whatsapp_daily_limit:tr('Por usuario / día / operación','Per user / day / operation'),birthday_ai_limit:tr('IA cumpleaños / mes','Birthday AI / month')}))
 function apply(data){
  const limitKeys=Object.keys(labels.value)
  const valid=data && typeof data==='object' && limitKeys.every(key=>Number.isFinite(data.limits?.[key])) && ['ai','replies','inbox','birthdays'].every(key=>Number.isFinite(data.usage?.[key]?.used)) && typeof data.whatsapp_enabled==='boolean' && typeof data.ai_enabled==='boolean'
  if(!valid){settings.value=null;throw new Error('Invalid integration settings response')}
- settings.value=data;Object.assign(draft,{organization_code:data.organization_code||'',whatsapp_enabled:data.whatsapp_enabled,ai_enabled:data.ai_enabled})
+ settings.value=data;Object.assign(draft,{organization_code:data.organization_code||'',member_date_format:data.member_date_format||'mdy',whatsapp_enabled:data.whatsapp_enabled,ai_enabled:data.ai_enabled})
 }
 async function load(){if(!month.value)return;const current=++version;loading.value=true;error.value='';try{const {data}=await apiClient.get('/secretary/integrations',{params:{month:month.value}});if(current===version)apply(data)}catch{if(current===version)error.value=tr('No se pudo cargar la configuración. Verifica que el servidor esté actualizado y que se haya limpiado la caché de rutas.','Unable to load settings. Verify that the server is updated and its route cache has been cleared.')}finally{if(current===version)loading.value=false}}
 async function save(){saving.value=true;error.value='';saved.value=false;try{const {data}=await apiClient.put('/secretary/integrations',draft,{params:{month:month.value}});apply(data);saved.value=true}catch{error.value=tr('No se pudo guardar la configuración.','Unable to save settings.')}finally{saving.value=false}}

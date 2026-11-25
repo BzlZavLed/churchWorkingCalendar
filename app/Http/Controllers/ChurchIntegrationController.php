@@ -24,6 +24,7 @@ class ChurchIntegrationController extends Controller {
   $data['church_name']=$church->name;
   $data['logo_url']=$church->visitorLogoUrl();
   $data['organization_code']=$church->organization_code;
+  $data['member_date_format']=$church->member_date_format;
   $data['admin_whatsapp_enabled']=$data['whatsapp_enabled'];
   $data['admin_ai_enabled']=$data['ai_enabled'];
   $data['whatsapp_enabled']=(bool)$church->clerk_whatsapp_enabled;
@@ -32,7 +33,7 @@ class ChurchIntegrationController extends Controller {
  }
  public function clerkUpdate(Request $request) {
   $church=$this->clerkChurch($request);
-  $data=$request->validate(['organization_code'=>'sometimes|nullable|string|max:100','whatsapp_enabled'=>'required|boolean','ai_enabled'=>'required|boolean',
+  $data=$request->validate(['member_date_format'=>'sometimes|required|in:mdy,dmy,ydm','organization_code'=>'sometimes|nullable|string|max:100','whatsapp_enabled'=>'required|boolean','ai_enabled'=>'required|boolean',
    'limits'=>'prohibited','whatsapp_ai_limit'=>'prohibited','whatsapp_replies_limit'=>'prohibited',
    'whatsapp_inbox_limit'=>'prohibited','whatsapp_daily_limit'=>'prohibited','birthday_ai_limit'=>'prohibited',
    'church_id'=>'prohibited','admin_whatsapp_enabled'=>'prohibited','admin_ai_enabled'=>'prohibited']);
@@ -45,6 +46,7 @@ class ChurchIntegrationController extends Controller {
     WhatsAppMessage::whereIn('account_id',$ids)->where('status','pending')->update(['status'=>'ignored','body'=>null]);
    }
    if(array_key_exists('organization_code',$data))$church->organization_code=filled($data['organization_code'])?trim($data['organization_code']):null;
+   if (isset($data['member_date_format'])) $church->member_date_format=$data['member_date_format'];
    $church->forceFill(['clerk_whatsapp_enabled'=>$data['whatsapp_enabled'],'clerk_ai_enabled'=>$data['ai_enabled']])->save();
   });
   return $this->clerkShow($request);

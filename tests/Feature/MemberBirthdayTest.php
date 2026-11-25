@@ -50,6 +50,43 @@ class MemberBirthdayTest extends TestCase
         $this->postJson('/api/members', ['template_id' => $this->getJson('/api/members')->json('template.id'), 'name' => 'Clerk Added', 'email' => 'clerkadded@example.test', 'phone' => '+15555550101', 'data' => ['BornOn' => '1990-02-03']])->assertOk();
     }
 
+    public function test_legacy_birthdays_follow_church_date_format_and_iso_dates_keep_their_meaning(): void
+    {
+        [$church, $template, $field] = $this->context();
+        $this->member($church, $template, $field, '12-11-1998', 'Legacy Date');
+        $this->member($church, $template, $field, '1998-12-11', 'ISO Date');
+        $december = '/api/members/birthdays?'.http_build_query($this->query(['date' => '2027-12-15']));
+        $november = '/api/members/birthdays?'.http_build_query($this->query(['date' => '2027-11-15']));
+
+        $this->getJson($december)->assertOk()->assertJsonCount(2, 'members');
+        $this->putJson('/api/secretary/integrations', [
+            'member_date_format' => 'dmy', 'whatsapp_enabled' => false, 'ai_enabled' => false,
+        ])->assertOk()->assertJsonPath('member_date_format', 'dmy');
+        $this->getJson($december)->assertOk()->assertJsonPath('members.0.name', 'ISO Date')->assertJsonCount(1, 'members');
+        $this->getJson($november)->assertOk()->assertJsonPath('members.0.birthday', '2027-11-12')->assertJsonPath('members.0.name', 'Legacy Date');
+    }
+
+    public function test_bulk_correction_changes_only_matching_imported_birth_dates_once(): void
+    {
+        [$church, $template] = $this->context();
+        $member = ChurchMember::create([
+            'church_id' => $church->id, 'member_template_id' => $template->id, 'source_person_id' => '123',
+            'name' => 'Imported Member', 'email' => 'imported@example.test', 'phone' => '+15555550100', 'data' => ['BornOn' => '1998-11-12', 'AddressLine' => 'Example Street'],
+        ]);
+        $url = '/api/members/birthdate-correction';
+        $file = fn () => \Illuminate\Http\UploadedFile::fake()->createWithContent('members.csv', "PersonId,BornOn\n123,12/11/98\n456,1998-15-06\n");
+        $preview = $this->post($url, ['file' => $file()], ['Accept' => 'application/json'])->assertOk()
+            ->assertJsonPath('rows.0.status', 'ready')->assertJsonPath('rows.0.corrected', '1998-12-11')
+            ->assertJsonPath('rows.1.status', 'unmatched');
+        $this->assertSame('1998-11-12', $member->fresh()->data['BornOn']);
+        $payload = fn () => ['file' => $file(), 'preview_token' => $preview->json('preview_token')];
+        $this->post($url, $payload(), ['Accept' => 'application/json'])->assertOk()->assertJsonPath('updated', 1);
+        $this->assertSame('1998-12-11', $member->fresh()->data['BornOn']);
+        $this->assertSame('Example Street', $member->fresh()->data['AddressLine']);
+        $this->post($url, $payload(), ['Accept' => 'application/json'])->assertConflict();
+        $this->post($url, ['file' => $file()], ['Accept' => 'application/json'])->assertOk()->assertJsonPath('rows.0.status', 'unchanged');
+    }
+
     public function test_daily_weekly_biweekly_and_year_boundary(): void
     {
         [$church,$template,$field] = $this->context();

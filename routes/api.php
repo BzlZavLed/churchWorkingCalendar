@@ -164,6 +164,7 @@ Route::middleware(['auth:sanctum', 'superadmin.context', 'module.access'])->grou
     Route::post('members/birthdays/message', [\App\Http\Controllers\MemberBirthdayController::class, 'generate'])->middleware('throttle:5,1');
     Route::get('members', [\App\Http\Controllers\ChurchMemberController::class, 'index']);
     Route::get('members/template.csv', [\App\Http\Controllers\ChurchMemberController::class, 'download']);
+    Route::post('members/birthdate-correction', \App\Http\Controllers\MemberBirthDateCorrectionController::class);
     Route::post('members/import', [\App\Http\Controllers\ChurchMemberController::class, 'import']);
     Route::post('members', [\App\Http\Controllers\ChurchMemberController::class, 'save']);
     Route::get('members/import-drafts', [\App\Http\Controllers\MemberImportDraftController::class, 'index']);

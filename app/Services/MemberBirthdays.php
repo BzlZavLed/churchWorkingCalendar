@@ -28,10 +28,12 @@ class MemberBirthdays
         $members = [];
         $missing = 0;
         if ($field) {
+            $format = MemberDateFormat::forChurch($church);
             foreach (ChurchMember::where('church_id', $church)->orderBy('name')->cursor() as $member) {
                 $value = $member->data[$field] ?? null;
                 if(!$value && $field==='BornOn') foreach($fields as $legacy) { if(!empty($member->data[$legacy['id']])) { $value=$member->data[$legacy['id']]; break; } }
-                if (! is_string($value) || ! preg_match('/^(\d{4})-(\d{2})-(\d{2})$/D', $value, $parts) || ! checkdate((int) $parts[2], (int) $parts[3], (int) $parts[1])) {
+                $value = MemberDateFormat::normalize($value, $format);
+                if (! is_string($value) || ! preg_match('/^(\d{4})-(\d{2})-(\d{2})$/D', $value, $parts)) {
                     $missing++;
 
                     continue;

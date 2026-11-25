@@ -4,6 +4,7 @@ use App\Models\{ChurchMember,MemberTemplate};
 use Illuminate\Validation\ValidationException;
 class MemberImportReview {
  public function analyze(MemberTemplate $template,array $rows): array {
+  $format=MemberDateFormat::forChurch($template->church_id);
   $existing=ChurchMember::where('church_id',$template->church_id)->get();$bySource=$existing->filter(fn($m)=>filled($m->source_person_id))->keyBy('source_person_id');$seen=[];$review=[];$fileSources=[];
   foreach($rows as $row){$id=trim((string)($row['values']['PersonId']??''));if($id!=='')$fileSources[$id][]=$row['line'];}
   foreach($rows as $row){
@@ -11,7 +12,9 @@ class MemberImportReview {
    foreach($template->fields as $field){
     if(!array_key_exists($field['id'],$values))continue;$value=trim((string)$values[$field['id']]);
     if($field['type']==='checkbox' && $value!=='')$value=match(strtolower($value)){'true','1','yes','y','si','sí','s'=>true,'false','0','no','n'=>false,default=>$value};
-    if($field['id']==='BornOn' && preg_match('~^(\d{1,2})/(\d{1,2})/(\d{4})$~D',$value,$parts))$value=sprintf('%04d-%02d-%02d',$parts[3],$parts[1],$parts[2]);
+    if($field['type']==='dob' && $value!=='') {
+     $value=MemberDateFormat::normalize($value,$format,fromImport:true)??'invalid';
+    }
     $custom[$field['id']]=$value===''?null:$value;
    }
    $phone=collect(['MobilePhone','FamilyPhone','WorkPhone'])->map(fn($k)=>trim((string)($values[$k]??'')))->first(fn($v)=>$v!=='')??'';
@@ -25,7 +28,7 @@ class MemberImportReview {
    if($source!==null){if(isset($seen[$source])){$errors['PersonId']=['Duplicate PersonId in this file.'];$canAuthorize=false;$payload=null;}$seen[$source]=true;}
    $matches=collect();
    if($source!==null && isset($bySource[$source]))$matches=collect([$bySource[$source]]);
-   elseif($payload && filled($payload['name']??null) && filled($payload['data']['BornOn']??null))$matches=$existing->filter(fn($m)=>mb_strtolower(trim($m->name??''))===mb_strtolower(trim($payload['name'])) && ($m->data['BornOn']??null)===$payload['data']['BornOn']);
+   elseif($payload && filled($payload['name']??null) && filled($payload['data']['BornOn']??null))$matches=$existing->filter(fn($m)=>mb_strtolower(trim($m->name??''))===mb_strtolower(trim($payload['name'])) && MemberDateFormat::normalize($m->data['BornOn']??null,$format)===$payload['data']['BornOn']);
    $matches=$matches->map(fn($m)=>['id'=>$m->id,'name'=>$m->name,'dob'=>$m->data['BornOn']??null,'match'=>$source!==null && (string)$m->source_person_id===(string)$source?'person_id':'name_dob'])->values()->all();
    $action=($row['duplicate_action']??'skip')==='update'?'update':'skip';$target=isset($row['duplicate_target'])?(int)$row['duplicate_target']:null;
    if($matches && $action==='update' && !collect($matches)->contains('id',$target)){$errors['PersonId']=['Select a matching member to update.'];$canAuthorize=false;}

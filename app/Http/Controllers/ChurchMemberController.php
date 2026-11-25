@@ -13,6 +13,9 @@ class ChurchMemberController extends Controller {
     }
     public function index(Request $request, MemberRecords $records) {
         $church=$this->church($request);
+        if ($request->query('view') === 'family-map') {
+            return $this->familyMap($church);
+        }
         $template=$records->current($church);
         $members=ChurchMember::where('church_id',$church)->orderBy('name')->get(['id','name','given_name','first_surname','second_surname','email','phone','missing_fields','data']);
         foreach($members as $member) {
@@ -22,6 +25,63 @@ class ChurchMemberController extends Controller {
         }
         return ['template'=>$template,'members'=>$members,'church'=>Church::findOrFail($church)->only(['id','name','conference_name','organization_code'])];
     }
+    private function familyMap(int $church): array
+    {
+        $families = ChurchMember::where('church_id', $church)->orderBy('id')->get(['id', 'name', 'data'])
+            ->groupBy(fn ($member) => !empty($member->data['FamilyId'])
+                ? 'family:'.$member->data['FamilyId'] : 'member:'.$member->id);
+        $locations = [];
+        $directory = [];
+        $missing = 0;
+        foreach ($families as $id => $members) {
+            if ($members->contains(fn ($member) => !in_array(
+                strtolower(trim((string) ($member->data['IsConfidential'] ?? ''))),
+                ['', '0', 'false', 'n', 'no'], true
+            ))) {
+                continue;
+            }
+            foreach ($members as $member) {
+                $data = $member->data ?? [];
+                $lat = $data['Latitude'] ?? null;
+                $lng = $data['Longitude'] ?? null;
+                if (!is_numeric($lat) || !is_numeric($lng) || abs((float) $lat) > 90
+                    || abs((float) $lng) > 180 || ((float) $lat === 0.0 && (float) $lng === 0.0)) {
+                    continue;
+                }
+                $locations[$id] = [
+                    'id' => $id,
+                    'lat' => (float) $lat,
+                    'lng' => (float) $lng,
+                    'address' => $this->memberAddress($data),
+                    'names' => $members->pluck('name')->filter()->values(),
+                ];
+                break;
+            }
+            if (!isset($locations[$id])) {
+                $missing++;
+            }
+            foreach ($members as $member) {
+                $data = $member->data ?? [];
+                $directory[] = [
+                    'id' => $member->id,
+                    'name' => $member->name,
+                    'address' => $this->memberAddress($data),
+                    'missing_address' => trim($data['AddressLine'] ?? '') === '',
+                    'family_unmapped' => !isset($locations[$id]),
+                ];
+            }
+        }
+        return ['locations' => array_values($locations), 'missing' => $missing, 'directory' => $directory];
+    }
+
+    private function memberAddress(array $data): string
+    {
+        return implode(', ', array_filter(array_map(
+            fn ($field) => trim($data[$field] ?? ''),
+            ['AddressLine', 'OptionalLine', 'City', 'State', 'PostalCode', 'Country']
+        ), fn ($part) => $part !== ''));
+    }
+
     public function show(Request $request, MemberRecords $records, ChurchMember $member) {
         abort_unless($member->church_id===$this->church($request),404);
         $template=$records->current($member->church_id);
